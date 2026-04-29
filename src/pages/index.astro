@@ -1,0 +1,361 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Mick Tan" description="mick tan">
+  <main class="surface" transition:animate="fade">
+    <a href="/room/" id="door" aria-label="Observing — enter the room" data-astro-prefetch>
+      <p class="line">Observing.</p>
+    </a>
+  </main>
+
+  <div class="warm-layer" aria-hidden="true">
+    <div class="warm-bg"></div>
+    <div class="warm-content">
+      <span class="warm-name">enter &rarr;</span>
+    </div>
+  </div>
+
+  <footer>
+    <a href="mailto:mickintransit@gmail.com">Email</a>
+    <span aria-hidden="true">&middot;</span>
+    <a href="https://www.linkedin.com/in/micktanpk/" target="_blank" rel="noopener">LinkedIn</a>
+  </footer>
+
+  {/* Animated SVG turbulence filter that displaces the warm-layer's edge,
+       producing a flickering / shimmering boundary instead of a sterile circle. */}
+  <svg width="0" height="0" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+    <defs>
+      <filter id="lens-shimmer" x="-5%" y="-5%" width="110%" height="110%">
+        {/* 1) Gentle breathing edge via animated displacement of turbulence */}
+        <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="3" stitchTiles="stitch" />
+        <feDisplacementMap in="SourceGraphic" scale="1.5" result="displaced">
+          <animate attributeName="scale" values="0.5;2;0.5" dur="6s" repeatCount="indefinite"
+                   calcMode="spline" keySplines="0.4 0 0.6 1; 0.4 0 0.6 1" />
+        </feDisplacementMap>
+
+        {/* 2) Chromatic aberration: extract R/G/B channels, offset R right, B left,
+              recombine with arithmetic add. Very subtle (1px). Reads as glass. */}
+        <feColorMatrix in="displaced" type="matrix"
+          values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r" />
+        <feOffset in="r" dx="1" dy="0" result="rShift" />
+        <feColorMatrix in="displaced" type="matrix"
+          values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g" />
+        <feColorMatrix in="displaced" type="matrix"
+          values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b" />
+        <feOffset in="b" dx="-1" dy="0" result="bShift" />
+        <feComposite in="rShift" in2="g" operator="arithmetic"
+          k1="0" k2="1" k3="1" k4="0" result="rg" />
+        <feComposite in="rg" in2="bShift" operator="arithmetic"
+          k1="0" k2="1" k3="1" k4="0" />
+      </filter>
+    </defs>
+  </svg>
+</Layout>
+
+<style>
+  :root {
+    --mx: 50vw;
+    --my: 50vh;
+    --lens-r: 0px;
+    --lens-r-rest: 100px;
+    --lens-r-hover: 170px;
+  }
+
+  html, body { overflow: hidden; height: 100%; }
+
+  .surface {
+    position: relative;
+    z-index: 2;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+  }
+
+  #door {
+    color: inherit;
+    text-decoration: none;
+    display: inline-block;
+    position: relative;
+    transition: transform 280ms cubic-bezier(.2,.8,.2,1);
+  }
+
+  #door:focus-visible { outline: 2px dashed rgba(232, 232, 224, 0.7); outline-offset: 14px; border-radius: 4px; }
+  #door:hover .line { letter-spacing: 0.04em; }
+
+  .line {
+    font-size: clamp(1.4rem, 3.6vw, 2.2rem);
+    font-weight: 400;
+    font-style: italic;
+    letter-spacing: 0.02em;
+    color: var(--ink);
+    transition: letter-spacing 320ms cubic-bezier(.2,.8,.2,1);
+  }
+
+  /* Footer is at root z-index 10, above the warm-layer (z 5).
+     mix-blend-mode: difference inverts the text color against whatever is
+     painted behind it — cream-on-dark by default, dark-on-cream when the
+     lens passes over it. Always readable. */
+  footer {
+    position: fixed;
+    bottom: 2.5rem;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 0.85rem;
+    z-index: 10;
+    color: #ffffff;
+    mix-blend-mode: difference;
+    opacity: 0.6;
+  }
+
+  footer a { color: inherit; text-decoration: none; }
+  footer a:hover { opacity: 0.9; }
+  footer span { margin: 0 0.75rem; }
+
+  /* Sci-fi cream-white reveal layer — clipped to a circle that follows the cursor.
+     The SVG turbulence filter displaces the layer's pixels so the circular
+     boundary "shimmers" rather than reading as a sterile lens. */
+  .warm-layer {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 5;
+    clip-path: circle(var(--lens-r) at var(--mx) var(--my));
+    -webkit-clip-path: circle(var(--lens-r) at var(--mx) var(--my));
+    transition: clip-path 90ms linear;
+    filter: url(#lens-shimmer);
+  }
+
+  .warm-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at var(--mx) var(--my),
+        #ffffff 0%,
+        #fafaf5 18%,
+        #ebe9e0 42%,
+        #c8c5b8 72%,
+        #5a574a 95%,
+        #1a1812 100%);
+  }
+
+  /* Holographic scan-lines inside the lens. Subtle, slow drift downward. */
+  .warm-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent 0,
+      transparent 1px,
+      rgba(15, 15, 20, 0.06) 1px,
+      rgba(15, 15, 20, 0.06) 2px
+    );
+    mix-blend-mode: multiply;
+    pointer-events: none;
+    animation: scanlines-drift 0.22s linear infinite;
+  }
+
+  @keyframes scanlines-drift {
+    from { transform: translateY(0); }
+    to { transform: translateY(2px); }
+  }
+
+  .warm-content {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 0.8rem;
+    color: #1a1812;
+    font-family: 'Lora', Georgia, serif;
+    pointer-events: none;
+  }
+
+  .warm-name {
+    font-size: clamp(1.4rem, 3.6vw, 2.2rem);
+    font-weight: 400;
+    font-style: italic;
+    letter-spacing: 0.02em;
+    /* Chromatic ghost is now handled by the SVG lens-shimmer filter
+       (R/G/B channel split + offset). Cleaner than text-shadow. */
+  }
+
+  .warm-hint {
+    font-size: clamp(0.85rem, 1.8vw, 1rem);
+    font-style: italic;
+    opacity: 0.5;
+    letter-spacing: 0.04em;
+    margin-top: 0.4rem;
+  }
+
+  /* When over Observing, the lens grows to --lens-r-hover via the 280ms
+     transition. Once it's settled, JS sets --lens-r-breathing each frame
+     to a sinusoidal value, producing a slow breathe in/out around hover size.
+     The fallback to --lens-r-hover is what plays during the grow phase. */
+  .warm-layer.over-name {
+    clip-path: circle(var(--lens-r-breathing, var(--lens-r-hover)) at var(--mx) var(--my));
+    -webkit-clip-path: circle(var(--lens-r-breathing, var(--lens-r-hover)) at var(--mx) var(--my));
+    transition: clip-path 280ms cubic-bezier(.2,.8,.2,1);
+  }
+
+  .warm-layer.spacebar {
+    clip-path: circle(160vmax at var(--mx) var(--my));
+    -webkit-clip-path: circle(160vmax at var(--mx) var(--my));
+    transition: clip-path 600ms cubic-bezier(.2,.8,.2,1);
+  }
+
+  @media (hover: none) {
+    :root { --lens-r-rest: 110px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .warm-layer { transition: none !important; filter: none !important; }
+    .warm-bg::after { animation: none; }
+  }
+</style>
+
+<script>
+  // Re-init on every page-load (initial + ClientRouter navigations).
+  // AbortController cleans up old listeners so they don't accumulate
+  // when the user navigates away and back.
+  let voidAbort: AbortController | null = null;
+
+  const initVoid = () => {
+    const root = document.documentElement;
+    const layer = document.querySelector<HTMLDivElement>('.warm-layer');
+    const door = document.getElementById('door') as HTMLAnchorElement | null;
+    if (!layer || !door) return;
+
+    voidAbort?.abort();
+    voidAbort = new AbortController();
+    const { signal } = voidAbort;
+
+    root.style.setProperty('--lens-r', '0px');
+    root.style.setProperty('--mx', '50vw');
+    root.style.setProperty('--my', '50vh');
+    layer.classList.remove('over-name', 'spacebar');
+
+    let active = false;
+    let lastTouch = 0;
+
+    const setLens = (px: number) => root.style.setProperty('--lens-r', `${px}px`);
+    const moveTo = (x: number, y: number) => {
+      root.style.setProperty('--mx', `${x}px`);
+      root.style.setProperty('--my', `${y}px`);
+      if (!active) {
+        active = true;
+        requestAnimationFrame(() => {
+          setLens(220);
+          setTimeout(() => setLens(140), 280);
+        });
+      }
+    };
+
+    window.addEventListener('mousemove', (e) => moveTo(e.clientX, e.clientY), { signal });
+
+    const handleTouch = (e: TouchEvent) => {
+      const t = e.touches[0];
+      if (!t) return;
+      lastTouch = Date.now();
+      moveTo(t.clientX, t.clientY);
+    };
+    window.addEventListener('touchstart', handleTouch, { passive: true, signal });
+    window.addEventListener('touchmove', handleTouch, { passive: true, signal });
+
+    window.addEventListener('keydown', (e) => {
+      if (!active) {
+        const r = door.getBoundingClientRect();
+        moveTo(r.left + r.width / 2, r.top + r.height / 2);
+      }
+      if (e.key === ' ' || e.code === 'Space') {
+        e.preventDefault();
+        layer.classList.add('spacebar');
+      }
+      if (e.key === 'Escape') {
+        layer.classList.remove('spacebar');
+        active = false;
+        setLens(0);
+      }
+    }, { signal });
+
+    window.addEventListener('keyup', (e) => {
+      if (e.key === ' ' || e.code === 'Space') layer.classList.remove('spacebar');
+    }, { signal });
+
+    // Breathing pulse on hover: after the grow transition completes,
+    // gently oscillate the lens radius around its hover size.
+    let breatheRaf: number | null = null;
+    let breatheKickoff: number | null = null;
+    const HOVER_R = 170;
+    const BREATHE_AMP = 4;        // px on each side of hover size — subtle
+    const BREATHE_PERIOD = 6200;  // ms per full breath cycle — slow inhale/exhale
+    const GROW_MS = 320;          // give the CSS transition time to settle
+
+    const startBreathe = () => {
+      stopBreathe();
+      breatheKickoff = window.setTimeout(() => {
+        if (signal.aborted) return;
+        if (!layer.classList.contains('over-name')) return;
+        const start = performance.now();
+        const tick = (now: number) => {
+          if (signal.aborted) return;
+          if (!layer.classList.contains('over-name')) { breatheRaf = null; return; }
+          const phase = ((now - start) / BREATHE_PERIOD) * Math.PI * 2;
+          const r = HOVER_R + Math.sin(phase) * BREATHE_AMP;
+          root.style.setProperty('--lens-r-breathing', `${r}px`);
+          breatheRaf = requestAnimationFrame(tick);
+        };
+        breatheRaf = requestAnimationFrame(tick);
+      }, GROW_MS);
+    };
+
+    const stopBreathe = () => {
+      if (breatheKickoff !== null) { clearTimeout(breatheKickoff); breatheKickoff = null; }
+      if (breatheRaf !== null) { cancelAnimationFrame(breatheRaf); breatheRaf = null; }
+      root.style.removeProperty('--lens-r-breathing');
+    };
+
+    const setOverName = (b: boolean) => {
+      layer.classList.toggle('over-name', b);
+      if (b) startBreathe(); else stopBreathe();
+    };
+
+    door.addEventListener('mouseenter', () => setOverName(true), { signal });
+    door.addEventListener('mouseleave', () => setOverName(false), { signal });
+    door.addEventListener('focus', () => setOverName(true), { signal });
+    door.addEventListener('blur', () => setOverName(false), { signal });
+
+    // Lens disappears when cursor leaves the viewport or the tab loses focus.
+    const dismissLens = () => {
+      stopBreathe();
+      layer.classList.remove('over-name', 'spacebar');
+      setLens(0);
+      active = false;
+    };
+    document.documentElement.addEventListener('mouseleave', dismissLens, { signal });
+    window.addEventListener('blur', dismissLens, { signal });
+
+    setTimeout(() => {
+      if (signal.aborted) return;
+      if (!active) {
+        moveTo(window.innerWidth / 2, window.innerHeight / 2);
+        setTimeout(() => {
+          if (signal.aborted) return;
+          if (Date.now() - lastTouch > 800) {
+            setLens(0);
+            active = false;
+          }
+        }, 1100);
+      }
+    }, 1600);
+  };
+
+  document.addEventListener('astro:page-load', initVoid);
+</script>

@@ -1,0 +1,25 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import RoomDefault from '../../layouts/RoomDefault.astro';
+import { getCollection, render } from 'astro:content';
+import type { GetStaticPaths } from 'astro';
+
+export const getStaticPaths = (async () => {
+  const rooms = await getCollection('rooms', ({ data, id }) => {
+    return !data.draft && !id.startsWith('_');
+  });
+  return rooms.map((room) => ({
+    params: { slug: room.id },
+    props: { room },
+  }));
+}) satisfies GetStaticPaths;
+
+const { room } = Astro.props;
+const { Content } = await render(room);
+---
+
+<Layout title={`${room.data.title} — Mick Tan`} description={room.data.summary ?? room.data.title}>
+  <RoomDefault title={room.data.title} date={room.data.date}>
+    <Content />
+  </RoomDefault>
+</Layout>

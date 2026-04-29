@@ -1,0 +1,174 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+
+const rooms = await getCollection('rooms', ({ data, id }) => {
+  return !data.draft && !id.startsWith('_');
+});
+
+rooms.sort((a, b) => {
+  const da = a.data.date ? new Date(a.data.date).valueOf() : 0;
+  const db = b.data.date ? new Date(b.data.date).valueOf() : 0;
+  return db - da;
+});
+---
+
+<Layout title="The Room — Mick Tan" description="every room mick tan has built">
+  <main class="inverse-page">
+    <header class="page-head">
+      <a href="/" class="home-link" data-astro-prefetch>&larr; home</a>
+      <h1>the room</h1>
+      <p class="sub">a collection of objects. each one tells you something.</p>
+    </header>
+
+    {rooms.length === 0 ? (
+      <div class="empty">
+        <p>nothing here yet.</p>
+        <p class="empty-sub">mick is somewhere, building.</p>
+      </div>
+    ) : (
+      <ol class="room-list">
+        {rooms.map((room, i) => (
+          <li class="room-item" style={`--i: ${i}`}>
+            <a href={`/room/${room.id}/`} class="room-link" data-astro-prefetch>
+              <span class="room-number">{String(i + 1).padStart(2, '0')}</span>
+              <span class="room-title">{room.data.title}</span>
+              {room.data.summary && <span class="room-summary">{room.data.summary}</span>}
+            </a>
+          </li>
+        ))}
+      </ol>
+    )}
+  </main>
+</Layout>
+
+<style>
+  /* Inverse of the landing page: cream surface, dark ink. */
+  html, body { background: #f0ece4; }
+
+  .inverse-page {
+    min-height: 100vh;
+    background: #f0ece4;
+    color: #2a2a27;
+    font-family: 'Lora', Georgia, serif;
+    padding: 4rem 2rem 6rem;
+    overflow-x: hidden;
+  }
+
+  .page-head {
+    max-width: 56rem;
+    margin: 0 auto 5rem;
+    position: relative;
+  }
+
+  .home-link {
+    display: inline-block;
+    color: #2a2a27;
+    text-decoration: none;
+    font-size: 0.85rem;
+    opacity: 0.45;
+    margin-bottom: 3rem;
+    transition: opacity 200ms;
+  }
+  .home-link:hover { opacity: 0.95; }
+
+  .page-head h1 {
+    font-size: clamp(3rem, 9vw, 5.5rem);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1;
+    color: #1a1812;
+  }
+
+  .page-head .sub {
+    margin-top: 1.5rem;
+    font-size: clamp(1rem, 2vw, 1.15rem);
+    font-style: italic;
+    opacity: 0.55;
+    max-width: 30rem;
+  }
+
+  .empty {
+    max-width: 56rem;
+    margin: 0 auto;
+    padding: 4rem 0;
+    font-style: italic;
+    opacity: 0.5;
+  }
+  .empty-sub { margin-top: 0.4rem; opacity: 0.7; }
+
+  .room-list {
+    max-width: 56rem;
+    margin: 0 auto;
+    list-style: none;
+    padding: 0;
+  }
+
+  .room-item {
+    border-top: 1px solid rgba(42, 42, 39, 0.16);
+    transition: padding 280ms cubic-bezier(.2,.8,.2,1);
+  }
+  .room-item:last-child {
+    border-bottom: 1px solid rgba(42, 42, 39, 0.16);
+  }
+
+  .room-item:nth-child(odd) .room-link { padding-left: 2rem; }
+  .room-item:nth-child(even) .room-link { padding-left: 0; padding-right: 2rem; text-align: right; }
+
+  @media (max-width: 600px) {
+    .room-item:nth-child(odd) .room-link,
+    .room-item:nth-child(even) .room-link {
+      padding-left: 0; padding-right: 0; text-align: left;
+    }
+  }
+
+  .room-link {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 1.5rem;
+    align-items: baseline;
+    padding: 1.6rem 0;
+    color: inherit;
+    text-decoration: none;
+    transition: transform 280ms cubic-bezier(.2,.8,.2,1), color 200ms;
+    position: relative;
+  }
+
+  .room-item:nth-child(even) .room-link {
+    grid-template-columns: 1fr auto;
+  }
+
+  .room-item:nth-child(even) .room-number { order: 2; }
+  .room-item:nth-child(even) .room-title,
+  .room-item:nth-child(even) .room-summary { order: 1; }
+
+  .room-link:hover { transform: translateX(8px); }
+  .room-item:nth-child(even) .room-link:hover { transform: translateX(-8px); }
+
+  .room-number {
+    font-size: 0.85rem;
+    font-feature-settings: 'tnum';
+    opacity: 0.35;
+    align-self: baseline;
+  }
+
+  .room-title {
+    font-size: clamp(1.5rem, 3.5vw, 2.2rem);
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: -0.005em;
+  }
+
+  .room-summary {
+    grid-column: 2;
+    font-size: 0.95rem;
+    font-style: italic;
+    opacity: 0.5;
+    margin-top: 0.4rem;
+  }
+
+  .room-item:nth-child(even) .room-summary {
+    grid-column: 1;
+    text-align: right;
+  }
+</style>

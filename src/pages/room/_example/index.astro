@@ -1,0 +1,74 @@
+---
+// TEMPLATE: copy this whole folder (e.g. to src/pages/room/synth/)
+// then edit this file to be anything you want.
+// Underscore-prefixed folders are NOT generated as public pages,
+// so this template won't show up at /room/_example/.
+
+import Layout from '../../../layouts/Layout.astro';
+---
+
+<Layout title="An interactive room — Mick Tan" description="a one-off interactive room">
+  <main class="custom">
+    <a class="back" href="/room/" data-astro-prefetch>&larr; the room</a>
+
+    <h1>this room is fully custom</h1>
+    <p class="lead">
+      Anything goes here. Bring your own colours, fonts, scripts, three.js scenes, ascii art, full-bleed video — whatever the object needs.
+    </p>
+
+    <section class="demo">
+      <p>For example, this paragraph has a custom hover.</p>
+      <button class="poke">poke me</button>
+    </section>
+  </main>
+
+  <style>
+    .custom {
+      min-height: 100vh;
+      max-width: 38rem;
+      margin: 0 auto;
+      padding: 4rem 2rem 6rem;
+      font-family: 'Lora', Georgia, serif;
+      color: #f0ece4;
+    }
+    .back { color: inherit; opacity: 0.4; text-decoration: none; font-size: 0.9rem; }
+    .back:hover { opacity: 0.9; }
+    h1 {
+      margin-top: 4rem;
+      font-size: clamp(1.75rem, 4vw, 2.5rem);
+      font-weight: 500;
+      line-height: 1.2;
+    }
+    .lead {
+      margin-top: 1.5rem;
+      line-height: 1.65;
+      opacity: 0.85;
+    }
+    .demo { margin-top: 3rem; padding: 2rem; border: 1px dashed rgba(244, 165, 99, 0.4); border-radius: 6px; }
+    .demo p { transition: color 200ms; }
+    .demo p:hover { color: #f4a563; cursor: pointer; }
+    .poke {
+      margin-top: 1.5rem;
+      background: transparent;
+      border: 1px solid #f4a563;
+      color: #f4a563;
+      padding: 0.6rem 1.4rem;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 200ms;
+    }
+    .poke:hover { background: #f4a563; color: #2a1408; }
+  </style>
+
+  <script>
+    document.querySelector('.poke')?.addEventListener('click', (e) => {
+      const btn = e.currentTarget as HTMLButtonElement;
+      btn.textContent = ['poked!', 'again?', 'one more?', 'ok stop', 'fine'][
+        Math.min(4, parseInt(btn.dataset.n ?? '0', 10))
+      ];
+      btn.dataset.n = String(parseInt(btn.dataset.n ?? '0', 10) + 1);
+    });
+  </script>
+</Layout>
