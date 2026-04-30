@@ -396,25 +396,28 @@ const { songs, personas } = data;
   }
   .all-voices summary::marker { display: none; }
   .all-voices summary::-webkit-details-marker { display: none; }
-  .voice-block {
+  /* :global() because these blocks are injected at runtime by JS via
+     document.createElement — they don't get Astro's scoping data attribute,
+     so the default scoped selectors wouldn't match. */
+  :global(#allVoicesBody .voice-block) {
     margin-top: 2rem;
     padding: 1.4rem 1.4rem 1.5rem;
     background: rgba(255, 217, 194, 0.32);
     border-radius: 12px;
-    border-left: 3px solid var(--accent-2);
+    border-left: 3px solid #ff9a3e;
   }
-  .voice-block:first-child { margin-top: 1.4rem; }
-  .voice-block + .voice-block { margin-top: 2rem; }
-  .voice-block .voice-label {
+  :global(#allVoicesBody .voice-block:first-child) { margin-top: 1.4rem; }
+  :global(#allVoicesBody .voice-block + .voice-block) { margin-top: 2rem; }
+  :global(#allVoicesBody .voice-block .voice-label) {
     font-size: 0.85rem;
     font-weight: 700;
-    color: var(--accent-3);
+    color: #6c63ff;
     text-transform: lowercase;
     letter-spacing: 0.04em;
     display: block;
     margin-bottom: 0.8rem;
   }
-  .voice-block .voice-text {
+  :global(#allVoicesBody .voice-block .voice-text) {
     white-space: pre-wrap;
     font-size: 0.93rem;
     line-height: 1.55;
