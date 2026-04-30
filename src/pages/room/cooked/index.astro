@@ -1,0 +1,724 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import data from './songs.json';
+
+const { songs, personas } = data;
+---
+
+<Layout title="cooked. — Mick Tan" description="a 90s big beat banger reviewer-guessing game">
+  <main class="cooked">
+    <a class="back" href="/room/" data-astro-prefetch>&larr; the room</a>
+
+    <header class="head">
+      <h1>cooked. <span class="emoji">🍳</span></h1>
+      <p class="sub">drop a 90s big beat banger. read the review. guess who wrote it.</p>
+      <p class="score" id="score" aria-live="polite">— / —</p>
+    </header>
+
+    <section class="picker" id="picker" aria-label="pick a song">
+      <ol class="grid">
+        {songs.map(s => (
+          <li>
+            <button class="card" data-song-id={s.id} type="button" aria-label={`play ${s.title} by ${s.artist}`}>
+              <span class="cover" style={`background-image: url('${s.coverArt}')`}></span>
+              <span class="meta">
+                <span class="title">{s.title}</span>
+                <span class="artist">{s.artist} · {s.year}</span>
+              </span>
+            </button>
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    <section class="play" id="play" hidden>
+      <button class="back-to-picker" type="button" id="backToPicker">← back to the menu</button>
+
+      <div class="player">
+        <iframe
+          id="ytFrame"
+          width="100%"
+          height="100%"
+          src="about:blank"
+          title="YouTube player"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen
+        ></iframe>
+      </div>
+
+      <h2 class="now-playing" id="nowPlaying"></h2>
+      <p class="now-meta" id="nowMeta"></p>
+
+      <article class="review" id="reviewBox">
+        <p class="prompt">a review by <span class="who">an unnamed taster</span>:</p>
+        <div class="review-body" id="reviewBody"></div>
+      </article>
+
+      <form class="guess" id="guessForm">
+        <label for="guessInput">your guess — who wrote this?</label>
+        <input
+          id="guessInput"
+          name="guess"
+          type="text"
+          autocomplete="off"
+          maxlength="80"
+          placeholder="e.g. food influencer / property agent / wealth guru / linkedin guy…"
+          required
+        />
+        <input type="text" name="hp" tabindex="-1" autocomplete="off" class="hp" aria-hidden="true" />
+        <div class="hint-row" aria-hidden="true">
+          {Object.entries(personas).map(([key, p]) => (
+            <span class="hint" title={p.label}>{p.icon}</span>
+          ))}
+        </div>
+        <button type="submit" id="guessBtn">cook me</button>
+      </form>
+
+      <article class="result" id="result" hidden>
+        <p class="result-line" id="resultLine"></p>
+        <p class="reply" id="replyBody"></p>
+        <div class="result-actions">
+          <button type="button" id="seeAll">see all 4 voices</button>
+          <button type="button" id="nextVoice">try another voice for this song</button>
+          <button type="button" id="nextSong">pick a new song</button>
+        </div>
+        <details class="all-voices" id="allVoices" hidden>
+          <summary>the other 3 reviewers said:</summary>
+          <div id="allVoicesBody"></div>
+        </details>
+      </article>
+    </section>
+
+    <section class="request" aria-label="request a song">
+      <h3>request a song 🥹</h3>
+      <p>didn't see your fav 90s banger? tell the chef. (one request per minute, please be a person.)</p>
+      <form id="requestForm">
+        <input id="reqSong" name="song" type="text" placeholder="song name *" maxlength="100" required />
+        <input id="reqArtist" name="artist" type="text" placeholder="artist (optional)" maxlength="100" />
+        <input type="text" name="hp" tabindex="-1" autocomplete="off" class="hp" aria-hidden="true" />
+        <button type="submit" id="reqBtn">submit</button>
+      </form>
+      <p class="req-status" id="reqStatus" aria-live="polite"></p>
+    </section>
+  </main>
+</Layout>
+
+<style>
+  :root {
+    --paper-cooked: #fdf3e6;
+    --paper-cooked-2: #ffd9c2;
+    --ink-cooked: #2a1a14;
+    --ink-soft: rgba(42, 26, 20, 0.7);
+    --accent-1: #ff5e7e;
+    --accent-2: #ff9a3e;
+    --accent-3: #6c63ff;
+    --card-bg: #ffffff;
+    --card-shadow: 0 4px 16px rgba(42, 26, 20, 0.08);
+    --card-shadow-hover: 0 10px 30px rgba(255, 94, 126, 0.18);
+  }
+
+  html, body {
+    background: var(--paper-cooked);
+    color: var(--ink-cooked);
+    font-family: 'Quicksand', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    overflow-x: hidden;
+  }
+
+  .cooked {
+    max-width: 64rem;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 8rem;
+    background:
+      radial-gradient(ellipse at top right, #ffe9d4 0%, transparent 60%),
+      radial-gradient(ellipse at bottom left, #ffdde6 0%, transparent 55%),
+      linear-gradient(180deg, var(--paper-cooked) 0%, var(--paper-cooked-2) 100%);
+    min-height: 100vh;
+    border-radius: 0;
+  }
+
+  .back {
+    color: var(--ink-soft);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: color 200ms;
+    letter-spacing: 0.03em;
+  }
+  .back:hover { color: var(--accent-1); }
+
+  .head { margin: 4rem 0 3rem; }
+  .head h1 {
+    font-size: clamp(3rem, 9vw, 5rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    margin: 0;
+  }
+  .head h1 .emoji { display: inline-block; transform: rotate(-12deg); }
+  .head .sub {
+    margin-top: 1rem;
+    font-size: clamp(1rem, 2vw, 1.2rem);
+    color: var(--ink-soft);
+    max-width: 28rem;
+    line-height: 1.5;
+  }
+  .head .score {
+    margin-top: 1.4rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--accent-1);
+    letter-spacing: 0.02em;
+  }
+
+  .picker { margin-bottom: 4rem; }
+  .grid {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1.2rem;
+  }
+
+  .card {
+    width: 100%;
+    border: none;
+    background: var(--card-bg);
+    box-shadow: var(--card-shadow);
+    border-radius: 14px;
+    padding: 0;
+    cursor: pointer;
+    overflow: hidden;
+    text-align: left;
+    transition: transform 240ms cubic-bezier(.2,.8,.2,1), box-shadow 240ms, scale 240ms;
+    font-family: inherit;
+    color: inherit;
+  }
+  .card:hover { transform: translateY(-4px); box-shadow: var(--card-shadow-hover); }
+  .card:active { transform: translateY(-1px) scale(0.99); }
+
+  .cover {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background-size: cover;
+    background-position: center;
+    background-color: #ffd9c2;
+  }
+  .meta {
+    display: block;
+    padding: 0.85rem 1rem 1rem;
+  }
+  .title {
+    display: block;
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--ink-cooked);
+  }
+  .artist {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+  }
+
+  .play { animation: fadeIn 320ms ease-out; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  .back-to-picker {
+    background: transparent;
+    border: none;
+    color: var(--ink-soft);
+    font-family: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 0.4rem 0;
+    margin-bottom: 1.5rem;
+  }
+  .back-to-picker:hover { color: var(--accent-1); }
+
+  .player {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--card-shadow);
+  }
+  .player iframe { width: 100%; height: 100%; border: 0; }
+
+  .now-playing {
+    font-size: clamp(1.5rem, 4vw, 2rem);
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 0 0 0.4rem;
+  }
+  .now-meta {
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+    margin: 0 0 2rem;
+  }
+
+  .review {
+    background: var(--card-bg);
+    border-radius: 14px;
+    padding: 1.5rem 1.6rem;
+    box-shadow: var(--card-shadow);
+    margin-bottom: 1.6rem;
+  }
+  .review .prompt {
+    color: var(--ink-soft);
+    font-size: 0.85rem;
+    margin: 0 0 1rem;
+    letter-spacing: 0.01em;
+  }
+  .review .who {
+    background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-weight: 700;
+  }
+  .review-body {
+    font-size: 1rem;
+    line-height: 1.65;
+    white-space: pre-wrap;
+  }
+
+  .guess {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    margin-bottom: 2rem;
+  }
+  .guess label {
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+  .guess input[type="text"] {
+    font: inherit;
+    padding: 0.85rem 1rem;
+    border: 2px solid rgba(42, 26, 20, 0.1);
+    border-radius: 12px;
+    background: var(--card-bg);
+    color: inherit;
+    font-size: 1rem;
+    transition: border-color 200ms;
+  }
+  .guess input[type="text"]:focus {
+    outline: none;
+    border-color: var(--accent-1);
+  }
+  .guess .hp { display: none; }
+
+  .hint-row {
+    display: flex;
+    gap: 0.75rem;
+    font-size: 1.4rem;
+    margin-top: 0.2rem;
+    opacity: 0.55;
+  }
+
+  .guess button {
+    align-self: start;
+    background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
+    color: #fff;
+    border: none;
+    padding: 0.85rem 2rem;
+    border-radius: 999px;
+    font: inherit;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: transform 200ms, box-shadow 200ms;
+    box-shadow: 0 4px 16px rgba(255, 94, 126, 0.32);
+  }
+  .guess button:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255, 94, 126, 0.42); }
+  .guess button:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+  .result {
+    background: var(--card-bg);
+    border-radius: 14px;
+    padding: 1.5rem 1.6rem;
+    box-shadow: var(--card-shadow);
+    animation: fadeIn 320ms ease-out;
+  }
+  .result-line {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin: 0 0 0.6rem;
+  }
+  .result-line.correct { color: #2d8a4f; }
+  .result-line.wrong { color: var(--accent-1); }
+  .reply {
+    font-size: 1rem;
+    line-height: 1.6;
+    margin: 0 0 1.5rem;
+    font-style: italic;
+    color: var(--ink-cooked);
+  }
+  .result-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+  .result-actions button {
+    background: transparent;
+    border: 1.5px solid rgba(42, 26, 20, 0.2);
+    padding: 0.6rem 1.2rem;
+    border-radius: 999px;
+    font: inherit;
+    font-size: 0.88rem;
+    cursor: pointer;
+    color: inherit;
+    transition: border-color 200ms, background 200ms, color 200ms;
+  }
+  .result-actions button:hover {
+    border-color: var(--accent-1);
+    background: var(--accent-1);
+    color: #fff;
+  }
+
+  .all-voices {
+    margin-top: 1.4rem;
+    border-top: 1px dashed rgba(42, 26, 20, 0.15);
+    padding-top: 1rem;
+  }
+  .all-voices summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--accent-3);
+    font-size: 0.92rem;
+    padding: 0.4rem 0;
+    list-style: none;
+  }
+  .all-voices summary::marker { display: none; }
+  .all-voices summary::-webkit-details-marker { display: none; }
+  .voice-block {
+    margin-top: 1rem;
+    padding: 1rem 1.1rem;
+    background: rgba(255, 217, 194, 0.3);
+    border-radius: 10px;
+  }
+  .voice-block .voice-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--accent-3);
+    text-transform: lowercase;
+    letter-spacing: 0.04em;
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+  .voice-block .voice-text {
+    white-space: pre-wrap;
+    font-size: 0.93rem;
+    line-height: 1.55;
+  }
+
+  .request {
+    margin-top: 5rem;
+    padding-top: 3rem;
+    border-top: 1px dashed rgba(42, 26, 20, 0.15);
+  }
+  .request h3 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 0 0 0.4rem;
+  }
+  .request p {
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+    margin: 0 0 1.4rem;
+  }
+  .request form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+  .request input[type="text"] {
+    flex: 1;
+    min-width: 200px;
+    font: inherit;
+    padding: 0.7rem 1rem;
+    border: 2px solid rgba(42, 26, 20, 0.1);
+    border-radius: 12px;
+    background: var(--card-bg);
+    color: inherit;
+    font-size: 0.95rem;
+    transition: border-color 200ms;
+  }
+  .request input[type="text"]:focus {
+    outline: none;
+    border-color: var(--accent-3);
+  }
+  .request .hp { display: none; }
+  .request button {
+    background: var(--accent-3);
+    color: #fff;
+    border: none;
+    padding: 0.75rem 1.6rem;
+    border-radius: 999px;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 200ms;
+  }
+  .request button:hover { transform: translateY(-2px); }
+  .request button:disabled { opacity: 0.55; cursor: not-allowed; }
+  .req-status {
+    margin-top: 0.9rem;
+    font-size: 0.9rem;
+    min-height: 1.2em;
+  }
+  .req-status.ok { color: #2d8a4f; }
+  .req-status.err { color: var(--accent-1); }
+
+  @media (max-width: 600px) {
+    .cooked { padding: 2rem 1rem 6rem; }
+    .head { margin: 2rem 0 2rem; }
+    .grid { grid-template-columns: repeat(2, 1fr); gap: 0.8rem; }
+    .meta { padding: 0.7rem 0.8rem; }
+    .title { font-size: 0.95rem; }
+    .artist { font-size: 0.75rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .play, .result { animation: none; }
+    .card { transition: none; }
+  }
+</style>
+
+<script define:vars={{ songsData: songs, personasData: personas }}>
+  // localStorage score
+  const SCORE_KEY = 'cooked.score';
+  const loadScore = () => {
+    try { return JSON.parse(localStorage.getItem(SCORE_KEY)) || { correct: 0, total: 0 }; }
+    catch { return { correct: 0, total: 0 }; }
+  };
+  const saveScore = (s) => { try { localStorage.setItem(SCORE_KEY, JSON.stringify(s)); } catch {} };
+  const renderScore = () => {
+    const s = loadScore();
+    const el = document.getElementById('score');
+    if (!el) return;
+    if (s.total === 0) {
+      el.textContent = 'no rounds played yet';
+    } else {
+      el.textContent = `you've guessed ${s.correct} / ${s.total}`;
+    }
+  };
+  renderScore();
+
+  let currentSongId = null;
+  let currentPersona = null;
+  let lastSubmit = 0;
+
+  const personaKeys = Object.keys(personasData);
+  const pickRandom = (exclude) => {
+    const pool = personaKeys.filter(k => k !== exclude);
+    return pool[Math.floor(Math.random() * pool.length)];
+  };
+
+  const showSong = (songId, personaOverride) => {
+    const song = songsData.find(s => s.id === songId);
+    if (!song) return;
+    currentSongId = songId;
+    currentPersona = personaOverride || personaKeys[Math.floor(Math.random() * personaKeys.length)];
+
+    document.getElementById('picker').hidden = true;
+    document.getElementById('play').hidden = false;
+    document.getElementById('result').hidden = true;
+    document.getElementById('allVoices').hidden = true;
+    document.getElementById('allVoices').open = false;
+
+    document.getElementById('nowPlaying').textContent = song.title;
+    document.getElementById('nowMeta').textContent = `${song.artist} · ${song.year}`;
+    document.getElementById('reviewBody').textContent = song.reviews[currentPersona];
+
+    document.getElementById('ytFrame').src =
+      `https://www.youtube.com/embed/${song.youtubeId}?autoplay=1&rel=0`;
+
+    const guessInput = document.getElementById('guessInput');
+    const guessBtn = document.getElementById('guessBtn');
+    guessInput.value = '';
+    guessInput.disabled = false;
+    guessBtn.disabled = false;
+    guessBtn.textContent = 'cook me';
+    guessInput.focus();
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const goToPicker = () => {
+    document.getElementById('ytFrame').src = 'about:blank';
+    document.getElementById('play').hidden = true;
+    document.getElementById('picker').hidden = false;
+    currentSongId = null;
+    currentPersona = null;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Wire up song cards
+  document.querySelectorAll('.card').forEach(btn => {
+    btn.addEventListener('click', () => showSong(btn.dataset.songId));
+  });
+
+  document.getElementById('backToPicker').addEventListener('click', goToPicker);
+
+  // Guess form
+  document.getElementById('guessForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const now = Date.now();
+    if (now - lastSubmit < 2000) return;
+    lastSubmit = now;
+
+    const form = e.currentTarget;
+    const guess = form.elements.namedItem('guess').value.trim();
+    const hp = form.elements.namedItem('hp').value;
+    if (!guess || guess.length > 80) return;
+    if (hp) return;
+
+    const guessBtn = document.getElementById('guessBtn');
+    const guessInput = document.getElementById('guessInput');
+    guessInput.disabled = true;
+    guessBtn.disabled = true;
+    guessBtn.textContent = 'cooking…';
+
+    let result;
+    try {
+      const r = await fetch('/api/judge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          songId: currentSongId,
+          persona: currentPersona,
+          guess,
+        })
+      });
+      if (!r.ok) throw new Error('bad response');
+      result = await r.json();
+    } catch (err) {
+      // Soft fallback: simple keyword grading
+      result = localGrade(currentPersona, guess);
+    }
+
+    showResult(result);
+  });
+
+  const localGrade = (actual, guess) => {
+    const lower = guess.toLowerCase();
+    const map = {
+      foodie: ['food', 'tiktok', 'chef', 'cook', 'eat', 'foodie', 'restaurant', 'noodle', 'shiok', 'singapore'],
+      agent: ['property', 'real estate', 'agent', 'realtor', 'house', 'home', 'broker', 'listing', 'leasehold', 'freehold'],
+      guru: ['wealth', 'finance', 'guru', 'invest', 'stock', 'crypto', 'money', 'rich', 'broker', 'asset', 'portfolio'],
+      founder: ['linkedin', 'founder', 'startup', 'tech', 'hustle', 'entrepreneur', 'ceo', 'build in public', 'productivity']
+    };
+    const matched = map[actual]?.some(k => lower.includes(k));
+    return {
+      correct: !!matched,
+      reply: matched
+        ? "yeah ok you got me 🤌"
+        : `not quite — that was the ${personasData[actual].label.toLowerCase()} ${personasData[actual].icon}`,
+    };
+  };
+
+  const showResult = (result) => {
+    const score = loadScore();
+    score.total += 1;
+    if (result.correct) score.correct += 1;
+    saveScore(score);
+    renderScore();
+
+    const resultEl = document.getElementById('result');
+    const lineEl = document.getElementById('resultLine');
+    const replyEl = document.getElementById('replyBody');
+
+    if (result.correct) {
+      lineEl.textContent = `✓ nailed it. that was the ${personasData[currentPersona].label.toLowerCase()} ${personasData[currentPersona].icon}`;
+      lineEl.className = 'result-line correct';
+    } else {
+      lineEl.textContent = `✕ nope — that was the ${personasData[currentPersona].label.toLowerCase()} ${personasData[currentPersona].icon}`;
+      lineEl.className = 'result-line wrong';
+    }
+    replyEl.textContent = result.reply;
+    resultEl.hidden = false;
+    resultEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
+  // Result actions
+  document.getElementById('seeAll').addEventListener('click', () => {
+    const song = songsData.find(s => s.id === currentSongId);
+    if (!song) return;
+    const body = document.getElementById('allVoicesBody');
+    body.innerHTML = '';
+    Object.entries(song.reviews).forEach(([key, text]) => {
+      if (key === currentPersona) return;
+      const block = document.createElement('div');
+      block.className = 'voice-block';
+      const label = document.createElement('span');
+      label.className = 'voice-label';
+      label.textContent = `${personasData[key].icon} ${personasData[key].label.toLowerCase()}`;
+      block.appendChild(label);
+      const txt = document.createElement('div');
+      txt.className = 'voice-text';
+      txt.textContent = text;
+      block.appendChild(txt);
+      body.appendChild(block);
+    });
+    const details = document.getElementById('allVoices');
+    details.hidden = false;
+    details.open = true;
+    details.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  document.getElementById('nextVoice').addEventListener('click', () => {
+    showSong(currentSongId, pickRandom(currentPersona));
+  });
+  document.getElementById('nextSong').addEventListener('click', goToPicker);
+
+  // Request form
+  document.getElementById('requestForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const reqBtn = document.getElementById('reqBtn');
+    const status = document.getElementById('reqStatus');
+    const song = form.elements.namedItem('song').value.trim();
+    const artist = form.elements.namedItem('artist').value.trim();
+    const hp = form.elements.namedItem('hp').value;
+    if (!song || song.length > 100 || hp) return;
+    if (artist.length > 100) return;
+
+    reqBtn.disabled = true;
+    reqBtn.textContent = 'sending…';
+    status.className = 'req-status';
+    status.textContent = '';
+
+    try {
+      const r = await fetch('/api/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ song, artist, hp })
+      });
+      if (r.ok) {
+        status.className = 'req-status ok';
+        status.textContent = 'we got it 🤌 the chef will look';
+        form.reset();
+      } else if (r.status === 429) {
+        status.className = 'req-status err';
+        status.textContent = 'slow down — one request per minute, you bot energy';
+      } else {
+        const j = await r.json().catch(() => ({}));
+        status.className = 'req-status err';
+        status.textContent = j.error || 'something broke. try again later.';
+      }
+    } catch {
+      status.className = 'req-status err';
+      status.textContent = 'no signal. try again in a sec.';
+    } finally {
+      reqBtn.disabled = false;
+      reqBtn.textContent = 'submit';
+    }
+  });
+</script>
