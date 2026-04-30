@@ -1,0 +1,973 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import data from './data.json';
+
+const { paths, exercises, bosses } = data;
+---
+
+<Layout title="corporateladder. — Mick Tan" description="climb the ladder. workout boss-fights vs. corporate caricatures.">
+  <main class="cl">
+    <a class="back" href="/room/" data-astro-prefetch>&larr; the room</a>
+
+    <header class="head">
+      <h1>corporateladder<span class="dot">.</span></h1>
+      <p class="sub">workouts → damage. defeat the boss. climb a rung. <span class="nowrap">become a CEO. or a husk.</span></p>
+    </header>
+
+    {/* Onboarding view: no team yet, OR team in URL but user hasn't joined yet */}
+    <section class="onboard" id="onboard">
+      <div class="card-block" id="newTeamCard">
+        <h2>start a team</h2>
+        <p>create a new team and share the URL with anyone you want to climb with. solo also works (team of 1).</p>
+        <button id="createTeamBtn" class="primary-btn">+ start a team</button>
+      </div>
+
+      <div class="card-block" id="joinTeamCard" hidden>
+        <h2>you've been invited</h2>
+        <p>pick a handle and a path. you can change your path later.</p>
+        <form id="joinForm">
+          <label>
+            <span>handle</span>
+            <input id="joinHandle" name="handle" type="text" maxlength="24" required placeholder="what they call you" />
+          </label>
+          <label>
+            <span>path</span>
+            <select id="joinPath" name="path" required>
+              {paths.map(p => (
+                <option value={p.id}>{p.icon} {p.label} — {p.tagline}</option>
+              ))}
+            </select>
+          </label>
+          <button type="submit" class="primary-btn">join the team</button>
+        </form>
+        <p class="onboard-status" id="onboardStatus" aria-live="polite"></p>
+      </div>
+    </section>
+
+    {/* Game view */}
+    <section class="game" id="game" hidden>
+      <div class="game-grid">
+        {/* Boss column */}
+        <div class="boss-col">
+          <div class="boss-card">
+            <div class="boss-portrait" id="bossPortrait">👤</div>
+            <div class="boss-meta">
+              <div class="boss-tier" id="bossTier">??? Tier</div>
+              <div class="boss-name" id="bossName">???</div>
+              <div class="boss-tagline" id="bossTagline">connecting…</div>
+            </div>
+            <div class="hp-bar" aria-label="boss health">
+              <div class="hp-fill" id="hpFill"></div>
+              <div class="hp-label" id="hpLabel">— / —</div>
+            </div>
+            <div class="boss-weakness" id="bossWeakness"></div>
+            <div class="boss-quip" id="bossQuip">&nbsp;</div>
+          </div>
+
+          <details class="log-feed">
+            <summary>battle log</summary>
+            <ol id="logFeed"></ol>
+          </details>
+        </div>
+
+        {/* Right column: ladder + actions */}
+        <div class="side-col">
+          <div class="ladder-block" aria-label="the ladder">
+            <h3>the ladder</h3>
+            <ol class="ladder">
+              {bosses.slice().reverse().map((b, i) => {
+                const trueIdx = bosses.length - 1 - i;
+                return (
+                  <li class="rung" data-rung-idx={trueIdx}>
+                    <span class="rung-num">{String(trueIdx + 1).padStart(2, '0')}</span>
+                    <span class="rung-icon">{b.avatar}</span>
+                    <span class="rung-name">{b.name.toLowerCase()}</span>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+
+          <div class="party-block">
+            <h3>the party</h3>
+            <ol id="partyList"></ol>
+            <button id="copyJoinBtn" class="ghost-btn" type="button">📋 copy invite link</button>
+          </div>
+
+          <form class="log-form" id="logForm">
+            <h3>log a workout</h3>
+            <label>
+              <span>exercise</span>
+              <select id="logExercise" required>
+                {['strength', 'cardio', 'endurance', 'mobility'].map(group => (
+                  <optgroup label={group}>
+                    {exercises.filter(e => e.group === group).map(e => (
+                      <option value={e.id}>
+                        {e.icon} {e.label} ({e.damagePerUnit}/{e.unit})
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>amount</span>
+              <input id="logAmount" type="number" min="1" max="1000" step="1" required placeholder="e.g. 30" />
+            </label>
+            <button type="submit" class="primary-btn" id="logBtn">deal damage</button>
+            <p class="log-status" id="logStatus" aria-live="polite"></p>
+          </form>
+
+          <div class="path-switcher">
+            <h3>your path</h3>
+            <select id="pathSelect">
+              {paths.map(p => (
+                <option value={p.id}>{p.icon} {p.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Win state — covers everything when ladder is fully cleared */}
+      <div class="win" id="winOverlay" hidden>
+        <div class="win-card">
+          <div class="win-emoji">🪜</div>
+          <h2>you're at the top.</h2>
+          <p>the corner office is yours. the company is on fire. the board has questions.</p>
+          <p class="win-quiet">but at least you've done <span id="winDamage">0</span> dmg of pure squats and stretches getting here.</p>
+          <button class="primary-btn" id="winRestart">descend back to the lobby</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</Layout>
+
+<style>
+  /* ===== 8-bit arcade aesthetic ===== */
+  :root {
+    --cl-bg: #0a0e23;
+    --cl-bg-2: #1a1144;
+    --cl-fg: #f6e7ff;
+    --cl-dim: #a48fcc;
+    --cl-accent: #ffea3a;
+    --cl-pink: #ff4ad9;
+    --cl-cyan: #4af1ff;
+    --cl-green: #6dff6d;
+    --cl-red: #ff5e7e;
+    --cl-orange: #ffa340;
+    --cl-card: rgba(255, 255, 255, 0.04);
+    --cl-card-border: rgba(74, 241, 255, 0.25);
+  }
+
+  html, body {
+    background: var(--cl-bg);
+    color: var(--cl-fg);
+    font-family: 'Press Start 2P', system-ui, monospace;
+    overflow-x: hidden;
+  }
+
+  /* Scanlines + chunky CRT vignette */
+  .cl::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    background:
+      repeating-linear-gradient(
+        0deg,
+        rgba(255,255,255,0.025) 0px,
+        rgba(255,255,255,0.025) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+    mix-blend-mode: screen;
+  }
+  .cl::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.4) 100%);
+  }
+
+  .cl {
+    max-width: 80rem;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 6rem;
+    background:
+      radial-gradient(ellipse at top right, rgba(255, 74, 217, 0.15) 0%, transparent 55%),
+      radial-gradient(ellipse at bottom left, rgba(74, 241, 255, 0.1) 0%, transparent 55%);
+    min-height: 100vh;
+    position: relative;
+    z-index: 3;
+  }
+
+  .back {
+    color: var(--cl-dim);
+    text-decoration: none;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+  }
+  .back:hover { color: var(--cl-cyan); }
+
+  .head { margin: 3rem 0 3rem; }
+  .head h1 {
+    font-size: clamp(1.75rem, 6vw, 3.4rem);
+    line-height: 1.05;
+    margin: 0;
+    color: var(--cl-accent);
+    text-shadow:
+      3px 0 var(--cl-pink),
+      -3px 0 var(--cl-cyan);
+    letter-spacing: -0.02em;
+  }
+  .head h1 .dot { color: var(--cl-pink); }
+  .head .sub {
+    margin-top: 1.2rem;
+    font-size: 0.7rem;
+    color: var(--cl-dim);
+    line-height: 1.7;
+    max-width: 38rem;
+  }
+  .head .sub .nowrap { white-space: nowrap; }
+
+  /* ===== Onboarding ===== */
+  .onboard { display: flex; flex-direction: column; gap: 1.5rem; max-width: 38rem; }
+  .card-block {
+    background: var(--cl-card);
+    border: 2px solid var(--cl-card-border);
+    border-radius: 4px;
+    padding: 1.5rem 1.5rem 1.8rem;
+    box-shadow: 0 0 0 4px rgba(255, 234, 58, 0.08), 0 0 24px rgba(74, 241, 255, 0.1);
+  }
+  .card-block h2 {
+    font-size: 0.95rem;
+    color: var(--cl-accent);
+    margin: 0 0 0.8rem;
+    letter-spacing: 0.04em;
+  }
+  .card-block p {
+    font-size: 0.7rem;
+    color: var(--cl-dim);
+    line-height: 1.7;
+    margin: 0 0 1.4rem;
+  }
+  .card-block label {
+    display: block;
+    margin-bottom: 1rem;
+    font-size: 0.7rem;
+  }
+  .card-block label span {
+    display: block;
+    color: var(--cl-cyan);
+    margin-bottom: 0.4rem;
+    font-size: 0.65rem;
+    letter-spacing: 0.05em;
+  }
+  .card-block input[type="text"],
+  .card-block select {
+    width: 100%;
+    padding: 0.7rem;
+    background: rgba(0,0,0,0.4);
+    border: 2px solid var(--cl-card-border);
+    color: var(--cl-fg);
+    font-family: inherit;
+    font-size: 0.7rem;
+    border-radius: 2px;
+  }
+  .card-block input:focus,
+  .card-block select:focus {
+    outline: none;
+    border-color: var(--cl-accent);
+  }
+
+  .primary-btn {
+    background: var(--cl-pink);
+    color: var(--cl-bg);
+    border: 0;
+    padding: 0.8rem 1.4rem;
+    font-family: inherit;
+    font-size: 0.7rem;
+    cursor: pointer;
+    border-radius: 2px;
+    letter-spacing: 0.04em;
+    box-shadow: 4px 4px 0 var(--cl-cyan);
+    transition: transform 120ms, box-shadow 120ms;
+  }
+  .primary-btn:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--cl-cyan); }
+  .primary-btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--cl-cyan); }
+  .primary-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: 4px 4px 0 var(--cl-cyan); }
+
+  .ghost-btn {
+    background: transparent;
+    color: var(--cl-dim);
+    border: 2px solid var(--cl-card-border);
+    padding: 0.55rem 0.9rem;
+    font-family: inherit;
+    font-size: 0.6rem;
+    cursor: pointer;
+    border-radius: 2px;
+    letter-spacing: 0.04em;
+    transition: color 200ms, border-color 200ms;
+  }
+  .ghost-btn:hover { color: var(--cl-accent); border-color: var(--cl-accent); }
+
+  .onboard-status { font-size: 0.65rem; margin-top: 0.6rem; min-height: 1em; color: var(--cl-red); }
+  .onboard-status.ok { color: var(--cl-green); }
+
+  /* ===== Game grid ===== */
+  .game-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    gap: 2rem;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .game-grid { grid-template-columns: 1fr; }
+  }
+
+  .boss-col, .side-col {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  /* Boss card */
+  .boss-card {
+    background: linear-gradient(180deg, rgba(255, 74, 217, 0.12), rgba(0,0,0,0.4));
+    border: 2px solid var(--cl-pink);
+    border-radius: 4px;
+    padding: 1.6rem 1.6rem 1.8rem;
+    box-shadow:
+      inset 0 0 0 4px rgba(0,0,0,0.35),
+      0 0 32px rgba(255, 74, 217, 0.25);
+    text-align: center;
+  }
+  .boss-portrait {
+    font-size: clamp(4rem, 14vw, 7rem);
+    line-height: 1;
+    margin: 0.5rem 0 1rem;
+    filter: drop-shadow(4px 4px 0 var(--cl-pink));
+    animation: bossBob 3.4s ease-in-out infinite;
+  }
+  @keyframes bossBob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+  .boss-tier {
+    color: var(--cl-cyan);
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+  }
+  .boss-name {
+    font-size: clamp(1.1rem, 3.5vw, 1.6rem);
+    color: var(--cl-accent);
+    margin-bottom: 0.6rem;
+    letter-spacing: 0.02em;
+  }
+  .boss-tagline {
+    font-size: 0.65rem;
+    color: var(--cl-dim);
+    line-height: 1.7;
+    margin: 0 0 1.5rem;
+  }
+
+  .hp-bar {
+    position: relative;
+    height: 22px;
+    background: #1a0a1f;
+    border: 2px solid var(--cl-fg);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 0.8rem;
+  }
+  .hp-fill {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, var(--cl-red) 0%, var(--cl-orange) 50%, var(--cl-green) 100%);
+    transform-origin: left center;
+    transition: transform 700ms cubic-bezier(.25, .8, .25, 1);
+    background-size: 200% 100%;
+  }
+  .hp-fill.shake { animation: hpShake 280ms ease-out; }
+  @keyframes hpShake {
+    0%, 100% { transform: scaleX(var(--hp-pct, 1)) translateX(0); }
+    25% { transform: scaleX(var(--hp-pct, 1)) translateX(-3px); }
+    50% { transform: scaleX(var(--hp-pct, 1)) translateX(3px); }
+    75% { transform: scaleX(var(--hp-pct, 1)) translateX(-2px); }
+  }
+  .hp-label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    color: var(--cl-fg);
+    text-shadow: 1px 1px 0 #000;
+    z-index: 2;
+  }
+
+  .boss-weakness {
+    font-size: 0.55rem;
+    color: var(--cl-cyan);
+    letter-spacing: 0.06em;
+    margin-bottom: 1rem;
+    min-height: 1em;
+  }
+  .boss-quip {
+    font-size: 0.65rem;
+    color: var(--cl-fg);
+    background: rgba(0,0,0,0.4);
+    border: 1px dashed var(--cl-card-border);
+    padding: 0.7rem 0.9rem;
+    border-radius: 2px;
+    line-height: 1.6;
+    min-height: 2.5em;
+    font-style: italic;
+  }
+
+  /* Battle log */
+  .log-feed {
+    background: var(--cl-card);
+    border: 2px solid var(--cl-card-border);
+    border-radius: 4px;
+    padding: 0.8rem 1rem;
+  }
+  .log-feed summary {
+    cursor: pointer;
+    font-size: 0.65rem;
+    color: var(--cl-cyan);
+    letter-spacing: 0.05em;
+  }
+  .log-feed ol {
+    list-style: none;
+    padding: 0;
+    margin: 0.8rem 0 0;
+    max-height: 18rem;
+    overflow-y: auto;
+    font-size: 0.62rem;
+    line-height: 1.6;
+  }
+  .log-feed li {
+    padding: 0.4rem 0;
+    border-top: 1px dashed rgba(255,255,255,0.06);
+    color: var(--cl-dim);
+  }
+  .log-feed li:first-child { border-top: 0; }
+  .log-feed .who { color: var(--cl-accent); }
+  .log-feed .dmg { color: var(--cl-pink); }
+  .log-feed .killshot { color: var(--cl-green); font-weight: bold; }
+
+  /* Ladder */
+  .ladder-block, .party-block, .log-form, .path-switcher {
+    background: var(--cl-card);
+    border: 2px solid var(--cl-card-border);
+    border-radius: 4px;
+    padding: 1rem 1.1rem 1.2rem;
+  }
+  .ladder-block h3, .party-block h3, .log-form h3, .path-switcher h3 {
+    font-size: 0.7rem;
+    color: var(--cl-accent);
+    margin: 0 0 1rem;
+    letter-spacing: 0.05em;
+  }
+  .ladder {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .rung {
+    display: grid;
+    grid-template-columns: 32px 32px 1fr;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    border-left: 4px solid var(--cl-card-border);
+    font-size: 0.6rem;
+    color: var(--cl-dim);
+    transition: all 220ms;
+  }
+  .rung-num { color: var(--cl-cyan); font-size: 0.55rem; }
+  .rung-icon { font-size: 1.1rem; line-height: 1; }
+  .rung-name { letter-spacing: 0.04em; }
+  .rung.defeated {
+    border-left-color: var(--cl-green);
+    color: rgba(109, 255, 109, 0.5);
+  }
+  .rung.defeated .rung-icon { filter: grayscale(1) opacity(0.4); }
+  .rung.defeated .rung-name { text-decoration: line-through; }
+  .rung.active {
+    border-left-color: var(--cl-pink);
+    color: var(--cl-fg);
+    background: rgba(255, 74, 217, 0.08);
+    box-shadow: inset 0 0 0 1px rgba(255, 74, 217, 0.4);
+    animation: rungPulse 1.6s ease-in-out infinite;
+  }
+  @keyframes rungPulse {
+    0%, 100% { background: rgba(255, 74, 217, 0.08); }
+    50% { background: rgba(255, 74, 217, 0.18); }
+  }
+
+  /* Party */
+  .party-block ol {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 0.8rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .party-member {
+    display: grid;
+    grid-template-columns: 1.3rem 1fr auto;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.4rem 0.6rem;
+    background: rgba(0,0,0,0.25);
+    border-radius: 2px;
+    font-size: 0.62rem;
+    border-left: 3px solid var(--cl-cyan);
+  }
+  .party-member.you { border-left-color: var(--cl-accent); background: rgba(255, 234, 58, 0.06); }
+  .party-member .pm-icon { font-size: 0.9rem; line-height: 1; }
+  .party-member .pm-handle { color: var(--cl-fg); letter-spacing: 0.02em; }
+  .party-member .pm-handle .pm-tag { color: var(--cl-dim); margin-left: 0.4em; }
+  .party-member .pm-dmg { color: var(--cl-pink); font-size: 0.6rem; white-space: nowrap; }
+
+  /* Log form */
+  .log-form label {
+    display: block;
+    margin-bottom: 0.8rem;
+    font-size: 0.65rem;
+  }
+  .log-form label span {
+    display: block;
+    color: var(--cl-cyan);
+    margin-bottom: 0.3rem;
+    font-size: 0.55rem;
+    letter-spacing: 0.06em;
+  }
+  .log-form select,
+  .log-form input[type="number"] {
+    width: 100%;
+    padding: 0.6rem;
+    background: rgba(0,0,0,0.5);
+    border: 2px solid var(--cl-card-border);
+    color: var(--cl-fg);
+    font-family: inherit;
+    font-size: 0.65rem;
+    border-radius: 2px;
+  }
+  .log-form select:focus,
+  .log-form input:focus {
+    outline: none;
+    border-color: var(--cl-accent);
+  }
+  .log-form .primary-btn {
+    width: 100%;
+    margin-top: 0.4rem;
+  }
+  .log-status { font-size: 0.6rem; margin: 0.6rem 0 0; min-height: 1em; color: var(--cl-dim); }
+  .log-status.ok { color: var(--cl-green); }
+  .log-status.err { color: var(--cl-red); }
+
+  .path-switcher select {
+    width: 100%;
+    padding: 0.6rem;
+    background: rgba(0,0,0,0.5);
+    border: 2px solid var(--cl-card-border);
+    color: var(--cl-fg);
+    font-family: inherit;
+    font-size: 0.65rem;
+    border-radius: 2px;
+  }
+  .path-switcher select:focus { outline: none; border-color: var(--cl-accent); }
+
+  /* Win overlay */
+  .win {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 14, 35, 0.92);
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    backdrop-filter: blur(8px);
+  }
+  .win-card {
+    background: var(--cl-bg-2);
+    border: 2px solid var(--cl-accent);
+    box-shadow: 0 0 40px rgba(255, 234, 58, 0.4);
+    padding: 2.5rem 2rem;
+    max-width: 28rem;
+    text-align: center;
+    border-radius: 4px;
+  }
+  .win-emoji { font-size: 4rem; margin-bottom: 1rem; }
+  .win-card h2 {
+    font-size: 1.2rem;
+    color: var(--cl-accent);
+    margin: 0 0 1rem;
+    letter-spacing: 0.02em;
+  }
+  .win-card p {
+    font-size: 0.7rem;
+    color: var(--cl-fg);
+    line-height: 1.7;
+    margin: 0 0 1rem;
+  }
+  .win-card .win-quiet { color: var(--cl-dim); margin-bottom: 1.6rem; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .boss-portrait, .rung.active { animation: none; }
+    .hp-fill { transition: transform 0ms; }
+  }
+
+  /* Press Start 2P retro font — load once here, scoped to this page only via the page-level :root override above. */
+</style>
+
+{/* Load Press Start 2P just for this page */}
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+  rel="stylesheet"
+/>
+
+<script define:vars={{ DATA: data }}>
+  const PATHS = DATA.paths;
+  const EXERCISES = DATA.exercises;
+  const BOSSES = DATA.bosses;
+
+  const state = {
+    teamId: null,
+    handle: null,
+    path: null,
+    team: null,
+    pollHandle: null,
+  };
+
+  // ===== identity persistence (per-team) =====
+  const meKey = (teamId) => `cl.me.${teamId}`;
+  const saveMe = (teamId, handle, path) => {
+    try { localStorage.setItem(meKey(teamId), JSON.stringify({ handle, path })); } catch {}
+  };
+  const loadMe = (teamId) => {
+    try { return JSON.parse(localStorage.getItem(meKey(teamId)) || 'null'); } catch { return null; }
+  };
+
+  // ===== URL helpers =====
+  const getTeamId = () => new URLSearchParams(location.search).get('team');
+  const setTeamUrl = (teamId) => {
+    const u = new URL(location.href);
+    u.searchParams.set('team', teamId);
+    history.replaceState({}, '', u.toString());
+  };
+
+  // ===== API =====
+  const api = async (action, body) => {
+    const r = await fetch(`/api/ladder?action=${action}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {}),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || `request failed (${r.status})`);
+    return j;
+  };
+
+  // ===== rendering =====
+  const findBoss = (idx) => BOSSES[idx];
+  const findPath = (id) => PATHS.find(p => p.id === id);
+  const findExercise = (id) => EXERCISES.find(e => e.id === id);
+
+  const renderBoss = () => {
+    const t = state.team;
+    if (!t) return;
+    const boss = findBoss(t.currentBossIdx);
+    if (!boss) return;
+    document.getElementById('bossPortrait').textContent = boss.avatar;
+    document.getElementById('bossTier').textContent = `${boss.tier.toUpperCase()} TIER · rung ${t.currentBossIdx + 1} / ${BOSSES.length}`;
+    document.getElementById('bossName').textContent = boss.name;
+    document.getElementById('bossTagline').textContent = boss.tagline;
+
+    const pct = Math.max(0, t.currentBossHp / boss.hp);
+    const fill = document.getElementById('hpFill');
+    fill.style.setProperty('--hp-pct', String(pct));
+    fill.style.transform = `scaleX(${pct})`;
+    document.getElementById('hpLabel').textContent = `${Math.max(0, t.currentBossHp).toLocaleString()} / ${boss.hp.toLocaleString()}`;
+
+    const wEl = document.getElementById('bossWeakness');
+    if (boss.weakness) {
+      const p = findPath(boss.weakness);
+      wEl.textContent = `WEAK TO: ${p ? `${p.icon} ${p.label}` : boss.weakness} (1.5×)`;
+    } else {
+      wEl.textContent = boss.tier === 'exec' && t.currentBossIdx === BOSSES.length - 1
+        ? 'NO WEAKNESS — endgame, full team commitment'
+        : 'NO SPECIFIC WEAKNESS';
+    }
+  };
+
+  const renderLadder = () => {
+    const t = state.team;
+    if (!t) return;
+    document.querySelectorAll('.rung').forEach(li => {
+      const idx = parseInt(li.dataset.rungIdx, 10);
+      li.classList.remove('active', 'defeated');
+      if (idx < t.currentBossIdx) li.classList.add('defeated');
+      else if (idx === t.currentBossIdx) li.classList.add('active');
+    });
+  };
+
+  const renderParty = () => {
+    const t = state.team;
+    if (!t) return;
+    const ol = document.getElementById('partyList');
+    ol.innerHTML = '';
+    const sorted = [...t.members].sort((a, b) => b.totalDamage - a.totalDamage);
+    sorted.forEach(m => {
+      const li = document.createElement('li');
+      li.className = 'party-member' + (m.handle === state.handle ? ' you' : '');
+      const path = findPath(m.path);
+      li.innerHTML = `
+        <span class="pm-icon">${path ? path.icon : '👤'}</span>
+        <span class="pm-handle">${escapeHtml(m.handle)}<span class="pm-tag">${path ? path.label.toLowerCase() : ''}</span></span>
+        <span class="pm-dmg">${m.totalDamage.toLocaleString()} dmg</span>
+      `;
+      ol.appendChild(li);
+    });
+  };
+
+  const renderLog = () => {
+    const t = state.team;
+    if (!t) return;
+    const ol = document.getElementById('logFeed');
+    ol.innerHTML = '';
+    t.log.slice(0, 30).forEach(entry => {
+      const li = document.createElement('li');
+      const ex = findExercise(entry.exerciseId);
+      const exName = ex ? ex.label.toLowerCase() : entry.exerciseId;
+      const action = entry.defeated
+        ? `<span class="killshot">KO'd ${escapeHtml(entry.bossName)}</span>`
+        : `${entry.amount} ${ex ? ex.unit : ''} ${exName} → <span class="dmg">${entry.damage} dmg</span>`;
+      li.innerHTML = `<span class="who">${escapeHtml(entry.handle)}</span>: ${action}`;
+      ol.appendChild(li);
+    });
+  };
+
+  const escapeHtml = (s) => String(s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+
+  const renderAll = () => {
+    renderBoss();
+    renderLadder();
+    renderParty();
+    renderLog();
+    checkWin();
+  };
+
+  const checkWin = () => {
+    const t = state.team;
+    if (!t) return;
+    const isLastBossDead = t.currentBossIdx === BOSSES.length - 1 && t.currentBossHp <= 0;
+    if (isLastBossDead) {
+      const me = t.members.find(m => m.handle === state.handle);
+      document.getElementById('winDamage').textContent = me ? me.totalDamage.toLocaleString() : '0';
+      document.getElementById('winOverlay').hidden = false;
+    } else {
+      document.getElementById('winOverlay').hidden = true;
+    }
+  };
+
+  // ===== flow =====
+  const showOnboard = (mode) => {
+    document.getElementById('onboard').hidden = false;
+    document.getElementById('game').hidden = true;
+    document.getElementById('newTeamCard').hidden = mode !== 'new';
+    document.getElementById('joinTeamCard').hidden = mode !== 'join';
+  };
+  const showGame = () => {
+    document.getElementById('onboard').hidden = true;
+    document.getElementById('game').hidden = false;
+    renderAll();
+  };
+
+  const refresh = async () => {
+    if (!state.teamId) return;
+    try {
+      const { team } = await api('get', { teamId: state.teamId });
+      state.team = team;
+      renderAll();
+    } catch (e) {
+      console.warn('refresh failed', e);
+    }
+  };
+
+  const startPolling = () => {
+    if (state.pollHandle) clearInterval(state.pollHandle);
+    state.pollHandle = setInterval(refresh, 8000);
+  };
+
+  // ===== boot =====
+  const boot = async () => {
+    const teamId = getTeamId();
+    if (!teamId) { showOnboard('new'); return; }
+
+    state.teamId = teamId;
+    let team;
+    try {
+      ({ team } = await api('get', { teamId }));
+    } catch (e) {
+      showOnboard('new');
+      return;
+    }
+    state.team = team;
+
+    // Already joined?
+    const me = loadMe(teamId);
+    if (me && team.members.find(m => m.handle === me.handle)) {
+      state.handle = me.handle;
+      state.path = me.path;
+      document.getElementById('pathSelect').value = me.path;
+      showGame();
+      startPolling();
+      return;
+    }
+
+    showOnboard('join');
+  };
+
+  // ===== event wiring =====
+  document.getElementById('createTeamBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('createTeamBtn');
+    btn.disabled = true;
+    btn.textContent = 'creating…';
+    try {
+      const { teamId } = await api('create');
+      setTeamUrl(teamId);
+      state.teamId = teamId;
+      const { team } = await api('get', { teamId });
+      state.team = team;
+      showOnboard('join');
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = '+ start a team';
+      alert(e.message || 'failed');
+    }
+  });
+
+  document.getElementById('joinForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const handle = document.getElementById('joinHandle').value.trim();
+    const path = document.getElementById('joinPath').value;
+    const status = document.getElementById('onboardStatus');
+    status.className = 'onboard-status';
+    status.textContent = '';
+    if (!handle) { status.textContent = 'handle required'; return; }
+    try {
+      const { team } = await api('join', { teamId: state.teamId, handle, path });
+      state.team = team;
+      state.handle = handle;
+      state.path = path;
+      saveMe(state.teamId, handle, path);
+      document.getElementById('pathSelect').value = path;
+      showGame();
+      startPolling();
+    } catch (err) {
+      status.className = 'onboard-status';
+      status.textContent = err.message || 'failed to join';
+    }
+  });
+
+  document.getElementById('logForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const exerciseId = document.getElementById('logExercise').value;
+    const amount = parseInt(document.getElementById('logAmount').value, 10);
+    const status = document.getElementById('logStatus');
+    status.className = 'log-status';
+    status.textContent = '';
+    if (!Number.isFinite(amount) || amount <= 0) {
+      status.className = 'log-status err';
+      status.textContent = 'amount must be a positive number';
+      return;
+    }
+    const btn = document.getElementById('logBtn');
+    btn.disabled = true;
+    btn.textContent = 'dealing…';
+    try {
+      const { team, dealt, calc, hitLine, defeated, advancedBoss } = await api('log', {
+        teamId: state.teamId, handle: state.handle, exerciseId, amount,
+      });
+      state.team = team;
+      // Fire HP shake animation
+      const hpFill = document.getElementById('hpFill');
+      hpFill.classList.remove('shake');
+      void hpFill.offsetWidth; // restart
+      hpFill.classList.add('shake');
+      // Quip
+      document.getElementById('bossQuip').textContent = defeated
+        ? (team.log[0]?.bossName ? `${team.log[0].bossName} defeated!` : 'defeated!')
+        : (hitLine || '...');
+      const multiNote = (calc.classMult > 1 || calc.bossMult > 1)
+        ? ` (×${(calc.classMult * calc.bossMult).toFixed(2)} multiplier)`
+        : '';
+      status.className = 'log-status ok';
+      status.textContent = defeated
+        ? `${dealt} dmg — boss down! climbing…`
+        : `${dealt} dmg dealt${multiNote}`;
+      renderAll();
+      document.getElementById('logAmount').value = '';
+    } catch (err) {
+      status.className = 'log-status err';
+      status.textContent = err.message || 'log failed';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'deal damage';
+    }
+  });
+
+  document.getElementById('pathSelect').addEventListener('change', async (e) => {
+    const newPath = e.target.value;
+    if (!state.teamId || !state.handle) return;
+    try {
+      const { team } = await api('join', { teamId: state.teamId, handle: state.handle, path: newPath });
+      state.team = team;
+      state.path = newPath;
+      saveMe(state.teamId, state.handle, newPath);
+      renderAll();
+    } catch (err) {
+      console.warn('path switch failed', err);
+    }
+  });
+
+  document.getElementById('copyJoinBtn').addEventListener('click', async () => {
+    const url = location.href;
+    try {
+      await navigator.clipboard.writeText(url);
+      const b = document.getElementById('copyJoinBtn');
+      const orig = b.textContent;
+      b.textContent = 'copied ✓';
+      setTimeout(() => { b.textContent = orig; }, 1500);
+    } catch {
+      prompt('copy this URL:', url);
+    }
+  });
+
+  document.getElementById('winRestart').addEventListener('click', () => {
+    document.getElementById('winOverlay').hidden = true;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  boot();
+</script>

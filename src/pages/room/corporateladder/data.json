@@ -1,0 +1,197 @@
+{
+  "paths": [
+    {
+      "id": "Lifter",
+      "label": "Lifter",
+      "icon": "🏋️",
+      "tagline": "reps focus. push, squat, pull, burpee.",
+      "bonusType": "lift"
+    },
+    {
+      "id": "Runner",
+      "label": "Runner",
+      "icon": "🏃",
+      "tagline": "cardio focus. run, bike, swim.",
+      "bonusType": "cardio"
+    },
+    {
+      "id": "Grinder",
+      "label": "Grinder",
+      "icon": "🧗",
+      "tagline": "endurance focus. planks, HIIT, long-form.",
+      "bonusType": "endurance"
+    },
+    {
+      "id": "Flow",
+      "label": "Flow",
+      "icon": "🧘",
+      "tagline": "mobility focus. yoga, stretch, dance.",
+      "bonusType": "mobility"
+    },
+    {
+      "id": "Generalist",
+      "label": "Generalist",
+      "icon": "🤹",
+      "tagline": "jack of all trades. small bonus across the board.",
+      "bonusType": "all",
+      "flatMultiplier": 1.15
+    }
+  ],
+  "exercises": [
+    { "id": "push-up",  "label": "Push-ups",  "unit": "rep",   "damagePerUnit": 1,  "type": "lift",       "icon": "💪", "group": "strength" },
+    { "id": "squat",    "label": "Squats",    "unit": "rep",   "damagePerUnit": 1,  "type": "lift",       "icon": "🦵", "group": "strength" },
+    { "id": "pull-up",  "label": "Pull-ups",  "unit": "rep",   "damagePerUnit": 3,  "type": "lift",       "icon": "🦾", "group": "strength" },
+    { "id": "burpee",   "label": "Burpees",   "unit": "rep",   "damagePerUnit": 4,  "type": "lift",       "icon": "🤸", "group": "strength" },
+    { "id": "sit-up",   "label": "Sit-ups",   "unit": "rep",   "damagePerUnit": 1,  "type": "lift",       "icon": "🪑", "group": "strength" },
+    { "id": "lunge",    "label": "Lunges",    "unit": "rep",   "damagePerUnit": 1,  "type": "lift",       "icon": "🦿", "group": "strength" },
+
+    { "id": "run",      "label": "Run",       "unit": "min",   "damagePerUnit": 15, "type": "cardio",     "icon": "🏃", "group": "cardio" },
+    { "id": "bike",     "label": "Bike",      "unit": "min",   "damagePerUnit": 10, "type": "cardio",     "icon": "🚴", "group": "cardio" },
+    { "id": "swim",     "label": "Swim",      "unit": "min",   "damagePerUnit": 18, "type": "cardio",     "icon": "🏊", "group": "cardio" },
+    { "id": "walk",     "label": "Walk",      "unit": "min",   "damagePerUnit": 5,  "type": "cardio",     "icon": "🚶", "group": "cardio" },
+    { "id": "rope",     "label": "Jump Rope", "unit": "min",   "damagePerUnit": 12, "type": "cardio",     "icon": "🪢", "group": "cardio" },
+
+    { "id": "plank",    "label": "Plank",     "unit": "10s",   "damagePerUnit": 1,  "type": "endurance",  "icon": "🪨", "group": "endurance" },
+    { "id": "wall-sit", "label": "Wall Sit",  "unit": "10s",   "damagePerUnit": 1,  "type": "endurance",  "icon": "🧱", "group": "endurance" },
+    { "id": "hiit",     "label": "HIIT",      "unit": "min",   "damagePerUnit": 12, "type": "endurance",  "icon": "🔥", "group": "endurance" },
+
+    { "id": "yoga",     "label": "Yoga",      "unit": "min",   "damagePerUnit": 5,  "type": "mobility",   "icon": "🧘‍♀️", "group": "mobility" },
+    { "id": "stretch",  "label": "Stretch",   "unit": "min",   "damagePerUnit": 3,  "type": "mobility",   "icon": "🤸‍♀️", "group": "mobility" },
+    { "id": "dance",    "label": "Dance",     "unit": "min",   "damagePerUnit": 8,  "type": "mobility",   "icon": "💃", "group": "mobility" }
+  ],
+  "bosses": [
+    {
+      "id": "intern", "name": "The Intern", "avatar": "🧑‍💻", "tier": "grunt",
+      "hp": 300, "weakness": null,
+      "tagline": "it's day 3 and they have 47 ideas for how to fix everything.",
+      "hits": [
+        "wait — should i be taking notes on this?",
+        "is this billable to my onboarding hours?",
+        "let me circle back with my mentor real quick"
+      ],
+      "defeated": "intern slacks the whole team: 'i think i broke something. lol. help?'"
+    },
+    {
+      "id": "caesarian", "name": "The Caesarian", "avatar": "🤰", "tier": "grunt",
+      "hp": 600, "weakness": "Lifter",
+      "tagline": "would do literally anything to avoid labour.",
+      "hits": [
+        "i'm not really a 'reps person'",
+        "i scheduled a personal day during this fight",
+        "could we get an intern to do this part"
+      ],
+      "defeated": "caesarian books PTO retroactively and disappears for 2 weeks."
+    },
+    {
+      "id": "vibe-coder", "name": "The Vibe Coder", "avatar": "☁️", "tier": "grunt",
+      "hp": 1000, "weakness": "Grinder",
+      "tagline": "claims to vibe-code. cursor does it. takes the credit anyway.",
+      "hits": [
+        "hold on, my agent is generating a counterattack",
+        "tab tab tab tab tab tab",
+        "i'll have my AI respond to that move"
+      ],
+      "defeated": "vibe coder pushes a final commit. it doesn't compile. they go on vacation."
+    },
+    {
+      "id": "micromanager", "name": "The Micromanager", "avatar": "🤓", "tier": "grunt",
+      "hp": 1500, "weakness": "Runner",
+      "tagline": "tiny, bespectacled, hovers six inches off your shoulder.",
+      "hits": [
+        "are those reps in your weekly plan?",
+        "i'm going to need to see the form on that",
+        "did you log this in the spreadsheet yet?"
+      ],
+      "defeated": "schedules a post-mortem for their own defeat. invites you. mandatory."
+    },
+    {
+      "id": "email-apologist", "name": "The Email Apologist", "avatar": "📧", "tier": "middle",
+      "hp": 2500, "weakness": "Lifter",
+      "tagline": "as i mentioned in my previous email…",
+      "hits": [
+        "as i mentioned in my previous email",
+        "looping in stakeholders +chris +amy +leadership",
+        "per my last note re: this thread"
+      ],
+      "defeated": "sends one final 1,200-word recap email. nobody reads it. it haunts the inbox."
+    },
+    {
+      "id": "reply-all-reaper", "name": "The Reply-All Reaper", "avatar": "💌", "tier": "middle",
+      "hp": 4000, "weakness": "Lifter",
+      "tagline": "to: everyone-everywhere — subject: re: re: re: re: who took the leftover pizza?",
+      "hits": [
+        "+leadership for visibility",
+        "REPLY ALL: please remove me from this thread",
+        "FYI not actionable but adding the whole team"
+      ],
+      "defeated": "vanishes into a 47-person email thread. some say they're still typing."
+    },
+    {
+      "id": "bottleneck", "name": "The Bottleneck", "avatar": "🐌", "tier": "middle",
+      "hp": 6000, "weakness": "Runner",
+      "tagline": "every decision routes through them. they review on sundays.",
+      "hits": [
+        "i'll review on sunday",
+        "let me think on it over the long weekend",
+        "i'm a bit underwater this sprint"
+      ],
+      "defeated": "bottleneck approves the PR. it's a typo fix from 2024."
+    },
+    {
+      "id": "thought-leader", "name": "The Thought Leader", "avatar": "📈", "tier": "middle",
+      "hp": 8500, "weakness": "Flow",
+      "tagline": "daily linkedin essays. all about resilience. they fired everyone.",
+      "hits": [
+        "mind if i share this on linkedin?",
+        "this is actually content for my newsletter",
+        "great learning moment for the team — thread incoming 🧵"
+      ],
+      "defeated": "publishes a 14-tweet retrospective. 3 likes. all from interns."
+    },
+    {
+      "id": "hippo", "name": "The HIPPO", "avatar": "🦛", "tier": "exec",
+      "hp": 12000, "weakness": "Grinder",
+      "tagline": "Highest Paid Person's Opinion. always has the final word. always wrong.",
+      "hits": [
+        "i don't agree but i don't have data either",
+        "let's go with my gut on this one",
+        "i was VP at uber in 2014. trust me."
+      ],
+      "defeated": "HIPPO drops a 47-slide deck called 'thoughts' and quietly retires to a board seat."
+    },
+    {
+      "id": "re-orgmancer", "name": "The Re-Orgmancer", "avatar": "🌪️", "tier": "exec",
+      "hp": 16000, "weakness": "Runner",
+      "tagline": "solves all problems with another re-org. now you report to mark.",
+      "hits": [
+        "let's reshuffle the structure",
+        "you now report to mark, dotted-line to dual-track",
+        "we're forming a new pod. you're not on it. you're not not on it either."
+      ],
+      "defeated": "re-orgmancer gets re-orged. you now report to nobody. you are free."
+    },
+    {
+      "id": "pivoteer", "name": "The Pivoteer", "avatar": "🪦", "tier": "exec",
+      "hp": 22000, "weakness": "Grinder",
+      "tagline": "rebuilds the codebase. for the third time. calls it innovation.",
+      "hits": [
+        "AI changes everything — pivot",
+        "we're more of a [insert new category] company now",
+        "let's just rebuild it from scratch this time"
+      ],
+      "defeated": "pivoteer announces another pivot in their goodbye email. they're starting an agency."
+    },
+    {
+      "id": "visionary", "name": "The Visionary", "avatar": "👁️", "tier": "exec",
+      "hp": 35000, "weakness": null,
+      "tagline": "never coded. never sold. has been at every all-hands. has a vision.",
+      "hits": [
+        "i have a vision",
+        "the future is [vague]",
+        "we're not just a product. we're a movement.",
+        "have you read 'zero to one'? we should reread it."
+      ],
+      "defeated": "visionary boards a private jet to keynote a conference about how YOU defeated THEM. they call it growth."
+    }
+  ]
+}
