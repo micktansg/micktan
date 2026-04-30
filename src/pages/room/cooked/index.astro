@@ -56,22 +56,17 @@ const { songs, personas } = data;
       </article>
 
       <form class="guess" id="guessForm">
-        <label for="guessInput">your guess — who wrote this?</label>
+        <label for="guessInput">what flavour of internet personality is this giving? 👀</label>
         <input
           id="guessInput"
           name="guess"
           type="text"
           autocomplete="off"
           maxlength="80"
-          placeholder="e.g. food influencer / property agent / wealth guru / linkedin guy…"
+          placeholder="type your best guess…"
           required
         />
         <input type="text" name="hp" tabindex="-1" autocomplete="off" class="hp" aria-hidden="true" />
-        <div class="hint-row" aria-hidden="true">
-          {Object.entries(personas).map(([key, p]) => (
-            <span class="hint" title={p.label}>{p.icon}</span>
-          ))}
-        </div>
         <button type="submit" id="guessBtn">cook me</button>
       </form>
 
@@ -314,14 +309,6 @@ const { songs, personas } = data;
   }
   .guess .hp { display: none; }
 
-  .hint-row {
-    display: flex;
-    gap: 0.75rem;
-    font-size: 1.4rem;
-    margin-top: 0.2rem;
-    opacity: 0.55;
-  }
-
   .guess button {
     align-self: start;
     background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
@@ -524,6 +511,11 @@ const { songs, personas } = data;
   const showSong = (songId, personaOverride) => {
     const song = songsData.find(s => s.id === songId);
     if (!song) return;
+
+    // If we're already on this song (e.g. user clicked "try another voice"),
+    // keep the YouTube iframe untouched so playback continues without a reload.
+    const sameSong = currentSongId === songId;
+
     currentSongId = songId;
     currentPersona = personaOverride || personaKeys[Math.floor(Math.random() * personaKeys.length)];
 
@@ -537,8 +529,10 @@ const { songs, personas } = data;
     document.getElementById('nowMeta').textContent = `${song.artist} · ${song.year}`;
     document.getElementById('reviewBody').textContent = song.reviews[currentPersona];
 
-    document.getElementById('ytFrame').src =
-      `https://www.youtube.com/embed/${song.youtubeId}?autoplay=1&rel=0`;
+    if (!sameSong) {
+      document.getElementById('ytFrame').src =
+        `https://www.youtube.com/embed/${song.youtubeId}?autoplay=1&rel=0`;
+    }
 
     const guessInput = document.getElementById('guessInput');
     const guessBtn = document.getElementById('guessBtn');
