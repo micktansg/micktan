@@ -11,7 +11,7 @@ const { songs, personas } = data;
 
     <header class="head">
       <h1>cooked. <span class="emoji">🍳</span></h1>
-      <p class="sub">drop a 90s big beat banger. read the review. guess who wrote it.</p>
+      <p class="sub">drop a 90s big beat banger. read the review. <span class="nowrap">guess who wrote it.</span></p>
       <p class="score" id="score" aria-live="polite">— / —</p>
     </header>
 
@@ -56,7 +56,7 @@ const { songs, personas } = data;
       </article>
 
       <form class="guess" id="guessForm">
-        <label for="guessInput">what flavour of internet personality is this giving? 👀</label>
+        <label for="guessInput">who wrote this sh!t? 👀</label>
         <input
           id="guessInput"
           name="guess"
@@ -67,7 +67,7 @@ const { songs, personas } = data;
           required
         />
         <input type="text" name="hp" tabindex="-1" autocomplete="off" class="hp" aria-hidden="true" />
-        <button type="submit" id="guessBtn">cook me</button>
+        <button type="submit" id="guessBtn">roast me</button>
       </form>
 
       <article class="result" id="result" hidden>
@@ -75,8 +75,8 @@ const { songs, personas } = data;
         <p class="reply" id="replyBody"></p>
         <div class="result-actions">
           <button type="button" id="seeAll">see all 4 voices</button>
-          <button type="button" id="nextVoice">try another voice for this song</button>
-          <button type="button" id="nextSong">pick a new song</button>
+          <button type="button" id="nextVoice">another voice for this song</button>
+          <button type="button" id="nextSong" class="primary">next song →</button>
         </div>
         <details class="all-voices" id="allVoices" hidden>
           <summary>the other 3 reviewers said:</summary>
@@ -155,9 +155,10 @@ const { songs, personas } = data;
     margin-top: 1rem;
     font-size: clamp(1rem, 2vw, 1.2rem);
     color: var(--ink-soft);
-    max-width: 28rem;
+    max-width: 32rem;
     line-height: 1.5;
   }
+  .head .sub .nowrap { white-space: nowrap; }
   .head .score {
     margin-top: 1.4rem;
     font-size: 0.95rem;
@@ -368,6 +369,17 @@ const { songs, personas } = data;
     background: var(--accent-1);
     color: #fff;
   }
+  .result-actions button.primary {
+    background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
+    color: #fff;
+    border-color: transparent;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(255, 94, 126, 0.28);
+  }
+  .result-actions button.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(255, 94, 126, 0.36);
+  }
 
   .all-voices {
     margin-top: 1.4rem;
@@ -385,19 +397,22 @@ const { songs, personas } = data;
   .all-voices summary::marker { display: none; }
   .all-voices summary::-webkit-details-marker { display: none; }
   .voice-block {
-    margin-top: 1rem;
-    padding: 1rem 1.1rem;
-    background: rgba(255, 217, 194, 0.3);
-    border-radius: 10px;
+    margin-top: 2rem;
+    padding: 1.4rem 1.4rem 1.5rem;
+    background: rgba(255, 217, 194, 0.32);
+    border-radius: 12px;
+    border-left: 3px solid var(--accent-2);
   }
+  .voice-block:first-child { margin-top: 1.4rem; }
+  .voice-block + .voice-block { margin-top: 2rem; }
   .voice-block .voice-label {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     font-weight: 700;
     color: var(--accent-3);
     text-transform: lowercase;
     letter-spacing: 0.04em;
     display: block;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.8rem;
   }
   .voice-block .voice-text {
     white-space: pre-wrap;
@@ -539,7 +554,7 @@ const { songs, personas } = data;
     guessInput.value = '';
     guessInput.disabled = false;
     guessBtn.disabled = false;
-    guessBtn.textContent = 'cook me';
+    guessBtn.textContent = 'roast me';
     guessInput.focus();
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -578,7 +593,7 @@ const { songs, personas } = data;
     const guessInput = document.getElementById('guessInput');
     guessInput.disabled = true;
     guessBtn.disabled = true;
-    guessBtn.textContent = 'cooking…';
+    guessBtn.textContent = 'roasting…';
 
     let result;
     try {
@@ -670,7 +685,14 @@ const { songs, personas } = data;
   document.getElementById('nextVoice').addEventListener('click', () => {
     showSong(currentSongId, pickRandom(currentPersona));
   });
-  document.getElementById('nextSong').addEventListener('click', goToPicker);
+
+  // "next song" jumps directly to a random different song from the curated 8.
+  document.getElementById('nextSong').addEventListener('click', () => {
+    const others = songsData.filter(s => s.id !== currentSongId);
+    if (!others.length) { goToPicker(); return; }
+    const next = others[Math.floor(Math.random() * others.length)];
+    showSong(next.id);
+  });
 
   // Request form
   document.getElementById('requestForm').addEventListener('submit', async (e) => {

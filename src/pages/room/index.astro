@@ -2,13 +2,37 @@
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
 
-const rooms = await getCollection('rooms', ({ data, id }) => {
+const markdownRooms = await getCollection('rooms', ({ data, id }) => {
   return !data.draft && !id.startsWith('_');
 });
 
+// Interactive rooms — Astro pages under /src/pages/room/<slug>/ — aren't in
+// the content collection, so list them by hand here. Add a new entry per
+// interactive room as it ships.
+const interactiveRooms = [
+  {
+    id: 'cooked',
+    title: 'cooked.',
+    summary: 'a 90s big beat reviewer-guessing game',
+    date: new Date('2026-04-30'),
+    href: '/room/cooked/',
+  },
+];
+
+const rooms = [
+  ...markdownRooms.map(r => ({
+    id: r.id,
+    title: r.data.title,
+    summary: r.data.summary,
+    date: r.data.date ? new Date(r.data.date) : null,
+    href: `/room/${r.id}/`,
+  })),
+  ...interactiveRooms,
+];
+
 rooms.sort((a, b) => {
-  const da = a.data.date ? new Date(a.data.date).valueOf() : 0;
-  const db = b.data.date ? new Date(b.data.date).valueOf() : 0;
+  const da = a.date ? a.date.valueOf() : 0;
+  const db = b.date ? b.date.valueOf() : 0;
   return db - da;
 });
 ---
@@ -30,10 +54,10 @@ rooms.sort((a, b) => {
       <ol class="room-list">
         {rooms.map((room, i) => (
           <li class="room-item" style={`--i: ${i}`}>
-            <a href={`/room/${room.id}/`} class="room-link" data-astro-prefetch>
+            <a href={room.href} class="room-link" data-astro-prefetch>
               <span class="room-number">{String(i + 1).padStart(2, '0')}</span>
-              <span class="room-title">{room.data.title}</span>
-              {room.data.summary && <span class="room-summary">{room.data.summary}</span>}
+              <span class="room-title">{room.title}</span>
+              {room.summary && <span class="room-summary">{room.summary}</span>}
             </a>
           </li>
         ))}
