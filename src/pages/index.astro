@@ -5,7 +5,7 @@ import Layout from '../layouts/Layout.astro';
 <Layout title="Mick Tan" description="mick tan">
   <main class="surface" transition:animate="fade">
     <a href="/room/" id="door" aria-label="Observing — enter the room" data-astro-prefetch>
-      <p class="line">Observing.</p>
+      <p class="line" aria-label="Observing"><span style="--i:0">O</span><span style="--i:1">b</span><span style="--i:2">s</span><span style="--i:3">e</span><span style="--i:4">r</span><span style="--i:5">v</span><span style="--i:6">i</span><span style="--i:7">n</span><span style="--i:8">g</span><span style="--i:9">.</span></p>
     </a>
   </main>
 
@@ -97,13 +97,20 @@ import Layout from '../layouts/Layout.astro';
     letter-spacing: 0.02em;
     color: var(--ink);
     transition: letter-spacing 320ms cubic-bezier(.2,.8,.2,1);
-    /* Gentle breathing — opacity oscillates, period matches the lens hover-breathe. */
-    animation: word-breathe 5.6s ease-in-out infinite;
   }
 
-  @keyframes word-breathe {
-    0%, 100% { opacity: 0.78; }
-    50%      { opacity: 1; }
+  /* Per-letter ripple: each span shares the same 5.6s breath cycle but is
+     phase-staggered by --i, so the wave visibly travels across the word.
+     Each letter dims, brightens, and bobs up ~1.6px at peak. */
+  .line span {
+    display: inline-block;
+    animation: letter-ripple 5.6s ease-in-out infinite;
+    animation-delay: calc(var(--i, 0) * 90ms);
+  }
+
+  @keyframes letter-ripple {
+    0%, 100% { opacity: 0.55; transform: translateY(0); }
+    50%      { opacity: 1;    transform: translateY(-1.6px); }
   }
 
   /* Exit veil: cream-white overlay that fades in on click, matching /room/'s bg.
@@ -250,7 +257,7 @@ import Layout from '../layouts/Layout.astro';
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .line { animation: none; opacity: 1; }
+    .line span { animation: none; opacity: 1; transform: none; }
     .warm-layer { transition: none !important; filter: none !important; }
     .warm-bg::after { animation: none; }
     #exit-veil { transition: opacity 200ms linear; }
