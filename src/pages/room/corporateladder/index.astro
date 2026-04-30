@@ -10,6 +10,10 @@ const { paths, exercises, bosses } = data;
     <a class="back" href="/room/" data-astro-prefetch>&larr; the room</a>
 
     <header class="head">
+      <button class="bgm-toggle" id="bgmToggle" type="button" aria-label="toggle background music">
+        <span id="bgmIcon">🔇</span>
+        <span class="bgm-label" id="bgmLabel">music off</span>
+      </button>
       <h1>corporateladder<span class="dot">.</span></h1>
       <p class="sub">workouts → damage. defeat the boss. climb a rung. <span class="nowrap">become a CEO. or a husk.</span></p>
     </header>
@@ -63,6 +67,12 @@ const { paths, exercises, bosses } = data;
             <div class="boss-weakness" id="bossWeakness"></div>
             <div class="boss-quip" id="bossQuip">&nbsp;</div>
           </div>
+
+          <details class="strategy" open>
+            <summary>📋 recommended weekly workout</summary>
+            <p class="strategy-note" id="strategyNote">a daily share to clear this boss in 7 days, by class.</p>
+            <ol class="strategy-list" id="strategyList"></ol>
+          </details>
 
           <details class="log-feed">
             <summary>battle log</summary>
@@ -125,6 +135,9 @@ const { paths, exercises, bosses } = data;
                 <option value={p.id}>{p.icon} {p.label}</option>
               ))}
             </select>
+            <button id="stepOutBtn" type="button" class="ghost-btn" style="margin-top: 0.7rem; width: 100%;">
+              💤 step out (boss HP shrinks to your share)
+            </button>
           </div>
         </div>
       </div>
@@ -213,7 +226,28 @@ const { paths, exercises, bosses } = data;
   }
   .back:hover { color: var(--cl-cyan); }
 
-  .head { margin: 3rem 0 3rem; }
+  .head { margin: 3rem 0 3rem; position: relative; }
+  .bgm-toggle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: rgba(0,0,0,0.5);
+    border: 2px solid var(--cl-card-border);
+    color: var(--cl-fg);
+    padding: 0.55rem 0.9rem;
+    font-family: inherit;
+    font-size: 0.6rem;
+    cursor: pointer;
+    border-radius: 2px;
+    letter-spacing: 0.04em;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: border-color 200ms, color 200ms;
+  }
+  .bgm-toggle:hover { border-color: var(--cl-accent); color: var(--cl-accent); }
+  .bgm-toggle.on { border-color: var(--cl-green); color: var(--cl-green); }
+  .bgm-label { font-size: 0.55rem; }
   .head h1 {
     font-size: clamp(1.75rem, 6vw, 3.4rem);
     line-height: 1.05;
@@ -431,6 +465,61 @@ const { paths, exercises, bosses } = data;
     min-height: 2.5em;
     font-style: italic;
   }
+
+  /* Strategy / Recommended workout */
+  .strategy {
+    background: var(--cl-card);
+    border: 2px solid var(--cl-card-border);
+    border-radius: 4px;
+    padding: 0.9rem 1.1rem 1rem;
+  }
+  .strategy summary {
+    cursor: pointer;
+    font-size: 0.7rem;
+    color: var(--cl-accent);
+    letter-spacing: 0.04em;
+    list-style: none;
+  }
+  .strategy summary::-webkit-details-marker { display: none; }
+  .strategy[open] summary { margin-bottom: 0.7rem; }
+  .strategy-note {
+    font-size: 0.6rem;
+    color: var(--cl-dim);
+    margin: 0 0 0.8rem;
+    line-height: 1.6;
+  }
+  .strategy-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .strategy-row {
+    display: grid;
+    grid-template-columns: 24px 1fr auto;
+    gap: 0.7rem;
+    align-items: center;
+    padding: 0.5rem 0.7rem;
+    background: rgba(0,0,0,0.25);
+    border-left: 3px solid var(--cl-cyan);
+    border-radius: 2px;
+    font-size: 0.62rem;
+    line-height: 1.4;
+  }
+  .strategy-row.weak { border-left-color: var(--cl-pink); background: rgba(255, 74, 217, 0.08); }
+  .strategy-row .sr-icon { font-size: 1rem; line-height: 1; }
+  .strategy-row .sr-class { color: var(--cl-fg); font-size: 0.6rem; }
+  .strategy-row.weak .sr-class { color: var(--cl-pink); }
+  .strategy-row .sr-rec { color: var(--cl-dim); margin-top: 0.15rem; font-size: 0.58rem; }
+  .strategy-row .sr-dmg { color: var(--cl-green); font-size: 0.58rem; white-space: nowrap; }
+
+  .party-member.inactive {
+    opacity: 0.45;
+    border-left-color: var(--cl-dim);
+  }
+  .party-member.inactive .pm-tag::after { content: ' · 💤 stepped out'; color: var(--cl-orange); }
 
   /* Battle log */
   .log-feed {
@@ -729,6 +818,8 @@ const { paths, exercises, bosses } = data;
     });
   };
 
+  const activeMemberCount = (t) => t.members.filter(m => m.active !== false).length || 1;
+
   const renderParty = () => {
     const t = state.team;
     if (!t) return;
@@ -737,7 +828,9 @@ const { paths, exercises, bosses } = data;
     const sorted = [...t.members].sort((a, b) => b.totalDamage - a.totalDamage);
     sorted.forEach(m => {
       const li = document.createElement('li');
-      li.className = 'party-member' + (m.handle === state.handle ? ' you' : '');
+      const isYou = m.handle === state.handle;
+      const isInactive = m.active === false;
+      li.className = 'party-member' + (isYou ? ' you' : '') + (isInactive ? ' inactive' : '');
       const path = findPath(m.path);
       li.innerHTML = `
         <span class="pm-icon">${path ? path.icon : '👤'}</span>
@@ -746,6 +839,71 @@ const { paths, exercises, bosses } = data;
       `;
       ol.appendChild(li);
     });
+    // Update step-out button label
+    const me = t.members.find(m => m.handle === state.handle);
+    const btn = document.getElementById('stepOutBtn');
+    if (me && btn) {
+      if (me.active === false) {
+        btn.textContent = '↩️ step back in (boss HP scales up)';
+      } else {
+        btn.textContent = '💤 step out (boss HP shrinks)';
+      }
+    }
+  };
+
+  // Recommended workouts: per class, propose a daily routine to clear in 7 days.
+  const renderStrategy = () => {
+    const t = state.team;
+    if (!t) return;
+    const boss = findBoss(t.currentBossIdx);
+    if (!boss) return;
+    const N = activeMemberCount(t);
+    const weeklyShare = boss.hp; // solo per-week share = full solo HP per person
+    const dailyShare = Math.ceil(weeklyShare / 7);
+
+    const list = document.getElementById('strategyList');
+    list.innerHTML = '';
+
+    // Pick a primary recommended exercise per class — one matching the class's bonusType,
+    // chosen to be the most "convenient" common exercise.
+    const primary = {
+      Lifter:    EXERCISES.find(e => e.id === 'push-up'),
+      Runner:    EXERCISES.find(e => e.id === 'run'),
+      Grinder:   EXERCISES.find(e => e.id === 'hiit'),
+      Flow:      EXERCISES.find(e => e.id === 'yoga'),
+      Generalist: EXERCISES.find(e => e.id === 'walk'),
+    };
+
+    PATHS.forEach(p => {
+      const ex = primary[p.id];
+      if (!ex) return;
+      // Effective damage per unit:
+      let mult = 1;
+      if (p.bonusType === 'all' && p.flatMultiplier) mult = p.flatMultiplier;
+      else if (p.bonusType === ex.type) mult = 1.5;
+      if (boss.weakness === p.id) mult *= 1.5;
+      const dmgPerUnit = ex.damagePerUnit * mult;
+      const unitsNeeded = Math.max(1, Math.ceil(dailyShare / dmgPerUnit));
+      const totalDmg = Math.round(unitsNeeded * dmgPerUnit);
+      const isWeak = boss.weakness === p.id;
+      const li = document.createElement('li');
+      li.className = 'strategy-row' + (isWeak ? ' weak' : '');
+      li.innerHTML = `
+        <span class="sr-icon">${p.icon}</span>
+        <span>
+          <span class="sr-class">${p.label}${isWeak ? ' ⭐ (boss weakness)' : ''}</span>
+          <div class="sr-rec">${unitsNeeded} ${ex.unit}${unitsNeeded > 1 ? 's' : ''} of ${ex.label.toLowerCase()} / day</div>
+        </span>
+        <span class="sr-dmg">${totalDmg.toLocaleString()} dmg/day</span>
+      `;
+      list.appendChild(li);
+    });
+
+    // Note about team scaling
+    const note = document.getElementById('strategyNote');
+    note.textContent = N === 1
+      ? 'solo player. these numbers clear the boss in ~7 days.'
+      : `team of ${N} active. each member's daily share — clear in ~7 days.`;
   };
 
   const renderLog = () => {
@@ -774,6 +932,7 @@ const { paths, exercises, bosses } = data;
     renderLadder();
     renderParty();
     renderLog();
+    renderStrategy();
     checkWin();
   };
 
@@ -968,6 +1127,145 @@ const { paths, exercises, bosses } = data;
     document.getElementById('winOverlay').hidden = true;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
+
+  // Step out / step back in toggle.
+  document.getElementById('stepOutBtn').addEventListener('click', async () => {
+    if (!state.handle) return;
+    const me = state.team?.members.find(m => m.handle === state.handle);
+    const action = me?.active === false ? 'step_in' : 'step_out';
+    const btn = document.getElementById('stepOutBtn');
+    btn.disabled = true;
+    try {
+      const { team } = await api(action, { teamId: state.teamId, handle: state.handle });
+      state.team = team;
+      renderAll();
+    } catch (e) {
+      console.warn('step toggle failed', e);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // ===== 8-bit BGM (Web Audio, square+triangle, looping cheerful melody) =====
+  const bgm = (() => {
+    let ctx = null;
+    let masterGain = null;
+    let timer = null;
+    let started = false;
+    let stepIdx = 0;
+
+    // 4-bar cheerful loop in C major (I-IV-V-I), 16 sixteenth-note steps per bar.
+    // Lead pattern (frequencies in Hz, 0 = rest):
+    const C5=523.25, D5=587.33, E5=659.25, F5=698.46, G5=783.99, A5=880.00, B5=987.77, C6=1046.50, D6=1174.66;
+    const lead = [
+      // bar 1: C major arp + neighbour
+      C5, E5, G5, C6,  G5, E5, C5, E5,  G5, E5, C5, E5,  G5, A5, G5, E5,
+      // bar 2: F major
+      F5, A5, C6, F5,  C6, A5, F5, A5,  G5, F5, E5, F5,  A5, G5, F5, D5,
+      // bar 3: G major
+      G5, B5, D6, G5,  D6, B5, G5, B5,  A5, G5, F5, E5,  D5, E5, F5, G5,
+      // bar 4: back to C
+      C5, E5, G5, C6,  G5, E5, C5, E5,  G5, E5, D5, E5,  G5, E5, C5, 0
+    ];
+    // Bass: root notes per bar
+    const C3=130.81, F3=174.61, G3=196.00;
+    const bass = [
+      C3, 0, C3, 0,  C3, 0, C3, 0,  C3, 0, C3, 0,  C3, 0, C3, 0,
+      F3, 0, F3, 0,  F3, 0, F3, 0,  F3, 0, F3, 0,  F3, 0, F3, 0,
+      G3, 0, G3, 0,  G3, 0, G3, 0,  G3, 0, G3, 0,  G3, 0, G3, 0,
+      C3, 0, C3, 0,  C3, 0, C3, 0,  C3, 0, C3, 0,  C3, 0, C3, 0,
+    ];
+
+    const STEP_MS = 130; // ~115 BPM
+
+    const playNote = (freq, type, gain, durMs) => {
+      if (!freq || !ctx || !masterGain) return;
+      const osc = ctx.createOscillator();
+      osc.type = type;
+      osc.frequency.value = freq;
+      const g = ctx.createGain();
+      const now = ctx.currentTime;
+      g.gain.setValueAtTime(gain, now);
+      // Chiptune-y AR envelope: short release
+      g.gain.linearRampToValueAtTime(0, now + durMs / 1000 * 0.95);
+      osc.connect(g).connect(masterGain);
+      osc.start(now);
+      osc.stop(now + durMs / 1000);
+    };
+
+    const tick = () => {
+      const leadFreq = lead[stepIdx % lead.length];
+      const bassFreq = bass[stepIdx % bass.length];
+      playNote(leadFreq, 'square', 0.08, STEP_MS);
+      playNote(bassFreq, 'triangle', 0.18, STEP_MS * 1.4);
+      stepIdx = (stepIdx + 1) % lead.length;
+    };
+
+    const start = () => {
+      if (started) return;
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      masterGain = ctx.createGain();
+      masterGain.gain.value = 0.18;
+      masterGain.connect(ctx.destination);
+      started = true;
+      stepIdx = 0;
+      tick();
+      timer = setInterval(tick, STEP_MS);
+    };
+
+    const stop = () => {
+      if (!started) return;
+      clearInterval(timer);
+      timer = null;
+      try { ctx.close(); } catch {}
+      ctx = null;
+      masterGain = null;
+      started = false;
+    };
+
+    const isOn = () => started;
+
+    return { start, stop, isOn };
+  })();
+
+  // BGM toggle wiring
+  const bgmBtn = document.getElementById('bgmToggle');
+  const bgmIcon = document.getElementById('bgmIcon');
+  const bgmLabel = document.getElementById('bgmLabel');
+
+  // Restore preference
+  const BGM_KEY = 'cl.bgm';
+  const setBgmUI = (on) => {
+    bgmBtn.classList.toggle('on', on);
+    bgmIcon.textContent = on ? '🔊' : '🔇';
+    bgmLabel.textContent = on ? 'music on' : 'music off';
+  };
+
+  bgmBtn.addEventListener('click', () => {
+    if (bgm.isOn()) {
+      bgm.stop();
+      try { localStorage.setItem(BGM_KEY, '0'); } catch {}
+      setBgmUI(false);
+    } else {
+      bgm.start();
+      try { localStorage.setItem(BGM_KEY, '1'); } catch {}
+      setBgmUI(true);
+    }
+  });
+
+  // Auto-pause when tab is hidden, resume on focus if previously on.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && bgm.isOn()) {
+      bgm.stop();
+      // mark as "want on" so we resume; UI keeps 'on' state
+    } else if (!document.hidden && bgmBtn.classList.contains('on') && !bgm.isOn()) {
+      bgm.start();
+    }
+  });
+
+  // Initial UI: read pref but don't auto-start (browsers block autoplay).
+  // The user must click once to begin.
+  setBgmUI(false);
 
   boot();
 </script>

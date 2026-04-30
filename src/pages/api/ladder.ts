@@ -15,7 +15,7 @@ import data from '../room/corporateladder/data.json';
 
 export const prerender = false;
 
-type Member = { handle: string; path: string; totalDamage: number; joinedAt: number };
+type Member = { handle: string; path: string; totalDamage: number; joinedAt: number; active?: boolean };
 type LogEntry = {
   ts: number;
   handle: string;
@@ -108,8 +108,14 @@ const calcDamage = (
   return { damage, baseDamage: base, classMult, bossMult };
 };
 
+// Solo baselines in data.bosses[].hp scale by active team size at fight start.
+// Mid-fight team-size changes scale REMAINING hp proportionally.
+const activeCount = (team: Team): number =>
+  team.members.filter(m => m.active !== false).length || 1;
+
 const newTeam = (): Team => {
   const id = newId();
+  // Boss starts scaled to 1 (no members yet); first member's join scales it up.
   const firstBossHp = (data.bosses as any[])[0].hp;
   return {
     id,
@@ -119,6 +125,21 @@ const newTeam = (): Team => {
     members: [],
     log: [],
   };
+};
+
+// Scale current boss HP when active team size changes from oldN to newN.
+// Preserves "damage already dealt" by only rescaling the REMAINING share.
+const rescaleHpForSizeChange = (team: Team, oldN: number, newN: number) => {
+  if (oldN <= 0 || newN <= 0 || oldN === newN) return;
+  const boss = (data.bosses as any[])[team.currentBossIdx];
+  if (!boss) return;
+  const baseHp = boss.hp;
+  // Total HP for this fight = baseHp × max(N, 1) at the time of scaling.
+  // Damage already dealt = (baseHp × oldN) - currentHp.
+  // After scaling: new currentHp = (baseHp × newN) - dmgDealt … but only if positive.
+  // Simpler: scale REMAINING portion by newN/oldN. (Equivalent.)
+  const ratio = newN / oldN;
+  team.currentBossHp = Math.max(0, Math.round(team.currentBossHp * ratio));
 };
 
 const json = (obj: any, status = 200) =>
@@ -139,11 +160,19 @@ export const POST: APIRoute = async ({ request, url }) => {
     return json({ teamId: t.id, team: t });
   }
 
+  // Backfill: any legacy member without `active` is treated as active.
+  const ensureActiveFlag = (team: Team) => {
+    for (const m of team.members) {
+      if (m.active === undefined) m.active = true;
+    }
+  };
+
   // All other actions need a teamId
   const teamId = String(body?.teamId || '').trim();
   if (!teamId || teamId.length > 32) return json({ error: 'invalid teamId' }, 400);
   const team = await loadTeam(teamId);
   if (!team) return json({ error: 'team not found' }, 404);
+  ensureActiveFlag(team);
 
   // GET
   if (action === 'get') {
@@ -157,13 +186,36 @@ export const POST: APIRoute = async ({ request, url }) => {
     if (!handle || handle.length < 1) return json({ error: 'handle required' }, 400);
     if (!validPath(path)) return json({ error: 'invalid path' }, 400);
     const existing = team.members.find((m) => m.handle === handle);
+    const oldN = activeCount(team);
     if (existing) {
-      // Re-joining: allow path change.
+      // Re-joining: allow path change. Reactivate if previously stepped out.
       existing.path = path;
+      existing.active = true;
     } else {
       if (team.members.length >= 12) return json({ error: 'team full (12)' }, 400);
-      team.members.push({ handle, path, totalDamage: 0, joinedAt: Date.now() });
+      team.members.push({ handle, path, totalDamage: 0, joinedAt: Date.now(), active: true });
     }
+    const newN = activeCount(team);
+    if (oldN === 0 && newN > 0) {
+      // First active member: HP scales to newN from a previous "0" → use baseHp × newN.
+      const boss = (data.bosses as any[])[team.currentBossIdx];
+      if (boss) team.currentBossHp = boss.hp * newN;
+    } else {
+      rescaleHpForSizeChange(team, oldN, newN);
+    }
+    await saveTeam(team);
+    return json({ team });
+  }
+
+  // STEP_OUT — soft pause. Toggle active flag; rescale HP.
+  if (action === 'step_out' || action === 'step_in') {
+    const handle = sanitizeHandle(String(body?.handle || ''));
+    const member = team.members.find(m => m.handle === handle);
+    if (!member) return json({ error: 'not a team member' }, 400);
+    const oldN = activeCount(team);
+    member.active = action === 'step_in';
+    const newN = activeCount(team);
+    rescaleHpForSizeChange(team, oldN, newN);
     await saveTeam(team);
     return json({ team });
   }
@@ -177,6 +229,7 @@ export const POST: APIRoute = async ({ request, url }) => {
     const amount = Math.min(Math.floor(amountRaw), 1000);
     const member = team.members.find((m) => m.handle === handle);
     if (!member) return json({ error: 'not a team member' }, 400);
+    if (member.active === false) return json({ error: 'you are stepped out — step back in to log' }, 400);
     const ex = (data.exercises as any[]).find((e) => e.id === exerciseId);
     if (!ex) return json({ error: 'unknown exercise' }, 400);
     const boss = (data.bosses as any[])[team.currentBossIdx];
@@ -193,8 +246,9 @@ export const POST: APIRoute = async ({ request, url }) => {
       // auto-advance to next boss if any
       if (team.currentBossIdx + 1 < (data.bosses as any[]).length) {
         team.currentBossIdx += 1;
-        team.currentBossHp = (data.bosses as any[])[team.currentBossIdx].hp;
-        advancedBoss = (data.bosses as any[])[team.currentBossIdx];
+        const nextBoss = (data.bosses as any[])[team.currentBossIdx];
+        team.currentBossHp = nextBoss.hp * Math.max(1, activeCount(team));
+        advancedBoss = nextBoss;
       } else {
         team.currentBossHp = 0;
       }
@@ -220,7 +274,7 @@ export const POST: APIRoute = async ({ request, url }) => {
     if (team.currentBossHp > 0) return json({ error: 'current boss still alive' }, 400);
     if (team.currentBossIdx + 1 >= (data.bosses as any[]).length) return json({ error: 'top of ladder' }, 400);
     team.currentBossIdx += 1;
-    team.currentBossHp = (data.bosses as any[])[team.currentBossIdx].hp;
+    team.currentBossHp = (data.bosses as any[])[team.currentBossIdx].hp * Math.max(1, activeCount(team));
     await saveTeam(team);
     return json({ team });
   }

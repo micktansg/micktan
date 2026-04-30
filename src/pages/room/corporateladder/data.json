@@ -41,7 +41,7 @@
     { "id": "push-up",  "label": "Push-ups",  "unit": "rep",   "damagePerUnit": 1,  "type": "lift",       "icon": "💪", "group": "strength" },
     { "id": "squat",    "label": "Squats",    "unit": "rep",   "damagePerUnit": 1,  "type": "lift",       "icon": "🦵", "group": "strength" },
     { "id": "pull-up",  "label": "Pull-ups",  "unit": "rep",   "damagePerUnit": 3,  "type": "lift",       "icon": "🦾", "group": "strength" },
-    { "id": "burpee",   "label": "Burpees",   "unit": "rep",   "damagePerUnit": 4,  "type": "lift",       "icon": "🤸", "group": "strength" },
+    { "id": "burpee",   "label": "Burpees",   "unit": "rep",   "damagePerUnit": 3,  "type": "lift",       "icon": "🤸", "group": "strength" },
     { "id": "sit-up",   "label": "Sit-ups",   "unit": "rep",   "damagePerUnit": 1,  "type": "lift",       "icon": "🪑", "group": "strength" },
     { "id": "lunge",    "label": "Lunges",    "unit": "rep",   "damagePerUnit": 1,  "type": "lift",       "icon": "🦿", "group": "strength" },
 
@@ -49,20 +49,20 @@
     { "id": "bike",     "label": "Bike",      "unit": "min",   "damagePerUnit": 10, "type": "cardio",     "icon": "🚴", "group": "cardio" },
     { "id": "swim",     "label": "Swim",      "unit": "min",   "damagePerUnit": 18, "type": "cardio",     "icon": "🏊", "group": "cardio" },
     { "id": "walk",     "label": "Walk",      "unit": "min",   "damagePerUnit": 5,  "type": "cardio",     "icon": "🚶", "group": "cardio" },
-    { "id": "rope",     "label": "Jump Rope", "unit": "min",   "damagePerUnit": 12, "type": "cardio",     "icon": "🪢", "group": "cardio" },
+    { "id": "rope",     "label": "Jump Rope", "unit": "min",   "damagePerUnit": 18, "type": "cardio",     "icon": "🪢", "group": "cardio" },
 
     { "id": "plank",    "label": "Plank",     "unit": "10s",   "damagePerUnit": 1,  "type": "endurance",  "icon": "🪨", "group": "endurance" },
     { "id": "wall-sit", "label": "Wall Sit",  "unit": "10s",   "damagePerUnit": 1,  "type": "endurance",  "icon": "🧱", "group": "endurance" },
-    { "id": "hiit",     "label": "HIIT",      "unit": "min",   "damagePerUnit": 12, "type": "endurance",  "icon": "🔥", "group": "endurance" },
+    { "id": "hiit",     "label": "HIIT",      "unit": "min",   "damagePerUnit": 18, "type": "endurance",  "icon": "🔥", "group": "endurance" },
 
     { "id": "yoga",     "label": "Yoga",      "unit": "min",   "damagePerUnit": 5,  "type": "mobility",   "icon": "🧘‍♀️", "group": "mobility" },
     { "id": "stretch",  "label": "Stretch",   "unit": "min",   "damagePerUnit": 3,  "type": "mobility",   "icon": "🤸‍♀️", "group": "mobility" },
-    { "id": "dance",    "label": "Dance",     "unit": "min",   "damagePerUnit": 8,  "type": "mobility",   "icon": "💃", "group": "mobility" }
+    { "id": "dance",    "label": "Dance",     "unit": "min",   "damagePerUnit": 10, "type": "mobility",   "icon": "💃", "group": "mobility" }
   ],
   "bosses": [
     {
       "id": "intern", "name": "The Intern", "avatar": "🧑‍💻", "tier": "grunt",
-      "hp": 300, "weakness": null,
+      "hp": 1000, "weakness": null,
       "tagline": "it's day 3 and they have 47 ideas for how to fix everything.",
       "hits": [
         "wait — should i be taking notes on this?",
@@ -73,7 +73,7 @@
     },
     {
       "id": "caesarian", "name": "The Caesarian", "avatar": "🤰", "tier": "grunt",
-      "hp": 600, "weakness": "Lifter",
+      "hp": 1200, "weakness": "Lifter",
       "tagline": "would do literally anything to avoid labour.",
       "hits": [
         "i'm not really a 'reps person'",
@@ -84,7 +84,7 @@
     },
     {
       "id": "vibe-coder", "name": "The Vibe Coder", "avatar": "☁️", "tier": "grunt",
-      "hp": 1000, "weakness": "Grinder",
+      "hp": 1500, "weakness": "Grinder",
       "tagline": "claims to vibe-code. cursor does it. takes the credit anyway.",
       "hits": [
         "hold on, my agent is generating a counterattack",
@@ -95,7 +95,7 @@
     },
     {
       "id": "micromanager", "name": "The Micromanager", "avatar": "🤓", "tier": "grunt",
-      "hp": 1500, "weakness": "Runner",
+      "hp": 1800, "weakness": "Runner",
       "tagline": "tiny, bespectacled, hovers six inches off your shoulder.",
       "hits": [
         "are those reps in your weekly plan?",
@@ -107,6 +107,7 @@
     {
       "id": "email-apologist", "name": "The Email Apologist", "avatar": "📧", "tier": "middle",
       "hp": 2500, "weakness": "Lifter",
+      "_note": "values below are SOLO baseline; actual HP at fight = hp × active_team_size",
       "tagline": "as i mentioned in my previous email…",
       "hits": [
         "as i mentioned in my previous email",
@@ -117,7 +118,7 @@
     },
     {
       "id": "reply-all-reaper", "name": "The Reply-All Reaper", "avatar": "💌", "tier": "middle",
-      "hp": 4000, "weakness": "Lifter",
+      "hp": 3000, "weakness": "Lifter",
       "tagline": "to: everyone-everywhere — subject: re: re: re: re: who took the leftover pizza?",
       "hits": [
         "+leadership for visibility",
@@ -128,7 +129,7 @@
     },
     {
       "id": "bottleneck", "name": "The Bottleneck", "avatar": "🐌", "tier": "middle",
-      "hp": 6000, "weakness": "Runner",
+      "hp": 3500, "weakness": "Runner",
       "tagline": "every decision routes through them. they review on sundays.",
       "hits": [
         "i'll review on sunday",
@@ -139,7 +140,7 @@
     },
     {
       "id": "thought-leader", "name": "The Thought Leader", "avatar": "📈", "tier": "middle",
-      "hp": 8500, "weakness": "Flow",
+      "hp": 4000, "weakness": "Flow",
       "tagline": "daily linkedin essays. all about resilience. they fired everyone.",
       "hits": [
         "mind if i share this on linkedin?",
@@ -150,7 +151,7 @@
     },
     {
       "id": "hippo", "name": "The HIPPO", "avatar": "🦛", "tier": "exec",
-      "hp": 12000, "weakness": "Grinder",
+      "hp": 5000, "weakness": "Grinder",
       "tagline": "Highest Paid Person's Opinion. always has the final word. always wrong.",
       "hits": [
         "i don't agree but i don't have data either",
@@ -161,7 +162,7 @@
     },
     {
       "id": "re-orgmancer", "name": "The Re-Orgmancer", "avatar": "🌪️", "tier": "exec",
-      "hp": 16000, "weakness": "Runner",
+      "hp": 5500, "weakness": "Runner",
       "tagline": "solves all problems with another re-org. now you report to mark.",
       "hits": [
         "let's reshuffle the structure",
@@ -172,7 +173,7 @@
     },
     {
       "id": "pivoteer", "name": "The Pivoteer", "avatar": "🪦", "tier": "exec",
-      "hp": 22000, "weakness": "Grinder",
+      "hp": 6500, "weakness": "Grinder",
       "tagline": "rebuilds the codebase. for the third time. calls it innovation.",
       "hits": [
         "AI changes everything — pivot",
@@ -183,7 +184,7 @@
     },
     {
       "id": "visionary", "name": "The Visionary", "avatar": "👁️", "tier": "exec",
-      "hp": 35000, "weakness": null,
+      "hp": 8000, "weakness": null,
       "tagline": "never coded. never sold. has been at every all-hands. has a vision.",
       "hits": [
         "i have a vision",
