@@ -22,6 +22,10 @@ import Layout from '../layouts/Layout.astro';
     <a href="https://www.linkedin.com/in/micktanpk/" target="_blank" rel="noopener">LinkedIn</a>
   </footer>
 
+  {/* Exit veil — fades cream-white over the screen before navigation, so the
+      transition into /room/'s cream page is gradual instead of a hard contrast flip. */}
+  <div id="exit-veil" aria-hidden="true"></div>
+
   {/* Animated SVG turbulence filter that displaces the warm-layer's edge,
        producing a flickering / shimmering boundary instead of a sterile circle. */}
   <svg width="0" height="0" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
@@ -93,6 +97,33 @@ import Layout from '../layouts/Layout.astro';
     letter-spacing: 0.02em;
     color: var(--ink);
     transition: letter-spacing 320ms cubic-bezier(.2,.8,.2,1);
+    /* Gentle breathing — opacity oscillates, period matches the lens hover-breathe. */
+    animation: word-breathe 5.6s ease-in-out infinite;
+  }
+
+  @keyframes word-breathe {
+    0%, 100% { opacity: 0.78; }
+    50%      { opacity: 1; }
+  }
+
+  /* Exit veil: cream-white overlay that fades in on click, matching /room/'s bg.
+     The document swap happens behind it, so the brightness ramps up gradually
+     over 600ms instead of a hard cut. */
+  #exit-veil {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #f0ece4;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 100;
+    transition: opacity 600ms cubic-bezier(.4, 0, .2, 1);
+  }
+  #exit-veil.active {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   /* Footer is at root z-index 10, above the warm-layer (z 5).
@@ -211,13 +242,18 @@ import Layout from '../layouts/Layout.astro';
     transition: clip-path 600ms cubic-bezier(.2,.8,.2,1);
   }
 
-  @media (hover: none) {
-    :root { --lens-r-rest: 110px; }
+  /* Touch-only devices: no cursor lens. Drop the warm-layer entirely and
+     free up body overflow so mobile scroll/address-bar UX is normal. */
+  @media (hover: none) and (pointer: coarse) {
+    html, body { overflow: visible; height: auto; }
+    .warm-layer { display: none; }
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .line { animation: none; opacity: 1; }
     .warm-layer { transition: none !important; filter: none !important; }
     .warm-bg::after { animation: none; }
+    #exit-veil { transition: opacity 200ms linear; }
   }
 </style>
 
@@ -231,11 +267,27 @@ import Layout from '../layouts/Layout.astro';
     const root = document.documentElement;
     const layer = document.querySelector<HTMLDivElement>('.warm-layer');
     const door = document.getElementById('door') as HTMLAnchorElement | null;
-    if (!layer || !door) return;
+    const veil = document.getElementById('exit-veil') as HTMLDivElement | null;
+    if (!door) return;
 
     voidAbort?.abort();
     voidAbort = new AbortController();
     const { signal } = voidAbort;
+
+    if (veil) veil.classList.remove('active');
+
+    // Soften the dark→cream transition: fade the veil in, then navigate.
+    // Works identically on desktop and mobile.
+    door.addEventListener('click', (e) => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+      e.preventDefault();
+      if (veil) veil.classList.add('active');
+      setTimeout(() => { window.location.href = '/room/'; }, 620);
+    }, { signal });
+
+    // Touch-only devices: skip all cursor/touch lens behavior.
+    const isTouchOnly = matchMedia('(hover: none) and (pointer: coarse)').matches;
+    if (isTouchOnly || !layer) return;
 
     root.style.setProperty('--lens-r', '0px');
     root.style.setProperty('--mx', '50vw');
