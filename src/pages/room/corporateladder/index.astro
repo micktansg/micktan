@@ -7,13 +7,15 @@ const { paths, exercises, bosses } = data;
 
 <Layout title="corporateladder. — Mick Tan" description="climb the ladder. workout boss-fights vs. corporate caricatures.">
   <main class="cl">
-    <a class="back" href="/room/" data-astro-prefetch>&larr; the room</a>
-
-    <header class="head">
+    <div class="topbar">
+      <a class="back" href="/room/" data-astro-prefetch>&larr; the room</a>
       <button class="bgm-toggle" id="bgmToggle" type="button" aria-label="toggle background music">
         <span id="bgmIcon">🔇</span>
         <span class="bgm-label" id="bgmLabel">music off</span>
       </button>
+    </div>
+
+    <header class="head">
       <h1>corporateladder<span class="dot">.</span></h1>
       <p class="sub">workouts → damage. defeat the boss. climb a rung. <span class="nowrap">become a CEO. or a husk.</span></p>
     </header>
@@ -209,7 +211,7 @@ const { paths, exercises, bosses } = data;
   .cl {
     max-width: 80rem;
     margin: 0 auto;
-    padding: 2.5rem 1.5rem 6rem;
+    padding: 1.5rem 1.2rem 6rem;
     background:
       radial-gradient(ellipse at top right, rgba(255, 74, 217, 0.15) 0%, transparent 55%),
       radial-gradient(ellipse at bottom left, rgba(74, 241, 255, 0.1) 0%, transparent 55%);
@@ -217,46 +219,71 @@ const { paths, exercises, bosses } = data;
     position: relative;
     z-index: 3;
   }
+  @media (min-width: 720px) {
+    .cl { padding: 2.5rem 1.5rem 6rem; }
+  }
 
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+  }
   .back {
     color: var(--cl-dim);
     text-decoration: none;
     font-size: 0.7rem;
     letter-spacing: 0.05em;
+    padding: 0.4rem 0;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
   }
   .back:hover { color: var(--cl-cyan); }
 
-  .head { margin: 3rem 0 3rem; position: relative; }
+  .head { margin: 2rem 0 2.5rem; }
   .bgm-toggle {
-    position: absolute;
-    top: 0;
-    right: 0;
     background: rgba(0,0,0,0.5);
     border: 2px solid var(--cl-card-border);
     color: var(--cl-fg);
-    padding: 0.55rem 0.9rem;
+    padding: 0.5rem 0.8rem;
     font-family: inherit;
     font-size: 0.6rem;
     cursor: pointer;
     border-radius: 2px;
     letter-spacing: 0.04em;
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.45rem;
+    min-height: 36px;
     transition: border-color 200ms, color 200ms;
+    flex-shrink: 0;
   }
   .bgm-toggle:hover { border-color: var(--cl-accent); color: var(--cl-accent); }
   .bgm-toggle.on { border-color: var(--cl-green); color: var(--cl-green); }
   .bgm-label { font-size: 0.55rem; }
+  @media (max-width: 480px) {
+    .bgm-label { display: none; }
+    .bgm-toggle { padding: 0.5rem 0.7rem; }
+  }
   .head h1 {
-    font-size: clamp(1.75rem, 6vw, 3.4rem);
+    font-size: clamp(1.5rem, 7vw, 3.4rem);
     line-height: 1.05;
     margin: 0;
     color: var(--cl-accent);
     text-shadow:
-      3px 0 var(--cl-pink),
-      -3px 0 var(--cl-cyan);
+      2px 0 var(--cl-pink),
+      -2px 0 var(--cl-cyan);
     letter-spacing: -0.02em;
+    word-break: break-word;
+  }
+  @media (min-width: 720px) {
+    .head h1 {
+      text-shadow:
+        3px 0 var(--cl-pink),
+        -3px 0 var(--cl-cyan);
+    }
   }
   .head h1 .dot { color: var(--cl-pink); }
   .head .sub {
@@ -304,13 +331,14 @@ const { paths, exercises, bosses } = data;
   .card-block input[type="text"],
   .card-block select {
     width: 100%;
-    padding: 0.7rem;
+    padding: 0.85rem 0.75rem;
     background: rgba(0,0,0,0.4);
     border: 2px solid var(--cl-card-border);
     color: var(--cl-fg);
     font-family: inherit;
-    font-size: 0.7rem;
+    font-size: 16px; /* prevent iOS zoom on focus */
     border-radius: 2px;
+    min-height: 44px;
   }
   .card-block input:focus,
   .card-block select:focus {
@@ -322,7 +350,7 @@ const { paths, exercises, bosses } = data;
     background: var(--cl-pink);
     color: var(--cl-bg);
     border: 0;
-    padding: 0.8rem 1.4rem;
+    padding: 0.95rem 1.4rem;
     font-family: inherit;
     font-size: 0.7rem;
     cursor: pointer;
@@ -330,6 +358,7 @@ const { paths, exercises, bosses } = data;
     letter-spacing: 0.04em;
     box-shadow: 4px 4px 0 var(--cl-cyan);
     transition: transform 120ms, box-shadow 120ms;
+    min-height: 44px;
   }
   .primary-btn:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--cl-cyan); }
   .primary-btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--cl-cyan); }
@@ -339,13 +368,14 @@ const { paths, exercises, bosses } = data;
     background: transparent;
     color: var(--cl-dim);
     border: 2px solid var(--cl-card-border);
-    padding: 0.55rem 0.9rem;
+    padding: 0.7rem 0.9rem;
     font-family: inherit;
     font-size: 0.6rem;
     cursor: pointer;
     border-radius: 2px;
     letter-spacing: 0.04em;
     transition: color 200ms, border-color 200ms;
+    min-height: 40px;
   }
   .ghost-btn:hover { color: var(--cl-accent); border-color: var(--cl-accent); }
 
@@ -360,7 +390,7 @@ const { paths, exercises, bosses } = data;
     align-items: start;
   }
   @media (max-width: 900px) {
-    .game-grid { grid-template-columns: 1fr; }
+    .game-grid { grid-template-columns: 1fr; gap: 1.2rem; }
   }
 
   .boss-col, .side-col {
@@ -648,13 +678,14 @@ const { paths, exercises, bosses } = data;
   .log-form select,
   .log-form input[type="number"] {
     width: 100%;
-    padding: 0.6rem;
+    padding: 0.7rem 0.65rem;
     background: rgba(0,0,0,0.5);
     border: 2px solid var(--cl-card-border);
     color: var(--cl-fg);
     font-family: inherit;
-    font-size: 0.65rem;
+    font-size: 16px; /* prevent iOS zoom on focus */
     border-radius: 2px;
+    min-height: 44px;
   }
   .log-form select:focus,
   .log-form input:focus {
@@ -671,13 +702,14 @@ const { paths, exercises, bosses } = data;
 
   .path-switcher select {
     width: 100%;
-    padding: 0.6rem;
+    padding: 0.7rem 0.65rem;
     background: rgba(0,0,0,0.5);
     border: 2px solid var(--cl-card-border);
     color: var(--cl-fg);
     font-family: inherit;
-    font-size: 0.65rem;
+    font-size: 16px; /* prevent iOS zoom on focus */
     border-radius: 2px;
+    min-height: 44px;
   }
   .path-switcher select:focus { outline: none; border-color: var(--cl-accent); }
 
