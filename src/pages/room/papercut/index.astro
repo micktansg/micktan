@@ -66,35 +66,6 @@ import Layout from '../../../layouts/Layout.astro';
         <div class="scatter scatter-7"><div class="dot-small dot-small--yellow"></div></div>
         <div class="scatter scatter-8"><div class="halftone-circle halftone-circle--small"></div></div>
 
-        {/* Connecting lines from character to the orbit objects */}
-        <svg class="connections" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          <path d="M50,55 Q35,42 18,28" />
-          <path d="M50,55 Q65,38 84,22" />
-          <path d="M50,55 Q72,55 92,52" />
-          <path d="M50,55 Q30,60 12,72" />
-          <path d="M50,55 Q70,72 88,82" />
-        </svg>
-
-        {/* Floating photo-style "orbit" cutouts — each is an interactive input */}
-        <button class="orbit orbit--feed" id="btnFeed" type="button" aria-label="feed exposure">
-          <div class="photo-circle photo-circle--feed">
-            <span class="emo">📢</span>
-          </div>
-          <div class="orbit-tag">feed exposure</div>
-        </button>
-        <button class="orbit orbit--raise" id="btnRaise" type="button" aria-label="give a raise">
-          <div class="photo-circle photo-circle--raise">
-            <span class="emo">💸</span>
-          </div>
-          <div class="orbit-tag">give raise</div>
-        </button>
-        <button class="orbit orbit--praise" id="btnPraise" type="button" aria-label="praise">
-          <div class="photo-circle photo-circle--praise">
-            <span class="emo">👏</span>
-          </div>
-          <div class="orbit-tag">praise</div>
-        </button>
-
         {/* The character — collage figure with newspaper-text body */}
         <svg class="character" id="character" viewBox="0 0 200 320" aria-label="creative worker" filter="url(#papercut-edge)">
           {/* Hair */}
@@ -145,7 +116,20 @@ import Layout from '../../../layouts/Layout.astro';
       {/* Career stage label */}
       <div class="career-label" id="careerLabel">— intern —</div>
 
-      {/* Quit + Reset row */}
+      {/* Bottom button row — feed / raise / praise */}
+      <div class="inputs">
+        <button id="btnFeed" class="input-btn input-btn--feed" type="button">
+          <span class="emo">📢</span><span class="lbl">feed exposure</span>
+        </button>
+        <button id="btnRaise" class="input-btn input-btn--raise" type="button">
+          <span class="emo">💸</span><span class="lbl">give raise</span>
+        </button>
+        <button id="btnPraise" class="input-btn input-btn--praise" type="button">
+          <span class="emo">👏</span><span class="lbl">praise</span>
+        </button>
+      </div>
+
+      {/* Quit row — visually distinct, set apart so it doesn't get spam-clicked */}
       <div class="quit-row">
         <button id="btnQuit" class="quit-btn" type="button">
           <span class="emo">🚪</span><span>quit</span>
@@ -656,11 +640,50 @@ import Layout from '../../../layouts/Layout.astro';
     text-shadow: 2px 2px 0 var(--pc-blue-deep);
   }
 
-  /* Quit button — single, dramatic */
+  /* ===== Bottom button row — feed / raise / praise ===== */
+  .inputs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.6rem;
+    margin: 0 0 0.8rem;
+  }
+  @media (max-width: 480px) {
+    .inputs { grid-template-columns: 1fr; }
+  }
+  .input-btn {
+    background: var(--pc-paper);
+    border: 2px solid var(--pc-blue-deep);
+    border-radius: 4px;
+    padding: 0.85rem 0.6rem;
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--pc-ink);
+    cursor: pointer;
+    box-shadow: 4px 4px 0 var(--pc-blue-deep);
+    transition: transform 120ms, box-shadow 120ms, background 120ms;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    min-height: 56px;
+    line-height: 1.1;
+    text-align: center;
+  }
+  .input-btn .emo { font-size: 1.3rem; line-height: 1; }
+  .input-btn .lbl { font-size: 0.7rem; letter-spacing: 0.02em; }
+  .input-btn:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--pc-blue-deep); }
+  .input-btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--pc-blue-deep); }
+  .input-btn--feed { background: var(--pc-yellow); }
+  .input-btn--raise { background: var(--pc-cyan-soft); }
+  .input-btn--praise { background: var(--pc-pink); color: var(--pc-paper); }
+  .input-btn--feed:hover { background: #ffd55a; }
+
+  /* Quit button — small, dashed, set apart from the input row */
   .quit-row {
     display: flex;
     justify-content: center;
-    margin-bottom: 1.2rem;
+    margin: 1.4rem 0 1.2rem;
   }
   .quit-btn {
     background: transparent;
