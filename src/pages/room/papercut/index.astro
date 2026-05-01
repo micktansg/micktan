@@ -57,20 +57,15 @@ import Layout from '../../../layouts/Layout.astro';
 
       {/* The collage stage */}
       <div class="stage" id="stage">
-        {/* Decorative scatter (halftone circles, triangles, dots) — fixed positions, hand-placed */}
-        <div class="scatter scatter-1"><div class="halftone-circle"></div></div>
-        <div class="scatter scatter-2"><div class="dot-circle dot-circle--blue"></div></div>
-        <div class="scatter scatter-3"><div class="triangle triangle--yellow"></div></div>
-        <div class="scatter scatter-4"><div class="dot-small"></div></div>
-        <div class="scatter scatter-5"><div class="triangle triangle--pink"></div></div>
-        <div class="scatter scatter-6"><div class="dot-circle dot-circle--dark"></div></div>
-        <div class="scatter scatter-7"><div class="dot-small dot-small--yellow"></div></div>
-        <div class="scatter scatter-8"><div class="halftone-circle halftone-circle--small"></div></div>
+        {/* Trophy wall — awards plastered across the back wall (his world, his decoration) */}
+        <div class="trophy-wall" id="trophyWall" aria-hidden="true"></div>
 
         {/* The character — collage figure with newspaper-text body */}
         <svg class="character" id="character" viewBox="0 0 200 320" aria-label="creative worker" filter="url(#papercut-edge)">
-          {/* Hair */}
-          <path class="hair" d="M62,52 Q100,18 138,52 L138,90 Q124,75 100,72 Q76,75 62,90 Z" />
+          {/* Hair — three variants. Only the one matching the career stage shows. */}
+          <path class="hair-full" d="M62,52 Q100,18 138,52 L138,90 Q124,75 100,72 Q76,75 62,90 Z" />
+          <path class="hair-receding" d="M68,60 Q100,32 132,60 L132,82 Q120,72 100,72 Q80,72 68,82 Z" />
+          <path class="hair-sides" d="M62,70 Q66,58 78,60 L78,90 Q70,82 62,90 Z M138,70 Q134,58 122,60 L122,90 Q130,82 138,90 Z" />
           {/* Head — skin-toned, slightly desaturated like a grayscale photo */}
           <ellipse class="head" cx="100" cy="78" rx="38" ry="42" />
           {/* Eye-bags (Senior+) */}
@@ -108,9 +103,6 @@ import Layout from '../../../layouts/Layout.astro';
 
         {/* Floating "+" indicators when buttons pressed */}
         <span class="floater" id="floater"></span>
-
-        {/* Trophy shelf — the awards live on the character's office wall */}
-        <span class="prop trophy-shelf" id="trophyShelf" aria-hidden="true"></span>
 
         {/* Auto-promotion celebration banner — shows empty corporate praise on stage-up */}
         <div class="celebration" id="celebrationBanner" aria-live="polite"></div>
@@ -350,27 +342,32 @@ import Layout from '../../../layouts/Layout.astro';
   .capsule .prop.plant     { font-size: 1.2rem; }
   .capsule .prop.books     { font-size: 1rem; }
 
-  /* Trophy shelf on the back wall — awards live in here as a row of emojis */
-  .trophy-shelf {
-    position: absolute !important;
-    top: 8% !important;
-    left: 8% !important;
-    right: auto !important;
-    bottom: auto !important;
-    font-size: 0.9rem !important;
-    line-height: 1.2;
-    letter-spacing: 0.04em;
-    max-width: 50%;
-    transform: rotate(-1.5deg);
-    background: rgba(255,255,255,0.55);
-    border: 1px solid var(--pc-blue-deep);
-    border-radius: 2px;
-    padding: 2px 5px;
-    z-index: 2;
+  /* Trophy wall — awards plastered across the back wall, big enough to read */
+  .trophy-wall {
+    position: absolute;
+    top: 5%;
+    left: 6%;
+    right: 6%;
+    height: 38%;
     pointer-events: none;
-    box-shadow: 1px 1px 0 var(--pc-blue-deep);
+    z-index: 2;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    gap: 6%;
   }
-  .trophy-shelf:empty { display: none; }
+  .wall-award {
+    font-size: 1.6rem;
+    line-height: 1;
+    filter: drop-shadow(2px 2px 0 rgba(60,38,18,0.35));
+    user-select: none;
+  }
+  .wall-award:nth-child(odd)  { transform: rotate(-4deg); }
+  .wall-award:nth-child(even) { transform: rotate(3deg); }
+  .wall-award:nth-child(3n)   { transform: rotate(-1deg); }
+  .wall-award.fresh           { animation: trophy-pop 600ms cubic-bezier(.2,1.6,.4,1); }
+  /* Slightly smaller inside the capsule (the screen is tighter) */
+  .capsule .wall-award { font-size: 1.25rem; }
 
   .topbar {
     display: flex;
@@ -667,8 +664,12 @@ import Layout from '../../../layouts/Layout.astro';
     stroke: var(--pc-ink);
     stroke-width: 1.2;
   }
-  .character .hair {
-    fill: var(--stage-hair);
+  /* Hair — three variants. Only the one matching the career stage shows.
+     Color greys out and the shape thins as he ages. */
+  .character .hair-full,
+  .character .hair-receding,
+  .character .hair-sides {
+    display: none;
     stroke: var(--pc-ink);
     stroke-width: 0.8;
   }
@@ -711,7 +712,14 @@ import Layout from '../../../layouts/Layout.astro';
   .stage.stage-4 .character .glasses { opacity: 1; }
   .stage.stage-5 .character .bag { opacity: 1; }
   .stage.stage-5 .character .glasses { opacity: 1; }
-  .stage.stage-5 .character .hair { fill: #b8b0a4; }
+
+  /* Hair progression per career stage */
+  .stage.stage-0 .character .hair-full { display: block; fill: #3d2817; }
+  .stage.stage-1 .character .hair-full { display: block; fill: #3d2817; }
+  .stage.stage-2 .character .hair-full { display: block; fill: #5e4d3a; } /* graying */
+  .stage.stage-3 .character .hair-receding { display: block; fill: #8a7a6a; } /* receding, gray */
+  .stage.stage-4 .character .hair-sides { display: block; fill: #b8b0a0; } /* sides only, white-gray */
+  .stage.stage-5 .character .hair-sides { display: block; fill: #e0dcd2; opacity: 0.85; } /* near-bald, white wisps */
 
   /* Fire & smoke (overlay on stage) */
   .fire-layer, .smoke-layer {
@@ -1424,11 +1432,22 @@ import Layout from '../../../layouts/Layout.astro';
       state.awards.forEach(a => delete a._fresh);
     }
 
-    // Trophy-shelf inside the diorama: latest 5 awards as a row of emojis on the wall.
-    const shelf = document.getElementById('trophyShelf');
-    if (shelf) {
-      shelf.textContent = state.awards.slice(-5).map(a => a.emoji).join('');
+    // Trophy WALL inside the diorama — large award emojis plastered on the back wall.
+    const wall = document.getElementById('trophyWall');
+    if (wall) {
+      wall.innerHTML = '';
+      // Latest 6 awards (most recent first → looks freshest on the wall)
+      const recent = state.awards.slice(-6).reverse();
+      recent.forEach((a, i) => {
+        const w = document.createElement('span');
+        w.className = 'wall-award' + ((i === 0 && a._fresh_wall) ? ' fresh' : '');
+        w.textContent = a.emoji;
+        w.title = a.name;
+        wall.appendChild(w);
+      });
     }
+    // mark fresh state for the next paint
+    state.awards.forEach(a => { if (a._fresh) { a._fresh_wall = true; } });
   }
 
   function escapeHtml(s) {
