@@ -109,12 +109,18 @@ import Layout from '../../../layouts/Layout.astro';
         {/* Floating "+" indicators when buttons pressed */}
         <span class="floater" id="floater"></span>
 
+        {/* Trophy shelf — the awards live on the character's office wall */}
+        <span class="prop trophy-shelf" id="trophyShelf" aria-hidden="true"></span>
+
         {/* Auto-promotion celebration banner — shows empty corporate praise on stage-up */}
         <div class="celebration" id="celebrationBanner" aria-live="polite"></div>
 
         {/* Fire layer */}
         <div class="fire-layer" id="fireLayer" aria-hidden="true"></div>
         <div class="smoke-layer" id="smokeLayer" aria-hidden="true"></div>
+
+        {/* Confetti — only fires inside the stage; can never escape the gameplay window */}
+        <div class="full-fanfare" id="fullFanfare" aria-hidden="true"></div>
       </div>
 
       {/* Career stage label */}
@@ -160,8 +166,7 @@ import Layout from '../../../layouts/Layout.astro';
       </div>
     </div>
 
-    {/* Full-screen fanfare overlay (confetti shower on promotion / award) */}
-    <div class="full-fanfare" id="fullFanfare" aria-hidden="true"></div>
+    {/* Fanfare overlay is now INSIDE the stage so confetti can't escape the gameplay window. */}
 
     {/* Ending overlay */}
     <div class="ending" id="ending" hidden>
@@ -345,6 +350,28 @@ import Layout from '../../../layouts/Layout.astro';
   .capsule .prop.plant     { font-size: 1.2rem; }
   .capsule .prop.books     { font-size: 1rem; }
 
+  /* Trophy shelf on the back wall — awards live in here as a row of emojis */
+  .trophy-shelf {
+    position: absolute !important;
+    top: 8% !important;
+    left: 8% !important;
+    right: auto !important;
+    bottom: auto !important;
+    font-size: 0.9rem !important;
+    line-height: 1.2;
+    letter-spacing: 0.04em;
+    max-width: 50%;
+    transform: rotate(-1.5deg);
+    background: rgba(255,255,255,0.55);
+    border: 1px solid var(--pc-blue-deep);
+    border-radius: 2px;
+    padding: 2px 5px;
+    z-index: 2;
+    pointer-events: none;
+    box-shadow: 1px 1px 0 var(--pc-blue-deep);
+  }
+  .trophy-shelf:empty { display: none; }
+
   .topbar {
     display: flex;
     align-items: center;
@@ -462,7 +489,7 @@ import Layout from '../../../layouts/Layout.astro';
     aspect-ratio: 4 / 5;
     max-width: 36rem;
     margin: 0 auto 1.2rem;
-    overflow: visible;
+    overflow: hidden;
   }
 
   /* Connecting lines */
@@ -1106,24 +1133,24 @@ import Layout from '../../../layouts/Layout.astro';
     100% { transform: translateY(420px) rotate(720deg); opacity: 0; }
   }
 
-  /* Full-screen fanfare confetti */
+  /* Confetti shower — contained within the stage (the gameplay window) */
   .full-fanfare {
-    position: fixed;
+    position: absolute;
     inset: 0;
     pointer-events: none;
-    z-index: 200;
+    z-index: 7;
     overflow: hidden;
   }
   .full-fanfare .piece {
     position: absolute;
     top: -8%;
-    font-size: 1.4rem;
-    animation: confetti-fall 2.4s cubic-bezier(.25,.46,.45,.94) forwards;
+    font-size: 0.9rem;
+    animation: confetti-fall 1.6s cubic-bezier(.25,.46,.45,.94) forwards;
     filter: drop-shadow(1px 1px 0 rgba(0,0,0,0.15));
   }
   @keyframes confetti-fall {
     0%   { transform: translateY(0) translateX(0) rotate(0); opacity: 1; }
-    100% { transform: translateY(110vh) translateX(var(--xshift, 0)) rotate(900deg); opacity: 0; }
+    100% { transform: translateY(120%) translateX(var(--xshift, 0)) rotate(720deg); opacity: 0; }
   }
 
   /* ===== Character reactions ===== */
@@ -1142,15 +1169,15 @@ import Layout from '../../../layouts/Layout.astro';
   .character.react.intensity-mid    { filter: brightness(1.18) saturate(1.2); }
   .character.react.intensity-low    { filter: brightness(1.05); }
 
-  /* ===== Disturbing behaviours ===== */
+  /* ===== Disturbing behaviours — kept INSIDE the stage box ===== */
   .character.behavior-huddle {
     animation: behavior-huddle 9s steps(6) 1;
     transform-origin: center bottom;
   }
   @keyframes behavior-huddle {
     0%   { transform: translateX(-50%) translateY(0) scale(1) rotate(0); }
-    20%  { transform: translateX(-180%) translateY(80px) scale(0.85) rotate(-8deg); }
-    80%  { transform: translateX(-180%) translateY(80px) scale(0.85) rotate(-8deg); }
+    20%  { transform: translateX(-110%) translateY(28px) scale(0.85) rotate(-8deg); }
+    80%  { transform: translateX(-110%) translateY(28px) scale(0.85) rotate(-8deg); }
     100% { transform: translateX(-50%) translateY(0) scale(1) rotate(0); }
   }
 
@@ -1159,9 +1186,9 @@ import Layout from '../../../layouts/Layout.astro';
   }
   @keyframes behavior-pace {
     0%, 100% { transform: translateX(-50%); }
-    25%      { transform: translateX(-180%); }
-    50%      { transform: translateX(80%); }
-    75%      { transform: translateX(-180%); }
+    25%      { transform: translateX(-110%); }
+    50%      { transform: translateX(10%); }
+    75%      { transform: translateX(-110%); }
   }
 
   .character.behavior-stare {
@@ -1386,16 +1413,22 @@ import Layout from '../../../layouts/Layout.astro';
       empty.className = 'trophy-empty';
       empty.textContent = 'no awards yet. keep feeding.';
       tc.appendChild(empty);
-      return;
+    } else {
+      state.awards.slice().reverse().forEach((a, i) => {
+        const t = document.createElement('span');
+        t.className = 'trophy';
+        if (i === 0 && a._fresh) { t.classList.add('new'); }
+        t.innerHTML = `<span class="te">${a.emoji}</span><span>${escapeHtml(a.name)}</span>`;
+        tc.appendChild(t);
+      });
+      state.awards.forEach(a => delete a._fresh);
     }
-    state.awards.slice().reverse().forEach((a, i) => {
-      const t = document.createElement('span');
-      t.className = 'trophy';
-      if (i === 0 && a._fresh) { t.classList.add('new'); }
-      t.innerHTML = `<span class="te">${a.emoji}</span><span>${escapeHtml(a.name)}</span>`;
-      tc.appendChild(t);
-    });
-    state.awards.forEach(a => delete a._fresh);
+
+    // Trophy-shelf inside the diorama: latest 5 awards as a row of emojis on the wall.
+    const shelf = document.getElementById('trophyShelf');
+    if (shelf) {
+      shelf.textContent = state.awards.slice(-5).map(a => a.emoji).join('');
+    }
   }
 
   function escapeHtml(s) {
@@ -1583,21 +1616,24 @@ import Layout from '../../../layouts/Layout.astro';
   }
 
   function fullFanfare() {
+    // Stage-scoped now (the .full-fanfare element lives inside the screen).
+    // Smaller piece count + smaller sizes since it's a tiny window.
     const host = document.getElementById('fullFanfare');
+    if (!host) return;
     host.innerHTML = '';
     const emojis = ['🎉','✨','🎊','🟡','🟢','🩷','💛','🔴','⭐','🟠'];
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 22; i++) {
       const p = document.createElement('span');
       p.className = 'piece';
       p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
       p.style.left = (Math.random() * 100) + '%';
-      p.style.animationDelay = (Math.random() * 0.8) + 's';
-      p.style.animationDuration = (1.8 + Math.random() * 1.4) + 's';
-      p.style.fontSize = (0.9 + Math.random() * 1.3) + 'rem';
-      p.style.setProperty('--xshift', ((Math.random() - 0.5) * 80) + 'px');
+      p.style.animationDelay = (Math.random() * 0.5) + 's';
+      p.style.animationDuration = (1.2 + Math.random() * 0.8) + 's';
+      p.style.fontSize = (0.7 + Math.random() * 0.8) + 'rem';
+      p.style.setProperty('--xshift', ((Math.random() - 0.5) * 24) + 'px');
       host.appendChild(p);
     }
-    setTimeout(() => { host.innerHTML = ''; }, 3500);
+    setTimeout(() => { host.innerHTML = ''; }, 2200);
   }
 
   function reactCharacter() {
