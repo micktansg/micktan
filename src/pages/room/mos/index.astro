@@ -14,7 +14,7 @@ import Layout from '../../../layouts/Layout.astro';
 
     <div class="hud-counter">
       <div class="now"><span data-counter>0</span><em>m</em></div>
-      <div class="time" data-time-row><span data-time>67</span><em>s</em></div>
+      <div class="time" data-time-row><span data-time>30</span><em>s</em></div>
       <div class="best">best — <span data-best>0</span> m</div>
     </div>
 
@@ -470,6 +470,19 @@ import Layout from '../../../layouts/Layout.astro';
   function easeOutCubic(t: number) { return 1 - Math.pow(1 - t, 3); }
   function easeInCubic(t: number) { return t * t * t; }
 
+  // Deterministic 0–1 hash from an integer seed. Used to scatter road
+  // texture (stones, cracks) at fixed world positions so they scroll
+  // past coherently without per-frame jitter.
+  function hash01(n: number): number {
+    let h = (n * 2654435761) >>> 0;
+    h ^= h >>> 16;
+    h = Math.imul(h, 2246822519) >>> 0;
+    h ^= h >>> 13;
+    h = Math.imul(h, 3266489917) >>> 0;
+    h ^= h >>> 16;
+    return h / 0xFFFFFFFF;
+  }
+
   // Returns where the briefcase hand ends up in screen coords, so the caller
   // can drive the briefcase pendulum from outside the figure renderer.
   function drawFigure(ctx: CanvasRenderingContext2D, cx: number, groundY: number, pose: Pose, scale = 1): { handX: number; handY: number } {
@@ -768,7 +781,7 @@ import Layout from '../../../layouts/Layout.astro';
     let lastTapTime = 0;
     let distance = 0; // metres (float for sub-step resolution)
     let scrollX = 0; // px in screen space
-    const TIME_LIMIT = 67; // seconds — clock starts on first input
+    const TIME_LIMIT = 30; // seconds — clock starts on first input
     let timeLeft = TIME_LIMIT;
     let prevPose: Pose = idle;
     let nextPose: Pose = idle;
@@ -1068,35 +1081,90 @@ import Layout from '../../../layouts/Layout.astro';
       ctx!.scale(dpr, dpr);
       ctx!.clearRect(0, 0, W, H);
 
-      // Ground line + tick marks
+      // ----- ground / road surface -----
       const groundY = Math.min(H - 40, H * 0.78);
       const figureCX = Math.max(160, W * 0.32);
+      const roadH = Math.min(60, H - groundY - 4); // depth of the road band
 
-      ctx!.strokeStyle = 'rgba(58,46,26,0.22)';
-      ctx!.lineWidth = 1;
+      // road band: slightly darker buff than the manila bg, fades downward
+      const roadGrad = ctx!.createLinearGradient(0, groundY, 0, groundY + roadH);
+      roadGrad.addColorStop(0, '#d6c483');
+      roadGrad.addColorStop(0.7, '#cab97a');
+      roadGrad.addColorStop(1, '#bda86a');
+      ctx!.fillStyle = roadGrad;
+      ctx!.fillRect(0, groundY, W, roadH);
+
+      // top edge — bolder ground line
+      ctx!.strokeStyle = 'rgba(58,46,26,0.55)';
+      ctx!.lineWidth = 1.5;
       ctx!.beginPath();
-      ctx!.moveTo(0, groundY + 0.5);
-      ctx!.lineTo(W, groundY + 0.5);
+      ctx!.moveTo(0, groundY + 0.75);
+      ctx!.lineTo(W, groundY + 0.75);
       ctx!.stroke();
 
-      // ticks every 1 m; major every 5 m with a label
-      const tickSpacingM = 1;
-      const startM = Math.floor((distance - figureCX / PX_PER_M) / tickSpacingM) * tickSpacingM;
-      const endM = distance + (W - figureCX) / PX_PER_M + tickSpacingM;
-      ctx!.fillStyle = 'rgba(58,46,26,0.36)';
+      // visible-world bounds in metres
+      const startM = Math.floor((distance - figureCX / PX_PER_M));
+      const endM = distance + (W - figureCX) / PX_PER_M + 1;
+
+      // ----- deterministic scattered stones on the road -----
+      // Each ~0.18m slot has a chance of holding a stone. Same world position
+      // ⇒ same stone, so they scroll past coherently.
+      const stoneSlot = 0.18;
+      const startSlot = Math.floor(startM / stoneSlot);
+      const endSlot = Math.ceil(endM / stoneSlot);
+      for (let s = startSlot; s <= endSlot; s++) {
+        const present = hash01(s + 11);
+        if (present < 0.45) continue;
+        const wX = s * stoneSlot + hash01(s + 113) * stoneSlot;
+        const x = figureCX + (wX - distance) * PX_PER_M;
+        if (x < -6 || x > W + 6) continue;
+        const r = 0.7 + hash01(s + 211) * 2.2;
+        const yOff = 4 + hash01(s + 311) * (roadH - 8);
+        const tone = 0.16 + hash01(s + 411) * 0.22;
+        ctx!.fillStyle = `rgba(58,46,26,${tone.toFixed(3)})`;
+        ctx!.beginPath();
+        ctx!.ellipse(x, groundY + yOff, r, r * 0.72, 0, 0, Math.PI * 2);
+        ctx!.fill();
+      }
+
+      // ----- cracks on the surface — sparse, on/near the ground line -----
+      const crackSlot = 1.6;
+      const cStart = Math.floor(startM / crackSlot);
+      const cEnd = Math.ceil(endM / crackSlot);
+      ctx!.strokeStyle = 'rgba(58,46,26,0.34)';
+      ctx!.lineWidth = 1;
+      for (let s = cStart; s <= cEnd; s++) {
+        if (hash01(s + 5101) < 0.5) continue;
+        const wX = s * crackSlot + hash01(s + 5201) * crackSlot;
+        const x = figureCX + (wX - distance) * PX_PER_M;
+        if (x < -10 || x > W + 10) continue;
+        const len = 4 + hash01(s + 5301) * 9;
+        const ang = (hash01(s + 5401) - 0.5) * 0.7;
+        const yOff = 1 + hash01(s + 5501) * 4;
+        const cx2 = Math.cos(ang) * len * 0.5;
+        const cy2 = Math.sin(ang) * len * 0.5;
+        ctx!.beginPath();
+        ctx!.moveTo(x - cx2, groundY + yOff - cy2);
+        ctx!.lineTo(x + cx2, groundY + yOff + cy2);
+        ctx!.stroke();
+      }
+
+      // ----- distance ticks -----
+      ctx!.fillStyle = 'rgba(58,46,26,0.55)';
       ctx!.font = '10px Lora, Georgia, serif';
       ctx!.textAlign = 'center';
-      for (let m = startM; m <= endM; m += tickSpacingM) {
+      for (let m = Math.ceil(startM); m <= endM; m += 1) {
         const x = figureCX + (m - distance) * PX_PER_M;
         const major = m % 5 === 0;
-        const tickH = major ? 8 : 4;
-        ctx!.strokeStyle = major ? 'rgba(58,46,26,0.36)' : 'rgba(58,46,26,0.20)';
+        const tickH = major ? 11 : 5;
+        ctx!.strokeStyle = major ? 'rgba(58,46,26,0.55)' : 'rgba(58,46,26,0.28)';
+        ctx!.lineWidth = major ? 1.2 : 1;
         ctx!.beginPath();
         ctx!.moveTo(x + 0.5, groundY + 1);
         ctx!.lineTo(x + 0.5, groundY + 1 + tickH);
         ctx!.stroke();
         if (major && m >= 0) {
-          ctx!.fillText(`${m}`, x, groundY + 22);
+          ctx!.fillText(`${m}`, x, groundY + 26);
         }
       }
 
