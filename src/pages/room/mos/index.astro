@@ -1007,9 +1007,24 @@ import Layout from '../../../layouts/Layout.astro';
 
     // ----- main loop -----
     let raf = 0;
+    let frameErrored = false;
     function frame(now: number) {
       raf = requestAnimationFrame(frame);
+      try {
+        tickFrame(now);
+      } catch (err) {
+        // Don't let a single bad frame kill the loop — log once, recover.
+        if (!frameErrored) {
+          frameErrored = true;
+          console.error('[mos] frame error:', err, {
+            phase, distance, briefcaseAngle, briefcaseVel,
+            W, H, dpr, timeLeft,
+          });
+        }
+      }
+    }
 
+    function tickFrame(now: number) {
       // Late-tap detection (only while walking and after first step)
       if (phase === 'walking' && lastTapTime > 0) {
         const since = now - lastTapTime;
@@ -1020,7 +1035,7 @@ import Layout from '../../../layouts/Layout.astro';
 
       // Countdown — only ticks once first step has been committed.
       if (phase === 'walking' && timeLeft > 0) {
-        const dtSec = lastFrameMs ? Math.min(0.1, (now - lastFrameMs) / 1000) : 0.016;
+        const dtSec = lastFrameMs ? Math.max(0, Math.min(0.1, (now - lastFrameMs) / 1000)) : 0.016;
         timeLeft = Math.max(0, timeLeft - dtSec);
         const shown = Math.ceil(timeLeft);
         if (timeEl!.textContent !== String(shown)) timeEl!.textContent = String(shown);
@@ -1061,6 +1076,10 @@ import Layout from '../../../layouts/Layout.astro';
       const targetScroll = distance * PX_PER_M;
       scrollX += (targetScroll - scrollX) * 0.18;
 
+      // Skip render if canvas hasn't laid out yet — avoids weird zero-size
+      // gradient / draw calls.
+      if (W < 2 || H < 2) return;
+
       render(now);
     }
 
@@ -1084,15 +1103,17 @@ import Layout from '../../../layouts/Layout.astro';
       // ----- ground / road surface -----
       const groundY = Math.min(H - 40, H * 0.78);
       const figureCX = Math.max(160, W * 0.32);
-      const roadH = Math.min(60, H - groundY - 4); // depth of the road band
+      const roadH = Math.max(4, Math.min(60, H - groundY - 4));
 
       // road band: slightly darker buff than the manila bg, fades downward
-      const roadGrad = ctx!.createLinearGradient(0, groundY, 0, groundY + roadH);
-      roadGrad.addColorStop(0, '#d6c483');
-      roadGrad.addColorStop(0.7, '#cab97a');
-      roadGrad.addColorStop(1, '#bda86a');
-      ctx!.fillStyle = roadGrad;
-      ctx!.fillRect(0, groundY, W, roadH);
+      if (roadH > 4) {
+        const roadGrad = ctx!.createLinearGradient(0, groundY, 0, groundY + roadH);
+        roadGrad.addColorStop(0, '#d6c483');
+        roadGrad.addColorStop(0.7, '#cab97a');
+        roadGrad.addColorStop(1, '#bda86a');
+        ctx!.fillStyle = roadGrad;
+        ctx!.fillRect(0, groundY, W, roadH);
+      }
 
       // top edge — bolder ground line
       ctx!.strokeStyle = 'rgba(58,46,26,0.55)';
