@@ -474,13 +474,34 @@ import Layout from '../../../layouts/Layout.astro';
   // texture (stones, cracks) at fixed world positions so they scroll
   // past coherently without per-frame jitter.
   function hash01(n: number): number {
-    let h = (n * 2654435761) >>> 0;
+    let h = Math.imul(n | 0, 2654435761) >>> 0;
     h ^= h >>> 16;
     h = Math.imul(h, 2246822519) >>> 0;
     h ^= h >>> 13;
     h = Math.imul(h, 3266489917) >>> 0;
     h ^= h >>> 16;
     return h / 0xFFFFFFFF;
+  }
+
+  // Canvas `ellipse` throws IndexSizeError on a negative or non-finite
+  // radius — a single bad pose computation can take down the loop. This
+  // wrapper silently skips invalid calls and logs the first one for
+  // diagnosis. Replaces every direct ctx.ellipse in this file.
+  let _ellipseLogged = false;
+  function safeEllipse(
+    ctx: CanvasRenderingContext2D,
+    x: number, y: number,
+    rx: number, ry: number,
+    rot: number, start: number, end: number,
+  ) {
+    if (!isFinite(x) || !isFinite(y) || !isFinite(rx) || !isFinite(ry) || rx < 0.05 || ry < 0.05) {
+      if (!_ellipseLogged) {
+        _ellipseLogged = true;
+        console.warn('[mos] skipped ellipse with bad args', { x, y, rx, ry });
+      }
+      return;
+    }
+    ctx.ellipse(x, y, rx, ry, rot, start, end);
   }
 
   // Returns where the briefcase hand ends up in screen coords, so the caller
@@ -669,7 +690,7 @@ import Layout from '../../../layouts/Layout.astro';
     const brimW = r * 2.4;
     const brimH = r * 0.45;
     ctx.beginPath();
-    ctx.ellipse(0, brimY, brimW / 2, brimH / 2, 0, 0, Math.PI * 2);
+    safeEllipse(ctx, 0, brimY, brimW / 2, brimH / 2, 0, 0, Math.PI * 2);
     ctx.fill();
 
     // Crown
@@ -677,13 +698,13 @@ import Layout from '../../../layouts/Layout.astro';
     const crownW = r * 1.5;
     const crownY = brimY - crownH * 0.45;
     ctx.beginPath();
-    ctx.ellipse(0, crownY, crownW / 2, crownH / 2, 0, 0, Math.PI * 2);
+    safeEllipse(ctx, 0, crownY, crownW / 2, crownH / 2, 0, 0, Math.PI * 2);
     ctx.fill();
 
     // Hatband — thin manila stripe at brim/crown junction
     ctx.fillStyle = bg;
     ctx.beginPath();
-    ctx.ellipse(0, brimY - r * 0.05, crownW * 0.46, brimH * 0.18, 0, 0, Math.PI * 2);
+    safeEllipse(ctx, 0, brimY - r * 0.05, crownW * 0.46, brimH * 0.18, 0, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();
@@ -1144,7 +1165,7 @@ import Layout from '../../../layouts/Layout.astro';
         const tone = 0.16 + hash01(s + 411) * 0.22;
         ctx!.fillStyle = `rgba(58,46,26,${tone.toFixed(3)})`;
         ctx!.beginPath();
-        ctx!.ellipse(x, groundY + yOff, r, r * 0.72, 0, 0, Math.PI * 2);
+        safeEllipse(ctx!, x, groundY + yOff, r, r * 0.72, 0, 0, Math.PI * 2);
         ctx!.fill();
       }
 
