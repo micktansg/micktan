@@ -12,8 +12,8 @@ import Layout from '../../../layouts/Layout.astro';
     </header>
 
     <div class="hud-counter">
-      <div class="now"><span data-counter>0</span><em>cm</em></div>
-      <div class="best">best — <span data-best>0</span> cm</div>
+      <div class="now"><span data-counter>0</span><em>m</em></div>
+      <div class="best">best — <span data-best>0</span> m</div>
     </div>
 
     <div class="stage">
@@ -31,8 +31,8 @@ import Layout from '../../../layouts/Layout.astro';
         <h2>Application rejected.</h2>
         <p class="reason" data-reason>The Ministry regrets to inform you.</p>
         <dl>
-          <dt>Distance</dt><dd><span data-final>0</span> cm</dd>
-          <dt>Best</dt><dd><span data-final-best>0</span> cm</dd>
+          <dt>Distance</dt><dd><span data-final>0</span> m</dd>
+          <dt>Best</dt><dd><span data-final-best>0</span> m</dd>
         </dl>
         <p class="retry">tap to resubmit</p>
       </div>
@@ -564,7 +564,9 @@ import Layout from '../../../layouts/Layout.astro';
     const sig = ac.signal;
 
     // ----- persistence -----
-    let best = parseInt(localStorage.getItem('mos.best') ?? '0', 10) || 0;
+    // Stored as integer meters in `mos.best.m`. Old `mos.best` from the
+    // initial cm-tracking build is intentionally orphaned.
+    let best = parseInt(localStorage.getItem('mos.best.m') ?? '0', 10) || 0;
     bestEl.textContent = String(best);
     finalBestEl.textContent = String(best);
 
@@ -625,7 +627,7 @@ import Layout from '../../../layouts/Layout.astro';
     let phase: Phase = 'idle';
     let lastFoot: 'L' | 'R' | null = null;
     let lastTapTime = 0;
-    let distance = 0; // cm
+    let distance = 0; // metres (float for sub-step resolution)
     let scrollX = 0; // px in screen space
     let prevPose: Pose = idle;
     let nextPose: Pose = idle;
@@ -639,8 +641,8 @@ import Layout from '../../../layouts/Layout.astro';
 
     // ----- timing window -----
     function currentWindow(): number {
-      // 1000ms at distance 0, drops to 320ms by distance 8000.
-      const t = Math.min(1, distance / 8000);
+      // 1000ms at 0 m, drops to 320ms by 80 m.
+      const t = Math.min(1, distance / 80);
       return Math.round(1000 - t * 680);
     }
     const MIN_GAP = 90; // ms — taps closer than this = trip
@@ -689,10 +691,10 @@ import Layout from '../../../layouts/Layout.astro';
       returningToIdle = false;
       returnToIdleAt = now + 160;
 
-      // stride length in cm — vary per step so the counter ticks pleasantly
-      const stride = 38 + Math.floor(Math.random() * 36);
+      // stride length in metres — vary per step so the counter ticks pleasantly
+      const stride = 0.7 + Math.random() * 0.8; // 0.7–1.5 m
       distance += stride;
-      counterEl.textContent = String(distance);
+      counterEl.textContent = String(Math.floor(distance));
 
       // visual pad flash
       flashPad(foot, false);
@@ -723,10 +725,11 @@ import Layout from '../../../layouts/Layout.astro';
     }
 
     function showOverlay() {
-      finalEl!.textContent = String(distance);
-      if (distance > best) {
-        best = distance;
-        localStorage.setItem('mos.best', String(best));
+      const finalMetres = Math.floor(distance);
+      finalEl!.textContent = String(finalMetres);
+      if (finalMetres > best) {
+        best = finalMetres;
+        localStorage.setItem('mos.best.m', String(best));
         bestEl!.textContent = String(best);
       }
       finalBestEl!.textContent = String(best);
@@ -744,6 +747,7 @@ import Layout from '../../../layouts/Layout.astro';
       nextPose = idle;
       returningToIdle = false;
       counterEl!.textContent = '0';
+      bestEl!.textContent = String(best);
       overlayEl!.hidden = true;
     }
 
@@ -781,8 +785,8 @@ import Layout from '../../../layouts/Layout.astro';
     let currentPose: Pose = idle;
 
     // ----- world scroll -----
-    // distance increases monotonically. scrollX = distance * pxPerCm.
-    const PX_PER_CM = 1.2;
+    // distance increases monotonically. scrollX = distance * pxPerM.
+    const PX_PER_M = 120;
 
     // ----- main loop -----
     let raf = 0;
@@ -824,7 +828,7 @@ import Layout from '../../../layouts/Layout.astro';
       }
 
       // smooth scroll target
-      const targetScroll = distance * PX_PER_CM;
+      const targetScroll = distance * PX_PER_M;
       scrollX += (targetScroll - scrollX) * 0.18;
 
       render(now);
@@ -847,26 +851,24 @@ import Layout from '../../../layouts/Layout.astro';
       ctx!.lineTo(W, groundY + 0.5);
       ctx!.stroke();
 
-      const tickSpacingCm = 50;
-      const tickSpacingPx = tickSpacingCm * PX_PER_CM;
-      // worldX shown at figureCX corresponds to distance.
-      // a tick at world cm `c` is rendered at: figureCX + (c - distance) * PX_PER_CM
-      const startCm = Math.floor((distance - figureCX / PX_PER_CM) / tickSpacingCm) * tickSpacingCm;
-      const endCm = distance + (W - figureCX) / PX_PER_CM + tickSpacingCm;
+      // ticks every 1 m; major every 5 m with a label
+      const tickSpacingM = 1;
+      const startM = Math.floor((distance - figureCX / PX_PER_M) / tickSpacingM) * tickSpacingM;
+      const endM = distance + (W - figureCX) / PX_PER_M + tickSpacingM;
       ctx!.fillStyle = 'rgba(26,24,18,0.32)';
       ctx!.font = '10px Lora, Georgia, serif';
       ctx!.textAlign = 'center';
-      for (let c = startCm; c <= endCm; c += tickSpacingCm) {
-        const x = figureCX + (c - distance) * PX_PER_CM;
-        const major = c % 500 === 0;
+      for (let m = startM; m <= endM; m += tickSpacingM) {
+        const x = figureCX + (m - distance) * PX_PER_M;
+        const major = m % 5 === 0;
         const tickH = major ? 8 : 4;
         ctx!.strokeStyle = major ? 'rgba(26,24,18,0.32)' : 'rgba(26,24,18,0.18)';
         ctx!.beginPath();
         ctx!.moveTo(x + 0.5, groundY + 1);
         ctx!.lineTo(x + 0.5, groundY + 1 + tickH);
         ctx!.stroke();
-        if (major && c >= 0) {
-          ctx!.fillText(`${c}`, x, groundY + 22);
+        if (major && m >= 0) {
+          ctx!.fillText(`${m}`, x, groundY + 22);
         }
       }
 
