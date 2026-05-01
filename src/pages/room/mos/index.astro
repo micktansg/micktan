@@ -43,9 +43,10 @@ import Layout from '../../../layouts/Layout.astro';
 </Layout>
 
 <style>
-  /* Carbon-copy manila palette: warm buff surface, sepia ink, faded brown
-     accents. Distinct from the cream-ink /room/ index. */
-  html, body { background: #e8d997; overflow: hidden; }
+  /* Light parchment palette — clean warm cream, sepia ink, faded brown
+     accents. A touch warmer than /room/ so MOS reads as its own surface
+     without going saturated/sickly like the earlier manila. */
+  html, body { background: #f2ecd6; overflow: hidden; }
 
   .mos {
     position: fixed;
@@ -189,7 +190,7 @@ import Layout from '../../../layouts/Layout.astro';
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(232, 217, 151, 0.88);
+    background: rgba(242, 236, 214, 0.9);
     backdrop-filter: blur(2px);
     -webkit-backdrop-filter: blur(2px);
     z-index: 10;
@@ -208,7 +209,7 @@ import Layout from '../../../layouts/Layout.astro';
     text-align: center;
     padding: 3rem 3.5rem;
     max-width: 28rem;
-    background: #f0e2a8;
+    background: #f7f1de;
     border: 1px solid rgba(58, 46, 26, 0.24);
     box-shadow: 0 1px 0 rgba(58, 46, 26, 0.06), 0 24px 60px -30px rgba(58, 46, 26, 0.4);
   }
@@ -645,7 +646,7 @@ import Layout from '../../../layouts/Layout.astro';
     ctx.quadraticCurveTo(x0, y0, x0 + r, y0);
     ctx.fill();
     // clasp — small rectangle at top centre of case
-    ctx.fillStyle = '#e8d997';
+    ctx.fillStyle = '#f2ecd6';
     ctx.fillRect(-1.6 * scale, y0 + 1.5 * scale, 3.2 * scale, 2 * scale);
     ctx.restore();
   }
@@ -657,7 +658,7 @@ import Layout from '../../../layouts/Layout.astro';
 
     const r = M.head * scale;
     const ink = '#2a1f10';
-    const bg = '#e8d997';
+    const bg = '#f2ecd6';
 
     // Head — round skull
     ctx.fillStyle = ink;
@@ -1126,12 +1127,13 @@ import Layout from '../../../layouts/Layout.astro';
       const figureCX = Math.max(160, W * 0.32);
       const roadH = Math.max(4, Math.min(60, H - groundY - 4));
 
-      // road band: slightly darker buff than the manila bg, fades downward
+      // road band: slightly darker than the cream bg, desaturated so it
+      // reads as soft earth rather than yellow paper.
       if (roadH > 4) {
         const roadGrad = ctx!.createLinearGradient(0, groundY, 0, groundY + roadH);
-        roadGrad.addColorStop(0, '#d6c483');
-        roadGrad.addColorStop(0.7, '#cab97a');
-        roadGrad.addColorStop(1, '#bda86a');
+        roadGrad.addColorStop(0, '#e3dcc1');
+        roadGrad.addColorStop(0.7, '#d6cdaf');
+        roadGrad.addColorStop(1, '#c8be9c');
         ctx!.fillStyle = roadGrad;
         ctx!.fillRect(0, groundY, W, roadH);
       }
@@ -1245,12 +1247,12 @@ import Layout from '../../../layouts/Layout.astro';
 
       drawBriefcase(ctx!, handX, handY, figureScale, briefcaseAngle);
 
-      // subtle vignette at edges, manila-tinted, to focus on figure
+      // subtle vignette at edges, cream-tinted, to focus on figure
       const grad = ctx!.createLinearGradient(0, 0, W, 0);
-      grad.addColorStop(0, 'rgba(232,217,151,0.55)');
-      grad.addColorStop(0.12, 'rgba(232,217,151,0)');
-      grad.addColorStop(0.88, 'rgba(232,217,151,0)');
-      grad.addColorStop(1, 'rgba(232,217,151,0.55)');
+      grad.addColorStop(0, 'rgba(242,236,214,0.55)');
+      grad.addColorStop(0.12, 'rgba(242,236,214,0)');
+      grad.addColorStop(0.88, 'rgba(242,236,214,0)');
+      grad.addColorStop(1, 'rgba(242,236,214,0.55)');
       ctx!.fillStyle = grad;
       ctx!.fillRect(0, 0, W, H);
 
