@@ -109,6 +109,9 @@ import Layout from '../../../layouts/Layout.astro';
         {/* Floating "+" indicators when buttons pressed */}
         <span class="floater" id="floater"></span>
 
+        {/* Auto-promotion celebration banner — shows empty corporate praise on stage-up */}
+        <div class="celebration" id="celebrationBanner" aria-live="polite"></div>
+
         {/* Fire layer */}
         <div class="fire-layer" id="fireLayer" aria-hidden="true"></div>
         <div class="smoke-layer" id="smokeLayer" aria-hidden="true"></div>
@@ -144,18 +147,7 @@ import Layout from '../../../layouts/Layout.astro';
      </div>
     </section>
 
-    {/* Quit confirmation modal */}
-    <div class="modal" id="quitModal" hidden>
-      <div class="modal-card">
-        <p class="modal-text">Quit? Walk away from all this?</p>
-        <div class="modal-actions">
-          <button id="btnQuitCancel" class="modal-btn modal-btn--ghost" type="button">keep going</button>
-          <button id="btnQuitConfirm" class="modal-btn modal-btn--quit" type="button">yes, quit</button>
-        </div>
-      </div>
-    </div>
-
-    {/* Promotion / Award modal */}
+    {/* Quit-attempt modal — the boss bribes you to stay every time you try to leave. */}
     <div class="modal promo-modal" id="promoModal" hidden>
       <div class="modal-card promo-card">
         <div class="promo-confetti" id="promoConfetti" aria-hidden="true"></div>
@@ -163,6 +155,7 @@ import Layout from '../../../layouts/Layout.astro';
         <p class="modal-sub" id="promoSub"></p>
         <div class="modal-actions">
           <button id="btnPromoAck" class="modal-btn modal-btn--accept" type="button">accept it</button>
+          <button id="btnWalkAway" class="modal-btn modal-btn--walk" type="button">walk away</button>
         </div>
       </div>
     </div>
@@ -1054,6 +1047,47 @@ import Layout from '../../../layouts/Layout.astro';
     box-shadow: 4px 4px 0 var(--pc-pink);
   }
   .modal-btn--accept:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--pc-pink); }
+  .modal-btn--walk {
+    background: transparent;
+    color: var(--pc-blue-deep);
+    border: 2px dashed var(--pc-blue-deep);
+    box-shadow: none;
+    font-weight: 700;
+  }
+  .modal-btn--walk:hover { background: var(--pc-blue-deep); color: var(--pc-paper); border-style: solid; }
+
+  /* ===== Auto-promotion celebration banner ===== */
+  .celebration {
+    position: absolute;
+    top: 8%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--pc-yellow);
+    border: 2px solid var(--pc-blue-deep);
+    border-radius: 4px;
+    padding: 0.5rem 0.7rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--pc-blue-deep);
+    text-align: center;
+    line-height: 1.3;
+    max-width: 80%;
+    z-index: 9;
+    box-shadow: 3px 3px 0 var(--pc-blue-deep);
+    opacity: 0;
+    pointer-events: none;
+    text-shadow: 1px 1px 0 rgba(255,255,255,0.4);
+  }
+  .celebration.show {
+    animation: celebration-flash 4s ease-in-out forwards;
+  }
+  @keyframes celebration-flash {
+    0%   { opacity: 0; transform: translateX(-50%) scale(0.7); }
+    10%  { opacity: 1; transform: translateX(-50%) scale(1.05); }
+    20%  { transform: translateX(-50%) scale(1); }
+    80%  { opacity: 1; transform: translateX(-50%) scale(1); }
+    100% { opacity: 0; transform: translateX(-50%) scale(0.95); }
+  }
 
   .promo-confetti {
     position: absolute;
@@ -1272,7 +1306,7 @@ import Layout from '../../../layouts/Layout.astro';
     document.getElementById('moodFill').style.width = state.mood + '%';
     document.getElementById('burnoutFill').style.width = state.burnout + '%';
 
-    // No auto-stage-up: stage advances ONLY when the player accepts the promotion dialog.
+    // Auto-stage-up on XP threshold (no modal). Just a celebration.
     document.getElementById('stage').className = 'stage stage-' + state.stage;
     document.getElementById('careerLabel').textContent = '— ' + STAGES[state.stage].name + ' —';
 
@@ -1408,7 +1442,7 @@ import Layout from '../../../layouts/Layout.astro';
   function renderAfter() {
     saveState();
     render();
-    checkPromotion();
+    applyAutoAdvancement();
     bumpIdle();
   }
 
@@ -1424,35 +1458,79 @@ import Layout from '../../../layouts/Layout.astro';
     return award;
   }
 
-  // ===== promotion / award dialog flow =====
-  // After every input, decide if a promotion (or, at max stage, an extra award)
-  // is owed. Show the dialog. Stage only advances on acknowledgement.
-  function checkPromotion() {
-    if (state.ended) return;
-    if (state.pendingPromotion) return;
-    const next = STAGES[state.stage + 1];
-    if (next && state.xp >= next.xpAt) {
-      state.pendingPromotion = 'promotion';
-      saveState();
-      showPromotionModal();
-    } else if (!next && state.xp >= state.nextAwardAt) {
-      state.pendingPromotion = 'award';
-      saveState();
-      showPromotionModal();
+  // ===== auto-promotion (no modal) — just a celebration banner =====
+  // Empty corporate praise indexed by the stage you just got promoted INTO.
+  const PRAISE_PROMOTION = {
+    junior:              "You're amazing! I can't wait to see what you can do!",
+    senior:              "You're a star. We're so lucky to have you.",
+    'art director':      "You're absolutely killing it. Future of this place.",
+    'creative director': "You ARE this team. Without you, we're nothing.",
+    veteran:             "Legend. We're naming a meeting room after you.",
+  };
+  const PRAISE_VETERAN_AWARD = [
+    "Lifetime achievement vibes. We see you.",
+    "Genuinely iconic. You're the standard now.",
+    "We talk about you in pitches.",
+    "Your portfolio is the brief now.",
+    "You're not even in the running. You ARE the running.",
+    "Master class. Give that talk again.",
+    "Your name in their decks. Permanently.",
+  ];
+
+  // Idempotent: call from renderAfter — applies one stage-up OR one milestone award.
+  function applyAutoAdvancement() {
+    if (state.ended) return false;
+    let stageIdx = 0;
+    for (let i = STAGES.length - 1; i >= 0; i--) {
+      if (state.xp >= STAGES[i].xpAt) { stageIdx = i; break; }
     }
+    if (stageIdx > state.stage) {
+      state.stage = stageIdx;
+      grantAward('promotion');
+      saveState();
+      const nextName = STAGES[state.stage].name;
+      showCelebration(PRAISE_PROMOTION[nextName] || "You're a star.");
+      fullFanfare();
+      reactCharacter();
+      return true;
+    }
+    if (state.stage === STAGES.length - 1 && state.xp >= state.nextAwardAt) {
+      grantAward('milestone');
+      saveState();
+      const line = PRAISE_VETERAN_AWARD[Math.floor(Math.random() * PRAISE_VETERAN_AWARD.length)];
+      showCelebration(line);
+      fullFanfare();
+      reactCharacter();
+      return true;
+    }
+    return false;
   }
 
-  function showPromotionModal() {
-    const isMax = state.stage >= STAGES.length - 1;
+  function showCelebration(text) {
+    const banner = document.getElementById('celebrationBanner');
+    if (!banner) return;
+    banner.textContent = text;
+    banner.classList.remove('show');
+    void banner.offsetWidth;
+    banner.classList.add('show');
+  }
+
+  // ===== quit-attempt dialog (the bribe) =====
+  // Pressing the QUIT button summons the boss with a promotion offer.
+  // 'accept it' → another promotion / award + celebration.
+  // 'walk away' → ends the game (the only true win).
+  function showQuitAttempt() {
+    if (state.ended) return;
     const text = document.getElementById('promoText');
     const sub = document.getElementById('promoSub');
-    if (state.pendingPromotion === 'award' || isMax) {
-      text.textContent = 'Really? Another banger? we’ll give you another award!';
-      sub.textContent = STAGES[state.stage].name + ' · award incoming';
+    const isMax = state.stage >= STAGES.length - 1;
+    if (isMax) {
+      text.textContent = "Really? You were such a rising star, we'll give you another award!";
+      sub.textContent = "or… you could walk away.";
     } else {
       const nextName = STAGES[state.stage + 1].name;
-      text.textContent = 'Really? You were such a rising star, we’ll give you a promotion!';
-      sub.textContent = STAGES[state.stage].name + ' → ' + nextName;
+      text.textContent = "Really? You were such a rising star, we'll give you a promotion!";
+      sub.textContent = STAGES[state.stage].name + " → " + nextName + ". or… you could walk away.";
     }
     document.getElementById('promoModal').hidden = false;
     spawnPromoConfetti();
@@ -1465,19 +1543,28 @@ import Layout from '../../../layouts/Layout.astro';
   }
 
   function ackPromotion() {
-    const type = state.pendingPromotion;
-    state.pendingPromotion = null;
-    if (type === 'promotion' && state.stage < STAGES.length - 1) {
+    // The "accept it" path — the boss's bribe wins. Apply a promotion or award.
+    if (state.stage < STAGES.length - 1) {
       state.stage += 1;
       grantAward('promotion');
+      const nextName = STAGES[state.stage].name;
+      showCelebration(PRAISE_PROMOTION[nextName] || "You're a star.");
     } else {
       grantAward('milestone');
+      const line = PRAISE_VETERAN_AWARD[Math.floor(Math.random() * PRAISE_VETERAN_AWARD.length)];
+      showCelebration(line);
     }
     saveState();
     hidePromotionModal();
     fullFanfare();
     reactCharacter();
     render();
+  }
+
+  function walkAway() {
+    // The only true win: leave.
+    hidePromotionModal();
+    quit();
   }
 
   function spawnPromoConfetti() {
@@ -1619,12 +1706,8 @@ import Layout from '../../../layouts/Layout.astro';
     };
   })();
 
-  // ===== quit modal + ending =====
-  const quitModal = document.getElementById('quitModal');
+  // ===== ending =====
   const ending = document.getElementById('ending');
-
-  function showQuitModal() { quitModal.hidden = false; }
-  function hideQuitModal() { quitModal.hidden = true; }
 
   function showEnding() {
     const minutes = Math.max(1, Math.round(state.timeAlive / 60));
@@ -1725,11 +1808,11 @@ import Layout from '../../../layouts/Layout.astro';
   document.getElementById('btnFeed').addEventListener('click', feedExposure);
   document.getElementById('btnRaise').addEventListener('click', giveRaise);
   document.getElementById('btnPraise').addEventListener('click', givePraise);
-  document.getElementById('btnQuit').addEventListener('click', showQuitModal);
-  document.getElementById('btnQuitCancel').addEventListener('click', hideQuitModal);
-  document.getElementById('btnQuitConfirm').addEventListener('click', () => { hideQuitModal(); quit(); });
-  document.getElementById('btnReset').addEventListener('click', startNewLife);
+  // QUIT now opens the bribe modal — the only path to actually quitting is the 'walk away' button inside it.
+  document.getElementById('btnQuit').addEventListener('click', showQuitAttempt);
   document.getElementById('btnPromoAck').addEventListener('click', ackPromotion);
+  document.getElementById('btnWalkAway').addEventListener('click', walkAway);
+  document.getElementById('btnReset').addEventListener('click', startNewLife);
 
   const bgmBtn = document.getElementById('bgmToggle');
   const bgmIcon = document.getElementById('bgmIcon');
@@ -1755,8 +1838,7 @@ import Layout from '../../../layouts/Layout.astro';
     showEnding();
   } else {
     render();
-    // If a promotion was pending from a previous session, re-show the dialog.
-    if (state.pendingPromotion) showPromotionModal();
-    else checkPromotion();
+    // Catch up on any auto-promotions that were owed from a stale session.
+    applyAutoAdvancement();
   }
 </script>
