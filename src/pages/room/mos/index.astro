@@ -1,0 +1,907 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+---
+
+<Layout title="MOS — Ministry of Silly. Walk." description="alternate L and R. walk silly. don't fall.">
+  <main class="mos">
+    <a class="back" href="/room/" data-astro-prefetch>&larr; the room</a>
+
+    <header class="hud-head">
+      <h1>MOS.</h1>
+      <p class="sub">Ministry of Silly. Walk.</p>
+    </header>
+
+    <div class="hud-counter">
+      <div class="now"><span data-counter>0</span><em>cm</em></div>
+      <div class="best">best — <span data-best>0</span> cm</div>
+    </div>
+
+    <div class="stage">
+      <canvas data-stage></canvas>
+    </div>
+
+    <div class="pads" aria-hidden="false">
+      <button data-pad="L" class="pad" aria-label="left step"><span>L</span></button>
+      <button data-pad="R" class="pad" aria-label="right step"><span>R</span></button>
+    </div>
+
+    <div class="overlay" data-overlay hidden>
+      <div class="card">
+        <div class="stamp" data-stamp>REJECTED</div>
+        <h2>Application rejected.</h2>
+        <p class="reason" data-reason>The Ministry regrets to inform you.</p>
+        <dl>
+          <dt>Distance</dt><dd><span data-final>0</span> cm</dd>
+          <dt>Best</dt><dd><span data-final-best>0</span> cm</dd>
+        </dl>
+        <p class="retry">tap to resubmit</p>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<style>
+  html, body { background: #f0ece4; overflow: hidden; }
+
+  .mos {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    color: #1a1812;
+    font-family: 'Lora', Georgia, serif;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+
+  .back {
+    position: absolute;
+    top: 1.4rem;
+    left: 1.4rem;
+    color: #1a1812;
+    opacity: 0.4;
+    text-decoration: none;
+    font-size: 0.85rem;
+    z-index: 5;
+    transition: opacity 200ms;
+  }
+  .back:hover { opacity: 0.95; }
+
+  .hud-head {
+    padding: 1.4rem 2rem 0.4rem;
+    text-align: left;
+    pointer-events: none;
+  }
+  .hud-head h1 {
+    font-size: clamp(2.2rem, 5vw, 3.4rem);
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+  .hud-head .sub {
+    margin-top: 0.3rem;
+    font-style: italic;
+    font-size: clamp(0.9rem, 1.6vw, 1.1rem);
+    opacity: 0.6;
+  }
+
+  .hud-counter {
+    position: absolute;
+    top: 1.4rem;
+    right: 1.6rem;
+    text-align: right;
+    font-feature-settings: 'tnum';
+    pointer-events: none;
+    z-index: 4;
+  }
+  .hud-counter .now {
+    font-size: clamp(1.4rem, 3.2vw, 2rem);
+    font-weight: 500;
+    line-height: 1;
+  }
+  .hud-counter .now em {
+    font-style: normal;
+    font-size: 0.55em;
+    opacity: 0.5;
+    margin-left: 0.25em;
+  }
+  .hud-counter .best {
+    margin-top: 0.4rem;
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    opacity: 0.45;
+  }
+
+  .stage {
+    position: relative;
+    overflow: hidden;
+  }
+  .stage canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .pads {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border-top: 1px solid rgba(26, 24, 18, 0.18);
+  }
+  .pad {
+    background: transparent;
+    border: 0;
+    border-right: 1px solid rgba(26, 24, 18, 0.18);
+    color: #1a1812;
+    padding: 1.4rem 0;
+    font-family: 'Lora', Georgia, serif;
+    font-size: clamp(1.4rem, 4vw, 2rem);
+    font-weight: 500;
+    letter-spacing: 0.4em;
+    cursor: pointer;
+    transition: background 90ms ease-out;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pad:last-child { border-right: 0; }
+  .pad span { opacity: 0.45; transition: opacity 120ms; }
+  .pad:hover span { opacity: 0.85; }
+  .pad.flash { background: rgba(26, 24, 18, 0.08); }
+  .pad.flash span { opacity: 1; }
+  .pad.flash-bad { background: rgba(160, 30, 30, 0.16); }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(240, 236, 228, 0.85);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    z-index: 10;
+    cursor: pointer;
+    animation: overlay-in 320ms ease-out both;
+  }
+  .overlay[hidden] { display: none !important; }
+
+  @keyframes overlay-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .overlay .card {
+    position: relative;
+    text-align: center;
+    padding: 3rem 3.5rem;
+    max-width: 28rem;
+    background: #f5f1e8;
+    border: 1px solid rgba(26, 24, 18, 0.2);
+    box-shadow: 0 1px 0 rgba(26, 24, 18, 0.06), 0 24px 60px -30px rgba(26, 24, 18, 0.4);
+  }
+
+  .overlay .stamp {
+    position: absolute;
+    top: -0.6rem;
+    right: -1.2rem;
+    transform: rotate(8deg) scale(2.4);
+    color: #b22222;
+    border: 4px solid #b22222;
+    padding: 0.3rem 0.9rem;
+    font-family: 'Lora', Georgia, serif;
+    font-weight: 600;
+    font-size: 1.25rem;
+    letter-spacing: 0.2em;
+    opacity: 0;
+    animation: stamp-slam 520ms cubic-bezier(.2,1.6,.4,1) 200ms both;
+  }
+
+  @keyframes stamp-slam {
+    0%   { transform: rotate(20deg) scale(4); opacity: 0; }
+    60%  { transform: rotate(6deg) scale(1.05); opacity: 1; }
+    100% { transform: rotate(8deg) scale(1.1); opacity: 0.9; }
+  }
+
+  .overlay h2 {
+    font-size: clamp(1.4rem, 3vw, 1.8rem);
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    margin-bottom: 0.4rem;
+  }
+  .overlay .reason {
+    font-style: italic;
+    opacity: 0.55;
+    font-size: 0.9rem;
+    margin-bottom: 1.6rem;
+  }
+  .overlay dl {
+    display: grid;
+    grid-template-columns: auto auto;
+    column-gap: 1rem;
+    row-gap: 0.4rem;
+    justify-content: center;
+    margin-bottom: 1.8rem;
+    font-feature-settings: 'tnum';
+  }
+  .overlay dt {
+    text-align: right;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 0.72rem;
+    opacity: 0.5;
+    align-self: center;
+  }
+  .overlay dd { text-align: left; font-size: 1.1rem; }
+  .overlay .retry {
+    font-style: italic;
+    opacity: 0.5;
+    font-size: 0.9rem;
+  }
+
+  @media (max-width: 600px) {
+    .hud-head { padding-top: 3rem; padding-left: 1.2rem; }
+    .back { top: 1rem; left: 1rem; }
+    .hud-counter { top: 1rem; right: 1rem; }
+    .overlay .card { padding: 2.4rem 2rem; }
+  }
+</style>
+
+<script>
+  // ============================================================================
+  // MOS — Ministry of Silly Walk
+  // ----------------------------------------------------------------------------
+  // Self-contained: renderer + game loop + input + audio + persistence.
+  // Renderer ported from /room/mos-preview/.
+  // ============================================================================
+
+  type Pose = {
+    torso: number;
+    head: number;
+    Lhip: number; Lknee: number;
+    Rhip: number; Rknee: number;
+    Lshoulder: number; Lelbow: number;
+    Rshoulder: number; Relbow: number;
+    hipLift: number;
+    bodyDrift?: { x: number; y: number; rot: number };
+  };
+
+  const D = (deg: number) => (deg * Math.PI) / 180;
+
+  const idle: Pose = {
+    torso: D(-2), head: D(0),
+    Lhip: D(0), Lknee: D(0),
+    Rhip: D(0), Rknee: D(0),
+    Lshoulder: D(2), Lelbow: D(2),
+    Rshoulder: D(-2), Relbow: D(-2),
+    hipLift: 0,
+  };
+
+  // R-foot-forward step poses. For an L-foot step we mirror at runtime.
+  const stepPoses: Pose[] = [
+    // highKick
+    {
+      torso: D(-12), head: D(4),
+      Lhip: D(-4), Lknee: D(-2),
+      Rhip: D(85), Rknee: D(-30),
+      Lshoulder: D(20), Lelbow: D(8),
+      Rshoulder: D(-40), Relbow: D(-20),
+      hipLift: 0,
+    },
+    // longStride
+    {
+      torso: D(8), head: D(-2),
+      Lhip: D(-38), Lknee: D(8),
+      Rhip: D(50), Rknee: D(-8),
+      Lshoulder: D(-30), Lelbow: D(-10),
+      Rshoulder: D(40), Relbow: D(20),
+      hipLift: -6,
+    },
+    // bentShuffle
+    {
+      torso: D(-4), head: D(2),
+      Lhip: D(20), Lknee: D(-70),
+      Rhip: D(-10), Rknee: D(-90),
+      Lshoulder: D(-15), Lelbow: D(-60),
+      Rshoulder: D(15), Relbow: D(-50),
+      hipLift: 28,
+    },
+    // leanForward
+    {
+      torso: D(38), head: D(-22),
+      Lhip: D(-22), Lknee: D(4),
+      Rhip: D(28), Rknee: D(-14),
+      Lshoulder: D(50), Lelbow: D(10),
+      Rshoulder: D(-60), Relbow: D(-40),
+      hipLift: 0,
+    },
+    // goosestep
+    {
+      torso: D(-6), head: D(0),
+      Lhip: D(0), Lknee: D(0),
+      Rhip: D(70), Rknee: D(0),
+      Lshoulder: D(-30), Lelbow: D(-2),
+      Rshoulder: D(30), Relbow: D(-2),
+      hipLift: 0,
+    },
+  ];
+
+  const ragdollPose: Pose = {
+    torso: D(75), head: D(-30),
+    Lhip: D(110), Lknee: D(-50),
+    Rhip: D(60), Rknee: D(-90),
+    Lshoulder: D(160), Lelbow: D(-40),
+    Rshoulder: D(-140), Relbow: D(70),
+    hipLift: -40,
+    bodyDrift: { x: 8, y: -20, rot: D(20) },
+  };
+
+  // Mirror a R-forward pose into an L-forward pose by swapping limb angles.
+  function mirror(p: Pose): Pose {
+    return {
+      torso: p.torso,
+      head: p.head,
+      Lhip: p.Rhip, Lknee: p.Rknee,
+      Rhip: p.Lhip, Rknee: p.Lknee,
+      Lshoulder: p.Rshoulder, Lelbow: p.Relbow,
+      Rshoulder: p.Lshoulder, Relbow: p.Lelbow,
+      hipLift: p.hipLift,
+      bodyDrift: p.bodyDrift,
+    };
+  }
+
+  // Bone metrics
+  const M = {
+    torso: 62,
+    thigh: 46,
+    shin: 46,
+    upperArm: 36,
+    forearm: 32,
+    head: 13,
+    legW: 13,
+    armW: 10,
+    torsoW: 22,
+    footLen: 14,
+    footH: 5,
+  };
+
+  function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
+  function lerpPose(a: Pose, b: Pose, t: number): Pose {
+    const driftA = a.bodyDrift ?? { x: 0, y: 0, rot: 0 };
+    const driftB = b.bodyDrift ?? { x: 0, y: 0, rot: 0 };
+    return {
+      torso: lerp(a.torso, b.torso, t),
+      head: lerp(a.head, b.head, t),
+      Lhip: lerp(a.Lhip, b.Lhip, t),
+      Lknee: lerp(a.Lknee, b.Lknee, t),
+      Rhip: lerp(a.Rhip, b.Rhip, t),
+      Rknee: lerp(a.Rknee, b.Rknee, t),
+      Lshoulder: lerp(a.Lshoulder, b.Lshoulder, t),
+      Lelbow: lerp(a.Lelbow, b.Lelbow, t),
+      Rshoulder: lerp(a.Rshoulder, b.Rshoulder, t),
+      Relbow: lerp(a.Relbow, b.Relbow, t),
+      hipLift: lerp(a.hipLift, b.hipLift, t),
+      bodyDrift: {
+        x: lerp(driftA.x, driftB.x, t),
+        y: lerp(driftA.y, driftB.y, t),
+        rot: lerp(driftA.rot, driftB.rot, t),
+      },
+    };
+  }
+
+  function easeOutCubic(t: number) { return 1 - Math.pow(1 - t, 3); }
+  function easeInCubic(t: number) { return t * t * t; }
+
+  function drawFigure(ctx: CanvasRenderingContext2D, cx: number, groundY: number, pose: Pose, scale = 1) {
+    ctx.save();
+
+    const drift = pose.bodyDrift;
+    if (drift && (drift.x || drift.y || drift.rot)) {
+      ctx.translate(cx + drift.x, groundY + drift.y);
+      ctx.rotate(drift.rot);
+      ctx.translate(-cx, -groundY);
+    }
+
+    const ink = '#1a1812';
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = ink;
+    ctx.fillStyle = ink;
+
+    const hipX = cx;
+    const hipY = groundY - (M.shin + M.thigh) * scale + pose.hipLift * scale;
+
+    const torsoAng = pose.torso;
+    const shoulderX = hipX + Math.sin(torsoAng) * M.torso * scale;
+    const shoulderY = hipY - Math.cos(torsoAng) * M.torso * scale;
+
+    const headAng = torsoAng + pose.head;
+    const headDist = (M.head + 6) * scale;
+    const headCX = shoulderX + Math.sin(headAng) * headDist;
+    const headCY = shoulderY - Math.cos(headAng) * headDist;
+
+    const limb = (rootX: number, rootY: number, parentAng: number, childAng: number, len1: number, len2: number) => {
+      const a1 = parentAng;
+      const midX = rootX + Math.sin(a1) * len1;
+      const midY = rootY + Math.cos(a1) * len1;
+      const a2 = a1 + childAng;
+      const endX = midX + Math.sin(a2) * len2;
+      const endY = midY + Math.cos(a2) * len2;
+      return { midX, midY, endX, endY, a2 };
+    };
+
+    const lLeg = limb(hipX, hipY, pose.Lhip, pose.Lknee, M.thigh * scale, M.shin * scale);
+    const rLeg = limb(hipX, hipY, pose.Rhip, pose.Rknee, M.thigh * scale, M.shin * scale);
+
+    const legs = [
+      { ang: pose.Lhip, joints: lLeg, side: 'L' as const },
+      { ang: pose.Rhip, joints: rLeg, side: 'R' as const },
+    ].sort((a, b) => Math.abs(b.ang) - Math.abs(a.ang));
+
+    ctx.lineWidth = M.legW * scale;
+    for (const leg of legs) {
+      ctx.beginPath();
+      ctx.moveTo(hipX, hipY);
+      ctx.lineTo(leg.joints.midX, leg.joints.midY);
+      ctx.lineTo(leg.joints.endX, leg.joints.endY);
+      ctx.stroke();
+      drawShoe(ctx, leg.joints.endX, leg.joints.endY, leg.joints.a2, scale);
+    }
+
+    ctx.lineWidth = M.torsoW * scale;
+    ctx.beginPath();
+    ctx.moveTo(hipX, hipY);
+    ctx.lineTo(shoulderX, shoulderY);
+    ctx.stroke();
+
+    const lArm = limb(shoulderX, shoulderY, pose.Lshoulder + torsoAng, pose.Lelbow, M.upperArm * scale, M.forearm * scale);
+    const rArm = limb(shoulderX, shoulderY, pose.Rshoulder + torsoAng, pose.Relbow, M.upperArm * scale, M.forearm * scale);
+
+    ctx.lineWidth = M.armW * scale;
+    ctx.beginPath();
+    ctx.moveTo(shoulderX, shoulderY);
+    ctx.lineTo(rArm.midX, rArm.midY);
+    ctx.lineTo(rArm.endX, rArm.endY);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(shoulderX, shoulderY);
+    ctx.lineTo(lArm.midX, lArm.midY);
+    ctx.lineTo(lArm.endX, lArm.endY);
+    ctx.stroke();
+
+    drawBriefcase(ctx, lArm.endX, lArm.endY, scale);
+    drawHead(ctx, headCX, headCY, headAng, scale);
+
+    ctx.restore();
+  }
+
+  function drawShoe(ctx: CanvasRenderingContext2D, x: number, y: number, shinAng: number, scale: number) {
+    const footAng = shinAng + Math.PI / 2;
+    const halfLen = (M.footLen / 2) * scale;
+    const heelX = x - Math.sin(footAng) * halfLen * 0.4;
+    const heelY = y + Math.cos(footAng) * halfLen * 0.4;
+    const toeX = x + Math.sin(footAng) * halfLen * 1.6;
+    const toeY = y + Math.cos(footAng) * halfLen * 1.6;
+    ctx.lineWidth = (M.footH + 2) * scale;
+    ctx.beginPath();
+    ctx.moveTo(heelX, heelY);
+    ctx.lineTo(toeX, toeY);
+    ctx.stroke();
+  }
+
+  function drawBriefcase(ctx: CanvasRenderingContext2D, handX: number, handY: number, scale: number) {
+    const w = 26 * scale;
+    const h = 18 * scale;
+    const handleH = 5 * scale;
+    ctx.save();
+    ctx.translate(handX, handY);
+    ctx.lineWidth = 2 * scale;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(0, handleH);
+    ctx.stroke();
+    const r = 2 * scale;
+    const x0 = -w / 2, y0 = handleH;
+    ctx.beginPath();
+    ctx.moveTo(x0 + r, y0);
+    ctx.lineTo(x0 + w - r, y0);
+    ctx.quadraticCurveTo(x0 + w, y0, x0 + w, y0 + r);
+    ctx.lineTo(x0 + w, y0 + h - r);
+    ctx.quadraticCurveTo(x0 + w, y0 + h, x0 + w - r, y0 + h);
+    ctx.lineTo(x0 + r, y0 + h);
+    ctx.quadraticCurveTo(x0, y0 + h, x0, y0 + h - r);
+    ctx.lineTo(x0, y0 + r);
+    ctx.quadraticCurveTo(x0, y0, x0 + r, y0);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawHead(ctx: CanvasRenderingContext2D, cx: number, cy: number, headAng: number, scale: number) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(headAng);
+    ctx.beginPath();
+    ctx.arc(0, 0, M.head * scale, 0, Math.PI * 2);
+    ctx.fill();
+    const brimY = -M.head * scale * 0.6;
+    const brimW = M.head * scale * 2.4;
+    const brimH = M.head * scale * 0.45;
+    ctx.beginPath();
+    ctx.ellipse(0, brimY, brimW / 2, brimH / 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    const crownH = M.head * scale * 1.1;
+    const crownW = M.head * scale * 1.5;
+    const crownY = brimY - crownH * 0.45;
+    ctx.beginPath();
+    ctx.ellipse(0, crownY, crownW / 2, crownH / 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // ============================================================================
+  // Game
+  // ============================================================================
+
+  type Phase = 'idle' | 'walking' | 'falling' | 'dead';
+
+  function init() {
+    const canvas = document.querySelector<HTMLCanvasElement>('canvas[data-stage]');
+    const counterEl = document.querySelector<HTMLElement>('[data-counter]');
+    const bestEl = document.querySelector<HTMLElement>('[data-best]');
+    const finalEl = document.querySelector<HTMLElement>('[data-final]');
+    const finalBestEl = document.querySelector<HTMLElement>('[data-final-best]');
+    const overlayEl = document.querySelector<HTMLElement>('[data-overlay]');
+    const reasonEl = document.querySelector<HTMLElement>('[data-reason]');
+    const padL = document.querySelector<HTMLElement>('.pad[data-pad="L"]');
+    const padR = document.querySelector<HTMLElement>('.pad[data-pad="R"]');
+    if (!canvas || !counterEl || !bestEl || !finalEl || !finalBestEl || !overlayEl || !reasonEl || !padL || !padR) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const ac = new AbortController();
+    const sig = ac.signal;
+
+    // ----- persistence -----
+    let best = parseInt(localStorage.getItem('mos.best') ?? '0', 10) || 0;
+    bestEl.textContent = String(best);
+    finalBestEl.textContent = String(best);
+
+    // ----- audio -----
+    let audioCtx: AudioContext | null = null;
+    function ensureAudio() {
+      if (audioCtx) return audioCtx;
+      const C = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!C) return null;
+      audioCtx = new C();
+      return audioCtx;
+    }
+    function clop(pitch = 1) {
+      const a = ensureAudio();
+      if (!a) return;
+      const t = a.currentTime;
+      const osc = a.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(140 * pitch, t);
+      osc.frequency.exponentialRampToValueAtTime(60 * pitch, t + 0.07);
+      const g = a.createGain();
+      g.gain.setValueAtTime(0.16, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+      osc.connect(g).connect(a.destination);
+      osc.start(t);
+      osc.stop(t + 0.1);
+    }
+    function thud() {
+      const a = ensureAudio();
+      if (!a) return;
+      const t = a.currentTime;
+      const osc = a.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(110, t);
+      osc.frequency.exponentialRampToValueAtTime(35, t + 0.4);
+      const g = a.createGain();
+      g.gain.setValueAtTime(0.28, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+      osc.connect(g).connect(a.destination);
+      osc.start(t);
+      osc.stop(t + 0.5);
+    }
+
+    // ----- canvas sizing -----
+    let W = 0, H = 0, dpr = 1;
+    function resize() {
+      dpr = window.devicePixelRatio || 1;
+      W = canvas!.clientWidth;
+      H = canvas!.clientHeight;
+      canvas!.width = Math.max(1, Math.floor(W * dpr));
+      canvas!.height = Math.max(1, Math.floor(H * dpr));
+    }
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(canvas);
+
+    // ----- state -----
+    let phase: Phase = 'idle';
+    let lastFoot: 'L' | 'R' | null = null;
+    let lastTapTime = 0;
+    let distance = 0; // cm
+    let scrollX = 0; // px in screen space
+    let prevPose: Pose = idle;
+    let nextPose: Pose = idle;
+    let stepStart = 0;
+    let stepDuration = 360; // ms — pose transition length
+    let returnToIdleAt = 0; // ms — when to start tween back to idle
+    let returnDuration = 220;
+    let returningToIdle = false;
+    let fallStart = 0;
+    const FALL_DURATION = 700;
+
+    // ----- timing window -----
+    function currentWindow(): number {
+      // 1000ms at distance 0, drops to 320ms by distance 8000.
+      const t = Math.min(1, distance / 8000);
+      return Math.round(1000 - t * 680);
+    }
+    const MIN_GAP = 90; // ms — taps closer than this = trip
+
+    // ----- step trigger -----
+    function step(foot: 'L' | 'R') {
+      const now = performance.now();
+
+      if (phase === 'falling' || phase === 'dead') return;
+
+      // First tap — establish foot, no further checks
+      if (phase === 'idle') {
+        phase = 'walking';
+        lastFoot = foot;
+        lastTapTime = now;
+        commitStep(foot, now);
+        return;
+      }
+
+      // Wrong foot
+      if (foot === lastFoot) {
+        fall('Wrong foot.');
+        return;
+      }
+
+      const gap = now - lastTapTime;
+      if (gap < MIN_GAP) {
+        fall('Too eager.');
+        return;
+      }
+
+      lastFoot = foot;
+      lastTapTime = now;
+      commitStep(foot, now);
+    }
+
+    function commitStep(foot: 'L' | 'R', now: number) {
+      // Pick a random silly pose. Mirror it for left-foot steps so the L leg
+      // does the dramatic thing.
+      const base = stepPoses[Math.floor(Math.random() * stepPoses.length)];
+      const target = foot === 'L' ? mirror(base) : base;
+
+      prevPose = currentPose; // start tween from wherever we are
+      nextPose = target;
+      stepStart = now;
+      returningToIdle = false;
+      returnToIdleAt = now + 160;
+
+      // stride length in cm — vary per step so the counter ticks pleasantly
+      const stride = 38 + Math.floor(Math.random() * 36);
+      distance += stride;
+      counterEl.textContent = String(distance);
+
+      // visual pad flash
+      flashPad(foot, false);
+
+      // pitch the clop slightly per step
+      const pitch = 0.85 + Math.random() * 0.4;
+      clop(pitch);
+    }
+
+    function flashPad(foot: 'L' | 'R', bad: boolean) {
+      const el = foot === 'L' ? padL : padR;
+      const cls = bad ? 'flash-bad' : 'flash';
+      el!.classList.add(cls);
+      window.setTimeout(() => el!.classList.remove(cls), bad ? 380 : 140);
+    }
+
+    function fall(reason: string) {
+      if (phase === 'falling' || phase === 'dead') return;
+      phase = 'falling';
+      fallStart = performance.now();
+      prevPose = currentPose;
+      nextPose = ragdollPose;
+      thud();
+      reasonEl!.textContent = reason;
+
+      // brief red flash on whichever pad caused it (best guess: latest)
+      if (lastFoot) flashPad(lastFoot, true);
+    }
+
+    function showOverlay() {
+      finalEl!.textContent = String(distance);
+      if (distance > best) {
+        best = distance;
+        localStorage.setItem('mos.best', String(best));
+        bestEl!.textContent = String(best);
+      }
+      finalBestEl!.textContent = String(best);
+      overlayEl!.hidden = false;
+    }
+
+    function reset() {
+      phase = 'idle';
+      lastFoot = null;
+      lastTapTime = 0;
+      distance = 0;
+      scrollX = 0;
+      currentPose = idle;
+      prevPose = idle;
+      nextPose = idle;
+      returningToIdle = false;
+      counterEl!.textContent = '0';
+      overlayEl!.hidden = true;
+    }
+
+    // ----- input -----
+    function onKey(e: KeyboardEvent) {
+      if (phase === 'dead') return;
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        e.preventDefault();
+        step('L');
+      } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+        e.preventDefault();
+        step('R');
+      }
+    }
+    window.addEventListener('keydown', onKey, { signal: sig });
+
+    function bindPad(el: HTMLElement, foot: 'L' | 'R') {
+      const handler = (e: Event) => {
+        e.preventDefault();
+        if (phase === 'dead') return;
+        step(foot);
+      };
+      el.addEventListener('pointerdown', handler, { signal: sig });
+    }
+    bindPad(padL, 'L');
+    bindPad(padR, 'R');
+
+    // overlay click to retry
+    overlayEl.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      reset();
+    }, { signal: sig });
+
+    // ----- current animated pose -----
+    let currentPose: Pose = idle;
+
+    // ----- world scroll -----
+    // distance increases monotonically. scrollX = distance * pxPerCm.
+    const PX_PER_CM = 1.2;
+
+    // ----- main loop -----
+    let raf = 0;
+    function frame(now: number) {
+      raf = requestAnimationFrame(frame);
+
+      // Late-tap detection (only while walking and after first step)
+      if (phase === 'walking' && lastTapTime > 0) {
+        const since = now - lastTapTime;
+        if (since > currentWindow()) {
+          fall('Too slow.');
+        }
+      }
+
+      // Pose interpolation
+      if (phase === 'falling') {
+        const t = Math.min(1, (now - fallStart) / FALL_DURATION);
+        const eased = easeInCubic(t);
+        currentPose = lerpPose(prevPose, nextPose, eased);
+        if (t >= 1) {
+          phase = 'dead';
+          showOverlay();
+        }
+      } else if (phase === 'walking') {
+        const elapsed = now - stepStart;
+        if (!returningToIdle && elapsed >= 160) {
+          // swap to return-to-idle tween
+          returningToIdle = true;
+          prevPose = currentPose;
+          nextPose = idle;
+          stepStart = now;
+        }
+        const dur = returningToIdle ? returnDuration : 160;
+        const t = Math.min(1, elapsed / dur);
+        const eased = easeOutCubic(t);
+        currentPose = lerpPose(prevPose, nextPose, eased);
+      } else if (phase === 'idle' || phase === 'dead') {
+        // hold pose
+      }
+
+      // smooth scroll target
+      const targetScroll = distance * PX_PER_CM;
+      scrollX += (targetScroll - scrollX) * 0.18;
+
+      render(now);
+    }
+
+    function render(_now: number) {
+      ctx!.save();
+      ctx!.scale(dpr, dpr);
+      ctx!.clearRect(0, 0, W, H);
+
+      // Ground line + tick marks
+      const groundY = Math.min(H - 40, H * 0.78);
+      const figureCX = Math.max(160, W * 0.32);
+
+      // ticks every 50cm in world; major tick every 500cm
+      ctx!.strokeStyle = 'rgba(26,24,18,0.18)';
+      ctx!.lineWidth = 1;
+      ctx!.beginPath();
+      ctx!.moveTo(0, groundY + 0.5);
+      ctx!.lineTo(W, groundY + 0.5);
+      ctx!.stroke();
+
+      const tickSpacingCm = 50;
+      const tickSpacingPx = tickSpacingCm * PX_PER_CM;
+      // worldX shown at figureCX corresponds to distance.
+      // a tick at world cm `c` is rendered at: figureCX + (c - distance) * PX_PER_CM
+      const startCm = Math.floor((distance - figureCX / PX_PER_CM) / tickSpacingCm) * tickSpacingCm;
+      const endCm = distance + (W - figureCX) / PX_PER_CM + tickSpacingCm;
+      ctx!.fillStyle = 'rgba(26,24,18,0.32)';
+      ctx!.font = '10px Lora, Georgia, serif';
+      ctx!.textAlign = 'center';
+      for (let c = startCm; c <= endCm; c += tickSpacingCm) {
+        const x = figureCX + (c - distance) * PX_PER_CM;
+        const major = c % 500 === 0;
+        const tickH = major ? 8 : 4;
+        ctx!.strokeStyle = major ? 'rgba(26,24,18,0.32)' : 'rgba(26,24,18,0.18)';
+        ctx!.beginPath();
+        ctx!.moveTo(x + 0.5, groundY + 1);
+        ctx!.lineTo(x + 0.5, groundY + 1 + tickH);
+        ctx!.stroke();
+        if (major && c >= 0) {
+          ctx!.fillText(`${c}`, x, groundY + 22);
+        }
+      }
+
+      // Figure at fixed screen position — only legs/body change as we walk.
+      const figureScale = Math.min(1.15, Math.max(0.85, H / 520));
+      drawFigure(ctx!, figureCX, groundY, currentPose, figureScale);
+
+      // subtle vignette at edges to focus on figure (very light)
+      const grad = ctx!.createLinearGradient(0, 0, W, 0);
+      grad.addColorStop(0, 'rgba(240,236,228,0.55)');
+      grad.addColorStop(0.12, 'rgba(240,236,228,0)');
+      grad.addColorStop(0.88, 'rgba(240,236,228,0)');
+      grad.addColorStop(1, 'rgba(240,236,228,0.55)');
+      ctx!.fillStyle = grad;
+      ctx!.fillRect(0, 0, W, H);
+
+      ctx!.restore();
+    }
+
+    raf = requestAnimationFrame(frame);
+
+    // ----- cleanup on SPA navigation -----
+    function teardown() {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+      ac.abort();
+      if (audioCtx) {
+        audioCtx.close().catch(() => {});
+        audioCtx = null;
+      }
+      document.removeEventListener('astro:before-swap', teardown);
+    }
+    document.addEventListener('astro:before-swap', teardown, { once: true });
+  }
+
+  document.addEventListener('astro:page-load', init);
+</script>
+</Layout>
