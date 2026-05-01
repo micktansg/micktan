@@ -14,6 +14,7 @@ import Layout from '../../../layouts/Layout.astro';
 
     <div class="hud-counter">
       <div class="now"><span data-counter>0</span><em>m</em></div>
+      <div class="time" data-time-row><span data-time>67</span><em>s</em></div>
       <div class="best">best — <span data-best>0</span> m</div>
     </div>
 
@@ -72,7 +73,8 @@ import Layout from '../../../layouts/Layout.astro';
   .back:hover { opacity: 0.95; }
 
   .hud-head {
-    padding: 1.4rem 2rem 0.4rem;
+    /* top padding clears the absolutely-positioned back link above */
+    padding: 3.4rem 2rem 0.4rem;
     text-align: left;
     pointer-events: none;
   }
@@ -117,8 +119,27 @@ import Layout from '../../../layouts/Layout.astro';
     opacity: 0.5;
     margin-left: 0.25em;
   }
+  .hud-counter .time {
+    margin-top: 0.5rem;
+    font-size: clamp(1.05rem, 2.4vw, 1.4rem);
+    font-weight: 500;
+    line-height: 1;
+    color: #3a2e1a;
+    transition: color 200ms;
+  }
+  .hud-counter .time em {
+    font-style: normal;
+    font-size: 0.6em;
+    opacity: 0.5;
+    margin-left: 0.18em;
+  }
+  .hud-counter .time.low { color: #b22222; animation: time-pulse 720ms ease-in-out infinite; }
+  @keyframes time-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+  }
   .hud-counter .best {
-    margin-top: 0.4rem;
+    margin-top: 0.5rem;
     font-size: 0.78rem;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -665,13 +686,15 @@ import Layout from '../../../layouts/Layout.astro';
     const canvas = document.querySelector<HTMLCanvasElement>('canvas[data-stage]');
     const counterEl = document.querySelector<HTMLElement>('[data-counter]');
     const bestEl = document.querySelector<HTMLElement>('[data-best]');
+    const timeEl = document.querySelector<HTMLElement>('[data-time]');
+    const timeRowEl = document.querySelector<HTMLElement>('[data-time-row]');
     const finalEl = document.querySelector<HTMLElement>('[data-final]');
     const finalBestEl = document.querySelector<HTMLElement>('[data-final-best]');
     const overlayEl = document.querySelector<HTMLElement>('[data-overlay]');
     const reasonEl = document.querySelector<HTMLElement>('[data-reason]');
     const padL = document.querySelector<HTMLElement>('.pad[data-pad="L"]');
     const padR = document.querySelector<HTMLElement>('.pad[data-pad="R"]');
-    if (!canvas || !counterEl || !bestEl || !finalEl || !finalBestEl || !overlayEl || !reasonEl || !padL || !padR) return;
+    if (!canvas || !counterEl || !bestEl || !timeEl || !timeRowEl || !finalEl || !finalBestEl || !overlayEl || !reasonEl || !padL || !padR) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -745,6 +768,8 @@ import Layout from '../../../layouts/Layout.astro';
     let lastTapTime = 0;
     let distance = 0; // metres (float for sub-step resolution)
     let scrollX = 0; // px in screen space
+    const TIME_LIMIT = 67; // seconds — clock starts on first input
+    let timeLeft = TIME_LIMIT;
     let prevPose: Pose = idle;
     let nextPose: Pose = idle;
     let stepStart = 0;
@@ -913,8 +938,11 @@ import Layout from '../../../layouts/Layout.astro';
       briefcaseVel = 0;
       lastHandX = null;
       lastHandY = null;
+      timeLeft = TIME_LIMIT;
       counterEl!.textContent = '0';
       bestEl!.textContent = String(best);
+      timeEl!.textContent = String(TIME_LIMIT);
+      timeRowEl!.classList.remove('low');
       overlayEl!.hidden = true;
     }
 
@@ -974,6 +1002,19 @@ import Layout from '../../../layouts/Layout.astro';
         const since = now - lastTapTime;
         if (since > currentWindow()) {
           fall('Too slow.');
+        }
+      }
+
+      // Countdown — only ticks once first step has been committed.
+      if (phase === 'walking' && timeLeft > 0) {
+        const dtSec = lastFrameMs ? Math.min(0.1, (now - lastFrameMs) / 1000) : 0.016;
+        timeLeft = Math.max(0, timeLeft - dtSec);
+        const shown = Math.ceil(timeLeft);
+        if (timeEl!.textContent !== String(shown)) timeEl!.textContent = String(shown);
+        if (shown <= 10) timeRowEl!.classList.add('low');
+        else timeRowEl!.classList.remove('low');
+        if (timeLeft <= 0) {
+          fall('Time elapsed.');
         }
       }
 
