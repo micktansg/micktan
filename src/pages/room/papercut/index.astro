@@ -47,6 +47,7 @@ import Layout from '../../../layouts/Layout.astro';
     </svg>
 
     <section class="game" id="game">
+     <div class="capsule">
       {/* Stat bars at top */}
       <div class="device-stats">
         <div class="stat" title="how fed they are on exposure"><span class="lbl">fed</span><span class="bar"><span class="fill" id="fedFill"></span></span></div>
@@ -140,6 +141,7 @@ import Layout from '../../../layouts/Layout.astro';
       <div class="trophy-case" id="trophyCase">
         <div class="trophy-empty">no awards yet. keep feeding.</div>
       </div>
+     </div>
     </section>
 
     {/* Quit confirmation modal */}
@@ -221,7 +223,7 @@ import Layout from '../../../layouts/Layout.astro';
   }
 
   .pc {
-    max-width: 64rem;
+    max-width: 28rem;
     margin: 0 auto;
     padding: 1.2rem 1rem 6rem;
     min-height: 100vh;
@@ -229,8 +231,126 @@ import Layout from '../../../layouts/Layout.astro';
     z-index: 1;
   }
   @media (min-width: 720px) {
-    .pc { padding: 2rem 1.5rem 6rem; }
+    .pc { padding: 2rem 1rem 6rem; }
   }
+
+  /* ===== The capsule — claustrophobic plastic shell around the whole game ===== */
+  .capsule {
+    background: var(--pc-paper);
+    border: 4px solid var(--pc-blue-deep);
+    border-radius: 28px 28px 24px 24px;
+    padding: 0.9rem 0.9rem 1rem;
+    box-shadow:
+      inset 0 0 0 6px var(--pc-paper-warm),
+      inset 0 0 0 8px rgba(10,31,58,0.25),
+      8px 8px 0 var(--pc-yellow),
+      14px 14px 0 var(--pc-blue-deep);
+    position: relative;
+  }
+  .capsule::before {
+    /* Top "speaker grille" — purely decorative, says 'this is a device' */
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 64px;
+    height: 7px;
+    background:
+      repeating-linear-gradient(90deg,
+        var(--pc-blue-deep) 0 2px,
+        transparent 2px 5px);
+    border-radius: 0 0 4px 4px;
+  }
+  .capsule::after {
+    /* Plastic glare on the screen */
+    content: '';
+    position: absolute;
+    top: 14px;
+    right: 18px;
+    width: 10px;
+    height: 10px;
+    background: rgba(255,255,255,0.6);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  /* Tighten everything inside the capsule */
+  .capsule .device-stats {
+    margin: 0.2rem 0 0.7rem;
+    padding: 0.5rem;
+    gap: 0.4rem;
+    box-shadow: 3px 3px 0 var(--pc-blue-deep);
+  }
+  .capsule .device-stats .stat .lbl { font-size: 0.6rem; }
+  .capsule .device-stats .stat .bar { height: 9px; }
+
+  .capsule .stage {
+    /* The "screen" — square, framed inside the capsule */
+    aspect-ratio: 1 / 1;
+    margin-bottom: 0.6rem;
+    border-width: 3px;
+    border-radius: 4px;
+  }
+
+  .capsule .career-label {
+    font-size: 0.78rem;
+    margin: 0.3rem 0 0.6rem;
+    color: var(--pc-blue-deep);
+    text-shadow: 1px 1px 0 var(--pc-yellow);
+    letter-spacing: 0.08em;
+  }
+
+  .capsule .inputs {
+    gap: 0.4rem;
+    margin-bottom: 0.4rem;
+  }
+  .capsule .input-btn {
+    padding: 0.55rem 0.4rem;
+    font-size: 0.7rem;
+    min-height: 48px;
+    box-shadow: 2px 2px 0 var(--pc-blue-deep);
+  }
+  .capsule .input-btn:hover {
+    box-shadow: 4px 4px 0 var(--pc-blue-deep);
+  }
+  .capsule .input-btn .emo { font-size: 1.05rem; }
+  .capsule .input-btn .lbl { font-size: 0.6rem; }
+
+  .capsule .quit-row {
+    margin: 0.5rem 0 0.4rem;
+  }
+  .capsule .quit-btn {
+    padding: 0.45rem 1rem;
+    font-size: 0.7rem;
+    color: var(--pc-blue-deep);
+    border-color: var(--pc-blue-deep);
+    text-shadow: none;
+    min-height: 32px;
+  }
+
+  .capsule .trophy-case {
+    padding: 0.45rem 0.55rem;
+    min-height: 2.2rem;
+    box-shadow: inset 0 1px 2px rgba(10,31,58,0.15);
+    background: var(--pc-paper-warm);
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+  .capsule .trophy {
+    flex: 0 0 auto;
+    padding: 0.2rem 0.4rem;
+    font-size: 0.6rem;
+  }
+  .capsule .trophy .te { font-size: 0.85rem; }
+  .capsule .trophy-empty { font-size: 0.6rem; }
+
+  /* Smaller character and props inside the squeezed screen */
+  .capsule .character { width: 32%; }
+  .capsule .prop.monitor   { font-size: 1.4rem; }
+  .capsule .prop.mug       { font-size: 1rem; }
+  .capsule .prop.plant     { font-size: 1.2rem; }
+  .capsule .prop.books     { font-size: 1rem; }
 
   .topbar {
     display: flex;
@@ -771,6 +891,10 @@ import Layout from '../../../layouts/Layout.astro';
     padding: 1.5rem;
     animation: ending-fade 360ms ease forwards;
   }
+  /* Critical: restore [hidden] semantic when CSS sets display:flex above */
+  .modal[hidden],
+  .ending[hidden],
+  .full-fanfare[hidden] { display: none !important; }
   .modal-card {
     background: var(--pc-paper);
     border: 3px solid var(--pc-blue-deep);
