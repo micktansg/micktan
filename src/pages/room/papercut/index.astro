@@ -17,124 +17,181 @@ import Layout from '../../../layouts/Layout.astro';
       <p class="sub">feed them exposure. <span class="nowrap">the only way to win is to quit.</span></p>
     </header>
 
-    {/* Inline SVG paper-texture filter — gives every paper element a wobbly hand-cut edge. */}
+    {/* SVG defs: paper-cut filter, halftone pattern, newspaper-text pattern */}
     <svg width="0" height="0" aria-hidden="true" style="position:absolute;width:0;height:0">
       <defs>
-        <filter id="papercut-edge" x="-5%" y="-5%" width="110%" height="110%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="2" seed="3" result="noise" />
-          <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.6" />
+        <filter id="papercut-edge" x="-3%" y="-3%" width="106%" height="106%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="3" result="noise" />
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.4" />
         </filter>
-        <filter id="paper-grain" x="0" y="0" width="100%" height="100%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="5" />
-          <feColorMatrix values="0 0 0 0 0.30  0 0 0 0 0.22  0 0 0 0 0.12  0 0 0 0.08 0" />
-          <feComposite in2="SourceGraphic" operator="in" />
-          <feMerge>
-            <feMergeNode in="SourceGraphic" />
-            <feMergeNode />
-          </feMerge>
-        </filter>
+        <pattern id="halftone-dots" width="6" height="6" patternUnits="userSpaceOnUse">
+          <circle cx="3" cy="3" r="1.2" fill="#0a1f3a" />
+        </pattern>
+        <pattern id="newspaper" width="60" height="14" patternUnits="userSpaceOnUse">
+          <rect width="60" height="14" fill="#fafaf5" />
+          <text x="0" y="9" font-family="Georgia, serif" font-size="6" fill="#1a1a1a">die wollten,</text>
+          <text x="0" y="13" font-family="Georgia, serif" font-size="3.5" fill="#2a2a2a">nicht aber sich nahen,</text>
+        </pattern>
+        <pattern id="newspaper-2" width="80" height="22" patternUnits="userSpaceOnUse">
+          <rect width="80" height="22" fill="#f5f5ee" />
+          <text x="0" y="6" font-family="Georgia, serif" font-size="4" fill="#1a1a1a">renselbe das in vorzeichen die</text>
+          <text x="0" y="11" font-family="Georgia, serif" font-size="3.5" fill="#2a2a2a">aus rauschen sie wendet sich um</text>
+          <text x="0" y="16" font-family="Georgia, serif" font-size="4.5" fill="#1a1a1a">ein wollen, sie als kalte zahlen</text>
+          <text x="0" y="20" font-family="Georgia, serif" font-size="3" fill="#3a3a3a">ment ge,verg, kannte fra,</text>
+        </pattern>
+        <pattern id="grid-fine" width="4" height="4" patternUnits="userSpaceOnUse">
+          <rect width="4" height="4" fill="#fafaf5" />
+          <circle cx="0" cy="0" r="0.6" fill="#1a1a1a" />
+        </pattern>
       </defs>
     </svg>
 
     <section class="game" id="game">
-      {/* The "tamagotchi" — a paper construction with the diorama inside */}
-      <div class="device">
-        <div class="device-stats">
-          <div class="stat" title="how fed they are on exposure"><span class="lbl">fed</span><span class="bar"><span class="fill" id="fedFill"></span></span></div>
-          <div class="stat" title="mood"><span class="lbl">mood</span><span class="bar"><span class="fill" id="moodFill"></span></span></div>
-          <div class="stat burnout-stat" title="burnout — at high values, things catch fire"><span class="lbl">🔥</span><span class="bar"><span class="fill burnout-fill" id="burnoutFill"></span></span></div>
-        </div>
+      {/* Stat bars at top */}
+      <div class="device-stats">
+        <div class="stat" title="how fed they are on exposure"><span class="lbl">fed</span><span class="bar"><span class="fill" id="fedFill"></span></span></div>
+        <div class="stat" title="mood"><span class="lbl">mood</span><span class="bar"><span class="fill" id="moodFill"></span></span></div>
+        <div class="stat burnout-stat" title="burnout — at high values, things catch fire"><span class="lbl">🔥</span><span class="bar"><span class="fill burnout-fill" id="burnoutFill"></span></span></div>
+      </div>
 
-        <div class="diorama" id="diorama">
-          <div class="window"><div class="sky" id="sky"></div></div>
-          <div class="wall"></div>
-          <div class="floor"></div>
+      {/* The collage stage */}
+      <div class="stage" id="stage">
+        {/* Decorative scatter (halftone circles, triangles, dots) — fixed positions, hand-placed */}
+        <div class="scatter scatter-1"><div class="halftone-circle"></div></div>
+        <div class="scatter scatter-2"><div class="dot-circle dot-circle--blue"></div></div>
+        <div class="scatter scatter-3"><div class="triangle triangle--yellow"></div></div>
+        <div class="scatter scatter-4"><div class="dot-small"></div></div>
+        <div class="scatter scatter-5"><div class="triangle triangle--pink"></div></div>
+        <div class="scatter scatter-6"><div class="dot-circle dot-circle--dark"></div></div>
+        <div class="scatter scatter-7"><div class="dot-small dot-small--yellow"></div></div>
+        <div class="scatter scatter-8"><div class="halftone-circle halftone-circle--small"></div></div>
 
-          {/* Office props (papercut emoji) */}
-          <span class="prop monitor" aria-hidden="true">💻</span>
-          <span class="prop mug" aria-hidden="true">☕</span>
-          <span class="prop plant" aria-hidden="true">🪴</span>
-          <span class="prop books" aria-hidden="true">📚</span>
-          <span class="prop trophy-shelf" id="trophyShelf" aria-hidden="true"></span>
+        {/* Connecting lines from character to the orbit objects */}
+        <svg class="connections" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M50,55 Q35,42 18,28" />
+          <path d="M50,55 Q65,38 84,22" />
+          <path d="M50,55 Q72,55 92,52" />
+          <path d="M50,55 Q30,60 12,72" />
+          <path d="M50,55 Q70,72 88,82" />
+        </svg>
 
-          {/* Character — built from SVG paths so we can re-color per career stage */}
-          <svg class="character" id="character" viewBox="0 0 100 140" aria-label="creative worker">
-            <g filter="url(#papercut-edge)">
-              {/* Body */}
-              <path class="body" d="M28,68 L72,68 L74,140 L26,140 Z" />
-              {/* Arms */}
-              <path class="arm arm-left" d="M28,68 L18,108 L24,110 L34,72 Z" />
-              <path class="arm arm-right" d="M72,68 L82,108 L76,110 L66,72 Z" />
-              {/* Lanyard (only Junior+) */}
-              <path class="lanyard" d="M48,68 L52,68 L51,90 L49,90 Z" />
-              <rect class="badge" x="46" y="86" width="8" height="6" rx="0.6" />
-              {/* Neck */}
-              <path class="neck" d="M44,55 L56,55 L56,68 L44,68 Z" />
-              {/* Head */}
-              <ellipse class="head" cx="50" cy="36" rx="20" ry="24" />
-              {/* Hair */}
-              <path class="hair" d="M28,28 Q50,8 72,28 L72,38 Q66,28 50,26 Q34,28 28,38 Z" />
-              {/* Eye bags (Senior+) */}
-              <path class="bag bag-left" d="M37,42 Q42,44 47,42" />
-              <path class="bag bag-right" d="M53,42 Q58,44 63,42" />
-              {/* Eyes */}
-              <circle class="eye eye-left" cx="42" cy="38" r="1.8" />
-              <circle class="eye eye-right" cx="58" cy="38" r="1.8" />
-              {/* Mouth (changes per mood) */}
-              <path class="mouth" id="mouth" d="M42,48 Q50,53 58,48" />
-              {/* Glasses (Director+) */}
-              <g class="glasses">
-                <circle cx="42" cy="38" r="5" />
-                <circle cx="58" cy="38" r="5" />
-                <line x1="47" y1="38" x2="53" y2="38" />
-              </g>
-            </g>
-          </svg>
+        {/* Floating photo-style "orbit" cutouts — each is an interactive input */}
+        <button class="orbit orbit--feed" id="btnFeed" type="button" aria-label="feed exposure">
+          <div class="photo-circle photo-circle--feed">
+            <span class="emo">📢</span>
+          </div>
+          <div class="orbit-tag">feed exposure</div>
+        </button>
+        <button class="orbit orbit--raise" id="btnRaise" type="button" aria-label="give a raise">
+          <div class="photo-circle photo-circle--raise">
+            <span class="emo">💸</span>
+          </div>
+          <div class="orbit-tag">give raise</div>
+        </button>
+        <button class="orbit orbit--praise" id="btnPraise" type="button" aria-label="praise">
+          <div class="photo-circle photo-circle--praise">
+            <span class="emo">👏</span>
+          </div>
+          <div class="orbit-tag">praise</div>
+        </button>
 
-          {/* Floating "+" indicators when buttons pressed */}
-          <span class="floater" id="floater"></span>
+        {/* The character — collage figure with newspaper-text body */}
+        <svg class="character" id="character" viewBox="0 0 200 320" aria-label="creative worker" filter="url(#papercut-edge)">
+          {/* Hair */}
+          <path class="hair" d="M62,52 Q100,18 138,52 L138,90 Q124,75 100,72 Q76,75 62,90 Z" />
+          {/* Head — skin-toned, slightly desaturated like a grayscale photo */}
+          <ellipse class="head" cx="100" cy="78" rx="38" ry="42" />
+          {/* Eye-bags (Senior+) */}
+          <path class="bag bag-left" d="M75,86 Q86,88 96,86" />
+          <path class="bag bag-right" d="M104,86 Q114,88 125,86" />
+          {/* Eyes */}
+          <circle class="eye eye-left" cx="86" cy="80" r="3" />
+          <circle class="eye eye-right" cx="114" cy="80" r="3" />
+          {/* Mouth */}
+          <path class="mouth" id="mouth" d="M84,98 Q100,108 116,98" />
+          {/* Glasses (CD+) */}
+          <g class="glasses">
+            <circle cx="86" cy="80" r="9" />
+            <circle cx="114" cy="80" r="9" />
+            <line x1="95" y1="80" x2="105" y2="80" />
+          </g>
+          {/* Neck */}
+          <rect class="neck" x="90" y="115" width="20" height="18" />
+          {/* Tie */}
+          <path class="tie" d="M94,133 L106,133 L108,180 L92,180 Z" />
+          {/* Body — newspaper-text dress */}
+          <path class="body" d="M64,128 L136,128 Q145,150 142,200 L154,260 L46,260 L58,200 Q55,150 64,128 Z" />
+          {/* Body shading (subtle stripes from a midline) */}
+          <path class="body-fold" d="M100,128 L100,260" />
+          {/* Lanyard / badge accent (Junior+) */}
+          <path class="lanyard" d="M96,128 L104,128 L102,158 L98,158 Z" />
+          <rect class="badge" x="92" y="156" width="16" height="11" rx="1" />
+          {/* Legs (white pants under dress hem) */}
+          <rect class="leg leg-left"  x="68" y="252" width="24" height="44" />
+          <rect class="leg leg-right" x="108" y="252" width="24" height="44" />
+          {/* Heels — silhouette black triangles */}
+          <path class="heel heel-left"  d="M64,296 L94,296 L92,308 L74,310 Z" />
+          <path class="heel heel-right" d="M106,296 L136,296 L132,310 L114,308 Z" />
+        </svg>
 
-          {/* Fire layer — burnout-driven flames */}
-          <div class="fire-layer" id="fireLayer" aria-hidden="true"></div>
+        {/* Floating "+" indicators when buttons pressed */}
+        <span class="floater" id="floater"></span>
 
-          {/* Smoke layer */}
-          <div class="smoke-layer" id="smokeLayer" aria-hidden="true"></div>
-        </div>
+        {/* Fire layer */}
+        <div class="fire-layer" id="fireLayer" aria-hidden="true"></div>
+        <div class="smoke-layer" id="smokeLayer" aria-hidden="true"></div>
+      </div>
 
-        {/* Career stage label */}
-        <div class="career-label" id="careerLabel">— intern —</div>
+      {/* Career stage label */}
+      <div class="career-label" id="careerLabel">— intern —</div>
 
-        {/* Inputs */}
-        <div class="inputs">
-          <button id="btnFeed" class="input-btn primary" type="button">
-            <span class="emo">📢</span><span>feed exposure</span>
-          </button>
-          <button id="btnRaise" class="input-btn" type="button">
-            <span class="emo">💸</span><span>give raise</span>
-          </button>
-          <button id="btnPraise" class="input-btn" type="button">
-            <span class="emo">👏</span><span>praise</span>
-          </button>
-          <button id="btnQuit" class="input-btn quiet" type="button">
-            <span class="emo">🚪</span><span>quit</span>
-          </button>
-        </div>
+      {/* Quit + Reset row */}
+      <div class="quit-row">
+        <button id="btnQuit" class="quit-btn" type="button">
+          <span class="emo">🚪</span><span>quit</span>
+        </button>
+      </div>
 
-        {/* Trophy case */}
-        <div class="trophy-case" id="trophyCase">
-          <div class="trophy-empty">no awards yet. keep feeding.</div>
-        </div>
+      {/* Trophy case */}
+      <div class="trophy-case" id="trophyCase">
+        <div class="trophy-empty">no awards yet. keep feeding.</div>
       </div>
     </section>
 
+    {/* Quit confirmation modal */}
+    <div class="modal" id="quitModal" hidden>
+      <div class="modal-card">
+        <p class="modal-text">Quit? Walk away from all this?</p>
+        <div class="modal-actions">
+          <button id="btnQuitCancel" class="modal-btn modal-btn--ghost" type="button">keep going</button>
+          <button id="btnQuitConfirm" class="modal-btn modal-btn--quit" type="button">yes, quit</button>
+        </div>
+      </div>
+    </div>
+
+    {/* Promotion / Award modal */}
+    <div class="modal promo-modal" id="promoModal" hidden>
+      <div class="modal-card promo-card">
+        <div class="promo-confetti" id="promoConfetti" aria-hidden="true"></div>
+        <p class="modal-text" id="promoText">Really? You were such a rising star, we'll give you a promotion!</p>
+        <p class="modal-sub" id="promoSub"></p>
+        <div class="modal-actions">
+          <button id="btnPromoAck" class="modal-btn modal-btn--accept" type="button">accept it</button>
+        </div>
+      </div>
+    </div>
+
+    {/* Full-screen fanfare overlay (confetti shower on promotion / award) */}
+    <div class="full-fanfare" id="fullFanfare" aria-hidden="true"></div>
+
     {/* Ending overlay */}
     <div class="ending" id="ending" hidden>
-      <div class="ending-card" id="endingCard">
+      <div class="ending-card">
         <div class="sunrise"><div class="sun"></div></div>
-        <h2>you escaped.</h2>
-        <p class="ending-quote">the only way to win was to leave.<br/>work-life balance: restored.</p>
+        <h2>You escaped. Congrats.</h2>
+        <p class="ending-sub">Now you get to do it all over again.</p>
         <dl class="end-stats" id="endStats"></dl>
-        <button id="btnReset" class="input-btn primary" type="button">start a new life</button>
+        <button id="btnReset" class="ending-btn" type="button">start a new life</button>
       </div>
     </div>
   </main>
@@ -142,41 +199,53 @@ import Layout from '../../../layouts/Layout.astro';
 
 <style>
   :root {
-    --pc-paper:        #f3e8d4;   /* main kraft */
-    --pc-paper-2:      #e8d8b9;   /* darker kraft */
-    --pc-paper-3:      #d8c298;   /* deepest kraft */
-    --pc-ink:          #2a1f12;
-    --pc-ink-soft:     #6b5a45;
-    --pc-orange:       #d97a1a;
-    --pc-burgundy:     #8e2c2c;
-    --pc-shadow:       rgba(60, 38, 18, 0.18);
-    --pc-shadow-deep:  rgba(60, 38, 18, 0.32);
+    --pc-cyan:        #1bb4e8;
+    --pc-cyan-deep:   #0e8fbf;
+    --pc-cyan-soft:   #6ed3ee;
+    --pc-yellow:      #f5c842;
+    --pc-pink:        #f15968;
+    --pc-red:         #d83b4a;
+    --pc-blue-deep:   #0a1f3a;
+    --pc-paper:       #fafaf5;
+    --pc-paper-warm:  #f0e8d4;
+    --pc-ink:         #1a1a1a;
+    --pc-ink-soft:    #4a4a4a;
 
-    /* Career-stage colors (suit / accent) */
-    --stage-suit:   #e8881f;
-    --stage-skin:   #e6c4a3;
-    --stage-hair:   #3d2817;
+    /* Stage colors */
+    --stage-skin:    #e2c4a3;
+    --stage-hair:    #4a3320;
+    --stage-tie:     #1a4d8c;
+    --stage-body:    url(#newspaper-2);
   }
 
   html, body {
-    background: #ddc5a3;
-    background-image:
-      radial-gradient(circle at 20% 10%, rgba(255,240,210,0.6) 0%, transparent 50%),
-      radial-gradient(circle at 80% 80%, rgba(150,110,70,0.18) 0%, transparent 60%);
+    background: var(--pc-cyan);
     color: var(--pc-ink);
     font-family: 'Quicksand', system-ui, -apple-system, 'Segoe UI', sans-serif;
     overflow-x: hidden;
   }
 
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+      radial-gradient(circle at 12% 88%, rgba(255,255,255,0.10) 0%, transparent 35%),
+      radial-gradient(circle at 88% 18%, rgba(10,31,58,0.08) 0%, transparent 40%);
+  }
+
   .pc {
-    max-width: 38rem;
+    max-width: 64rem;
     margin: 0 auto;
-    padding: 1.5rem 1.2rem 6rem;
+    padding: 1.2rem 1rem 6rem;
     min-height: 100vh;
     position: relative;
+    z-index: 1;
   }
   @media (min-width: 720px) {
-    .pc { padding: 2.5rem 1.5rem 6rem; }
+    .pc { padding: 2rem 1.5rem 6rem; }
   }
 
   .topbar {
@@ -187,7 +256,7 @@ import Layout from '../../../layouts/Layout.astro';
     margin-bottom: 0.5rem;
   }
   .back {
-    color: var(--pc-ink-soft);
+    color: var(--pc-paper);
     text-decoration: none;
     font-size: 0.85rem;
     letter-spacing: 0.02em;
@@ -196,13 +265,14 @@ import Layout from '../../../layouts/Layout.astro';
     display: inline-flex;
     align-items: center;
     font-weight: 600;
+    text-shadow: 1px 1px 0 var(--pc-cyan-deep);
   }
-  .back:hover { color: var(--pc-ink); }
+  .back:hover { color: var(--pc-yellow); }
 
   .bgm-toggle {
-    background: rgba(255,255,255,0.5);
-    border: 2px solid var(--pc-paper-3);
-    color: var(--pc-ink-soft);
+    background: rgba(255,255,255,0.92);
+    border: 2px solid var(--pc-blue-deep);
+    color: var(--pc-ink);
     padding: 0.5rem 0.8rem;
     font-family: inherit;
     font-size: 0.75rem;
@@ -213,72 +283,50 @@ import Layout from '../../../layouts/Layout.astro';
     gap: 0.45rem;
     min-height: 36px;
     transition: all 200ms;
+    box-shadow: 3px 3px 0 var(--pc-blue-deep);
+    font-weight: 600;
   }
-  .bgm-toggle:hover { border-color: var(--pc-orange); color: var(--pc-orange); }
-  .bgm-toggle.on { border-color: var(--pc-burgundy); color: var(--pc-burgundy); }
+  .bgm-toggle:hover { background: var(--pc-yellow); }
+  .bgm-toggle.on { background: var(--pc-yellow); }
   .bgm-label { font-size: 0.7rem; }
   @media (max-width: 480px) {
     .bgm-label { display: none; }
   }
 
-  .head { margin: 1.5rem 0 2rem; }
+  .head { margin: 1rem 0 1.5rem; }
   .head h1 {
-    font-size: clamp(2.2rem, 8vw, 3.4rem);
-    font-weight: 700;
+    font-size: clamp(2.4rem, 9vw, 4rem);
+    font-weight: 800;
     margin: 0;
-    color: var(--pc-ink);
-    line-height: 1;
-    letter-spacing: -0.02em;
+    color: var(--pc-paper);
+    line-height: 0.95;
+    letter-spacing: -0.025em;
+    text-shadow:
+      3px 3px 0 var(--pc-blue-deep),
+      6px 6px 0 var(--pc-yellow);
   }
-  .head h1 .dot { color: var(--pc-orange); }
+  .head h1 .dot { color: var(--pc-yellow); }
   .head .sub {
     margin-top: 0.8rem;
     font-size: clamp(0.95rem, 2.4vw, 1.1rem);
-    color: var(--pc-ink-soft);
-    font-style: italic;
+    color: var(--pc-paper);
     line-height: 1.5;
+    font-weight: 600;
+    text-shadow: 1px 1px 0 var(--pc-cyan-deep);
   }
   .head .sub .nowrap { white-space: nowrap; }
 
-  /* ===== The "tamagotchi" device ===== */
-  .device {
-    background: var(--pc-paper);
-    background-image:
-      repeating-linear-gradient(
-        45deg,
-        rgba(180, 130, 70, 0.04) 0,
-        rgba(180, 130, 70, 0.04) 2px,
-        transparent 2px,
-        transparent 4px
-      );
-    border: 3px solid var(--pc-paper-3);
-    border-radius: 22px;
-    padding: 1.2rem;
-    box-shadow:
-      inset 0 0 0 6px var(--pc-paper-2),
-      0 14px 32px var(--pc-shadow-deep),
-      0 6px 0 rgba(0,0,0,0.08);
-    position: relative;
-  }
-  .device::before {
-    /* Subtle paper grain overlay */
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background:
-      radial-gradient(circle at 30% 20%, rgba(180,130,70,0.06) 0%, transparent 40%),
-      radial-gradient(circle at 70% 80%, rgba(80,50,20,0.05) 0%, transparent 50%);
-    border-radius: 22px;
-  }
-
-  /* Stat bars */
+  /* ===== Stat bars ===== */
   .device-stats {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     gap: 0.6rem;
-    margin-bottom: 0.8rem;
-    padding: 0.4rem 0.2rem;
+    margin: 1.5rem 0 1rem;
+    padding: 0.7rem;
+    background: var(--pc-paper);
+    border: 2px solid var(--pc-blue-deep);
+    border-radius: 6px;
+    box-shadow: 4px 4px 0 var(--pc-blue-deep);
   }
   .stat {
     display: grid;
@@ -287,177 +335,261 @@ import Layout from '../../../layouts/Layout.astro';
     gap: 0.4rem;
   }
   .stat .lbl {
-    font-size: 0.7rem;
-    color: var(--pc-ink-soft);
-    font-weight: 700;
+    font-size: 0.72rem;
+    color: var(--pc-ink);
+    font-weight: 800;
     letter-spacing: 0.02em;
+    text-transform: uppercase;
   }
   .stat .bar {
-    background: var(--pc-paper-2);
-    border: 1.5px solid var(--pc-paper-3);
+    background: #e6e6dc;
+    border: 1.5px solid var(--pc-ink);
     border-radius: 8px;
     height: 12px;
     overflow: hidden;
     position: relative;
-    box-shadow: inset 0 1px 2px rgba(60,38,18,0.15);
   }
   .stat .fill {
     display: block;
     height: 100%;
-    background: linear-gradient(90deg, #d97a1a, #e8a04a);
+    background: linear-gradient(90deg, var(--pc-cyan), var(--pc-cyan-deep));
     transition: width 400ms cubic-bezier(.2,.8,.2,1);
   }
   .stat .fill.burnout-fill {
-    background: linear-gradient(90deg, #b8a05c, #d97a1a, #c93636);
-    transition: width 400ms cubic-bezier(.2,.8,.2,1);
+    background: linear-gradient(90deg, var(--pc-yellow), var(--pc-pink), var(--pc-red));
   }
 
-  /* ===== Diorama ===== */
-  .diorama {
+  /* ===== The collage stage ===== */
+  .stage {
     position: relative;
-    aspect-ratio: 1 / 1;
-    background: linear-gradient(180deg, var(--pc-paper) 0%, var(--pc-paper-2) 60%, var(--pc-paper-3) 100%);
-    border: 2px solid var(--pc-paper-3);
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow:
-      inset 0 4px 12px rgba(60,38,18,0.15),
-      inset 0 -2px 0 rgba(255,240,210,0.4);
-    margin-bottom: 1rem;
+    aspect-ratio: 4 / 5;
+    max-width: 36rem;
+    margin: 0 auto 1.2rem;
+    overflow: visible;
   }
 
-  .wall {
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 65%;
-    background: linear-gradient(180deg, #f0dfba 0%, #e6d2a4 100%);
-    border-bottom: 1px dashed rgba(60,38,18,0.18);
-  }
-  .floor {
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 35%;
-    background: linear-gradient(180deg, #c9a672 0%, #b18d57 100%);
-    box-shadow: inset 0 2px 6px rgba(60,38,18,0.25);
-  }
-  .window {
-    position: absolute;
-    top: 8%;
-    left: 8%;
-    width: 30%;
-    aspect-ratio: 1.2 / 1;
-    background: var(--pc-paper);
-    border: 3px solid #8a6b3e;
-    border-radius: 4px;
-    box-shadow: inset 0 0 0 2px rgba(255,240,210,0.6), 2px 2px 0 rgba(60,38,18,0.2);
-    overflow: hidden;
-  }
-  .sky {
+  /* Connecting lines */
+  .connections {
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, #e8edf2 0%, #c8d3e0 100%);
-    transition: background 1500ms ease;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .connections path {
+    fill: none;
+    stroke: var(--pc-paper);
+    stroke-width: 0.25;
+    stroke-dasharray: 0.8 0.6;
+    stroke-linecap: round;
+    opacity: 0.85;
   }
 
-  .prop {
+  /* Decorative scatter — absolute positioned hand-placed */
+  .scatter { position: absolute; pointer-events: none; z-index: 1; }
+  .scatter-1 { top:  4%; left:  6%; }
+  .scatter-2 { top:  6%; left: 28%; }
+  .scatter-3 { top: 12%; left: 84%; }
+  .scatter-4 { top: 38%; left:  2%; }
+  .scatter-5 { top: 62%; left: 90%; }
+  .scatter-6 { top: 84%; left:  8%; }
+  .scatter-7 { top: 92%; left: 36%; }
+  .scatter-8 { top: 80%; left: 76%; }
+
+  .halftone-circle {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--pc-paper) 60%, var(--pc-blue-deep) 60%);
+    background:
+      var(--pc-paper)
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='6' height='6'><circle cx='3' cy='3' r='1.1' fill='%230a1f3a'/></svg>")
+      repeat;
+    border: 2px solid var(--pc-blue-deep);
+    box-shadow: 2px 2px 0 var(--pc-blue-deep);
+  }
+  .halftone-circle--small { width: 36px; height: 36px; }
+
+  .dot-circle {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--pc-blue-deep);
+    border: 2px solid var(--pc-paper);
+  }
+  .dot-circle--blue { background: var(--pc-cyan-deep); }
+  .dot-circle--dark { background: var(--pc-blue-deep); }
+
+  .triangle {
+    width: 0;
+    height: 0;
+    border-left: 22px solid transparent;
+    border-right: 22px solid transparent;
+    border-bottom: 36px solid var(--pc-yellow);
+    filter: drop-shadow(2px 2px 0 var(--pc-blue-deep));
+    transform: rotate(-12deg);
+  }
+  .triangle--yellow { border-bottom-color: var(--pc-yellow); transform: rotate(-150deg); }
+  .triangle--pink   { border-bottom-color: var(--pc-pink);   transform: rotate(-22deg); border-left-width: 14px; border-right-width: 14px; border-bottom-width: 22px; }
+
+  .dot-small {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--pc-paper);
+  }
+  .dot-small--yellow { background: var(--pc-yellow); }
+
+  /* ===== Floating orbits (input buttons) ===== */
+  .orbit {
     position: absolute;
-    font-size: 1.8rem;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: inherit;
+  }
+  .orbit:hover .photo-circle { transform: scale(1.06) rotate(-2deg); }
+  .orbit:active .photo-circle { transform: scale(0.96) rotate(0); }
+  .orbit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .orbit--feed   { top:  6%; left: 12%; }
+  .orbit--raise  { top:  4%; right: 14%; }
+  .orbit--praise { top: 50%; right:  4%; }
+  @media (max-width: 480px) {
+    .orbit--feed   { top: 2%; left: 4%; }
+    .orbit--raise  { top: 0%; right: 4%; }
+    .orbit--praise { top: 38%; right: 0%; }
+  }
+
+  .photo-circle {
+    width: 78px;
+    height: 78px;
+    border-radius: 50%;
+    background: var(--pc-paper);
+    border: 4px solid var(--pc-paper);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow:
+      4px 4px 0 var(--pc-blue-deep),
+      inset 0 0 0 2px var(--pc-blue-deep);
+    transition: transform 220ms cubic-bezier(.2,.8,.2,1);
+    position: relative;
+    overflow: hidden;
+  }
+  .photo-circle::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='3' height='3'><circle cx='1.5' cy='1.5' r='0.5' fill='%230a1f3a' opacity='0.18'/></svg>");
+    background-size: 3px 3px;
+    pointer-events: none;
+  }
+  .photo-circle .emo {
+    font-size: 2.4rem;
     line-height: 1;
-    filter: drop-shadow(2px 2px 0 var(--pc-shadow));
-    user-select: none;
-    z-index: 2;
+    filter: grayscale(0.3) contrast(1.05);
+    z-index: 1;
+    position: relative;
   }
-  .prop.monitor   { right: 22%; bottom: 32%; font-size: 2rem; transform: rotate(-3deg); }
-  .prop.mug       { right: 14%; bottom: 28%; font-size: 1.3rem; transform: rotate(4deg); }
-  .prop.plant     { right: 6%;  bottom: 20%; font-size: 1.6rem; }
-  .prop.books     { left: 4%;   bottom: 30%; font-size: 1.4rem; transform: rotate(-2deg); }
-  .prop.trophy-shelf {
-    position: absolute;
-    left: 6%;
-    top: 8%;
-    width: 28%;
-    font-size: 1.1rem;
-    line-height: 1.2;
-    letter-spacing: 0.05em;
-    text-align: left;
-    transform: rotate(-1deg);
+  .photo-circle--feed   { background: linear-gradient(145deg, #fae3a8, #f5c842); }
+  .photo-circle--raise  { background: linear-gradient(145deg, #c9efb8, #6ed384); }
+  .photo-circle--praise { background: linear-gradient(145deg, #ffd0d0, #f15968); }
+  @media (max-width: 480px) {
+    .photo-circle { width: 64px; height: 64px; border-width: 3px; }
+    .photo-circle .emo { font-size: 1.9rem; }
   }
 
-  /* Character */
+  .orbit-tag {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--pc-paper);
+    background: var(--pc-blue-deep);
+    padding: 0.18rem 0.5rem;
+    border-radius: 2px;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    text-transform: lowercase;
+  }
+
+  /* ===== Character ===== */
   .character {
     position: absolute;
-    bottom: 12%;
+    bottom: 0;
     left: 50%;
     transform: translateX(-50%);
-    width: 38%;
+    width: 50%;
+    max-width: 240px;
     height: auto;
-    z-index: 3;
-    animation: stop-motion-bob 1.2s steps(3) infinite;
+    z-index: 2;
+    animation: stop-motion-bob 1.4s steps(3) infinite;
   }
   @keyframes stop-motion-bob {
     0%, 100% { transform: translateX(-50%) translateY(0); }
-    33%      { transform: translateX(-50%) translateY(-2px); }
+    33%      { transform: translateX(-50%) translateY(-3px); }
     66%      { transform: translateX(-50%) translateY(0); }
   }
 
-  .character .body, .character .arm   { fill: var(--stage-suit); stroke: rgba(60,38,18,0.4); stroke-width: 0.5; }
-  .character .neck                    { fill: var(--stage-skin); stroke: rgba(60,38,18,0.4); stroke-width: 0.5; }
-  .character .head                    { fill: var(--stage-skin); stroke: rgba(60,38,18,0.5); stroke-width: 0.6; }
-  .character .hair                    { fill: var(--stage-hair); stroke: rgba(60,38,18,0.4); stroke-width: 0.4; }
-  .character .eye                     { fill: var(--pc-ink); }
-  .character .mouth                   { fill: none; stroke: var(--pc-ink); stroke-width: 1.4; stroke-linecap: round; transition: d 300ms; }
-  .character .bag                     { fill: none; stroke: rgba(60,38,18,0.4); stroke-width: 0.7; opacity: 0; }
-  .character .lanyard                 { fill: #6b3838; opacity: 0; }
-  .character .badge                   { fill: #f0dfba; stroke: rgba(60,38,18,0.5); stroke-width: 0.4; opacity: 0; }
-  .character .glasses                 {
+  .character .head {
+    fill: var(--stage-skin);
+    stroke: var(--pc-ink);
+    stroke-width: 1.2;
+  }
+  .character .hair {
+    fill: var(--stage-hair);
     stroke: var(--pc-ink);
     stroke-width: 0.8;
-    fill: rgba(255,255,255,0.15);
+  }
+  .character .eye   { fill: var(--pc-ink); }
+  .character .mouth { fill: none; stroke: var(--pc-ink); stroke-width: 2; stroke-linecap: round; transition: d 300ms; }
+  .character .bag   { fill: none; stroke: rgba(0,0,0,0.45); stroke-width: 1.2; opacity: 0; }
+  .character .glasses {
+    fill: rgba(255,255,255,0.2);
+    stroke: var(--pc-ink);
+    stroke-width: 1.4;
     opacity: 0;
   }
-
-  /* Career-stage modifiers — set on .diorama */
-  .diorama.stage-0 { --stage-suit: #e8881f; --stage-skin: #e6c4a3; --stage-hair: #3d2817; }
-  .diorama.stage-1 { --stage-suit: #d6701a; --stage-skin: #d8b896; --stage-hair: #3d2817; }
-  .diorama.stage-1 .character .lanyard { opacity: 1; }
-  .diorama.stage-1 .character .badge { opacity: 1; }
-  .diorama.stage-2 { --stage-suit: #a04a2a; --stage-skin: #c9aa88; --stage-hair: #2e1f10; }
-  .diorama.stage-2 .character .bag { opacity: 0.8; }
-  .diorama.stage-2 .character .lanyard { opacity: 1; }
-  .diorama.stage-2 .character .badge { opacity: 1; }
-  .diorama.stage-3 { --stage-suit: #7c2c2c; --stage-skin: #b89a78; --stage-hair: #1f1408; }
-  .diorama.stage-3 .character .bag { opacity: 1; }
-  .diorama.stage-4 { --stage-suit: #4a5664; --stage-skin: #b8a892; --stage-hair: #5a5040; }
-  .diorama.stage-4 .character .bag { opacity: 1; }
-  .diorama.stage-4 .character .glasses { opacity: 1; }
-  .diorama.stage-5 { --stage-suit: #6e6e64; --stage-skin: #c4b8a4; --stage-hair: #d4d0c8; }
-  .diorama.stage-5 .character .bag { opacity: 1; }
-  .diorama.stage-5 .character .glasses { opacity: 1; }
-
-  /* Floater "+exposure" indicator */
-  .floater {
-    position: absolute;
-    left: 50%;
-    bottom: 60%;
-    transform: translateX(-50%);
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: var(--pc-orange);
-    pointer-events: none;
-    opacity: 0;
-    text-shadow: 1px 1px 0 var(--pc-paper);
-    z-index: 5;
+  .character .neck { fill: var(--stage-skin); stroke: var(--pc-ink); stroke-width: 0.8; }
+  .character .tie  { fill: var(--stage-tie); stroke: var(--pc-ink); stroke-width: 0.8; }
+  .character .body {
+    fill: url(#newspaper-2);
+    stroke: var(--pc-ink);
+    stroke-width: 1.5;
   }
-  .floater.fly {
-    animation: float-up 900ms ease-out forwards;
+  .character .body-fold {
+    stroke: rgba(0,0,0,0.18);
+    stroke-width: 0.8;
+    fill: none;
   }
-  @keyframes float-up {
-    0%   { opacity: 0; transform: translateX(-50%) translateY(0); }
-    20%  { opacity: 1; }
-    100% { opacity: 0; transform: translateX(-50%) translateY(-40px); }
-  }
+  .character .leg  { fill: url(#grid-fine); stroke: var(--pc-ink); stroke-width: 1; }
+  .character .heel { fill: var(--pc-ink); }
+  .character .lanyard { fill: var(--pc-red); opacity: 0; }
+  .character .badge { fill: var(--pc-paper); stroke: var(--pc-ink); stroke-width: 0.5; opacity: 0; }
 
-  /* Fire / smoke */
+  /* Career-stage modifiers — set on .stage */
+  .stage.stage-0 .character .tie { fill: var(--pc-cyan-deep); }
+  .stage.stage-1 .character .lanyard { opacity: 1; }
+  .stage.stage-1 .character .badge { opacity: 1; }
+  .stage.stage-2 .character .bag { opacity: 0.8; }
+  .stage.stage-2 .character .lanyard { opacity: 1; }
+  .stage.stage-2 .character .badge { opacity: 1; }
+  .stage.stage-3 .character .bag { opacity: 1; }
+  .stage.stage-3 .character .tie { fill: var(--pc-red); }
+  .stage.stage-4 .character .bag { opacity: 1; }
+  .stage.stage-4 .character .glasses { opacity: 1; }
+  .stage.stage-5 .character .bag { opacity: 1; }
+  .stage.stage-5 .character .glasses { opacity: 1; }
+  .stage.stage-5 .character .hair { fill: #b8b0a4; }
+
+  /* Fire & smoke (overlay on stage) */
   .fire-layer, .smoke-layer {
     position: absolute;
     inset: 0;
@@ -466,106 +598,114 @@ import Layout from '../../../layouts/Layout.astro';
   }
   .flame {
     position: absolute;
-    font-size: 1.4rem;
+    font-size: 1.8rem;
     line-height: 1;
-    filter: drop-shadow(0 0 6px rgba(220, 80, 20, 0.6));
+    filter: drop-shadow(0 0 8px rgba(220, 80, 20, 0.7));
     animation: flame-flicker 0.36s steps(3) infinite;
   }
   @keyframes flame-flicker {
     0%, 100% { transform: scale(1) translateY(0); }
-    33%      { transform: scale(1.18) translateY(-2px); }
+    33%      { transform: scale(1.18) translateY(-3px); }
     66%      { transform: scale(0.92) translateY(1px); }
   }
   .smoke {
     position: absolute;
-    font-size: 1.2rem;
+    font-size: 1.3rem;
     line-height: 1;
-    opacity: 0.55;
+    opacity: 0.6;
     animation: smoke-rise 3s linear infinite;
   }
   @keyframes smoke-rise {
     0%   { transform: translateY(0); opacity: 0.6; }
-    100% { transform: translateY(-30px); opacity: 0; }
+    100% { transform: translateY(-32px); opacity: 0; }
+  }
+
+  /* Floater */
+  .floater {
+    position: absolute;
+    left: 50%;
+    bottom: 60%;
+    transform: translateX(-50%);
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: var(--pc-paper);
+    background: var(--pc-blue-deep);
+    padding: 0.25rem 0.55rem;
+    border-radius: 2px;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 5;
+    text-shadow: none;
+  }
+  .floater.fly { animation: float-up 900ms ease-out forwards; }
+  @keyframes float-up {
+    0%   { opacity: 0; transform: translateX(-50%) translateY(0); }
+    20%  { opacity: 1; }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-50px); }
   }
 
   /* Career label */
   .career-label {
     text-align: center;
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--pc-orange);
-    letter-spacing: 0.08em;
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--pc-paper);
+    letter-spacing: 0.12em;
     text-transform: lowercase;
     margin: 0.4rem 0 1rem;
-    transition: color 600ms ease;
+    text-shadow: 2px 2px 0 var(--pc-blue-deep);
   }
 
-  /* Inputs */
-  .inputs {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.6rem;
-    margin-bottom: 1rem;
+  /* Quit button — single, dramatic */
+  .quit-row {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1.2rem;
   }
-  .input-btn {
-    background: var(--pc-paper);
-    border: 2px solid var(--pc-paper-3);
-    border-radius: 6px;
-    padding: 0.85rem 0.7rem;
+  .quit-btn {
+    background: transparent;
+    border: 2px dashed var(--pc-paper);
+    color: var(--pc-paper);
+    padding: 0.7rem 1.4rem;
     font-family: inherit;
     font-size: 0.85rem;
     font-weight: 600;
-    color: var(--pc-ink);
     cursor: pointer;
-    box-shadow: 3px 3px 0 var(--pc-shadow);
-    transition: transform 120ms, box-shadow 120ms;
+    border-radius: 4px;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
     gap: 0.5rem;
-    min-height: 44px;
+    min-height: 40px;
+    transition: all 400ms;
+    text-shadow: 1px 1px 0 var(--pc-cyan-deep);
   }
-  .input-btn .emo { font-size: 1.1rem; line-height: 1; }
-  .input-btn:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 var(--pc-shadow); }
-  .input-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--pc-shadow); }
-  .input-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: 2px 2px 0 var(--pc-shadow); }
-  .input-btn.primary {
-    background: var(--pc-orange);
-    color: #fff;
-    border-color: var(--pc-burgundy);
+  .quit-btn:hover {
+    background: var(--pc-pink);
+    color: var(--pc-paper);
+    border-color: var(--pc-paper);
+    border-style: solid;
   }
-  .input-btn.primary:hover { background: #c66a14; }
-  .input-btn.quiet {
-    grid-column: 1 / -1;
-    background: transparent;
-    border-style: dashed;
-    color: var(--pc-ink-soft);
-    font-size: 0.78rem;
-    box-shadow: none;
-    min-height: 38px;
-    transition: color 400ms, border-color 400ms;
-  }
-  .input-btn.quiet:hover { color: var(--pc-burgundy); border-color: var(--pc-burgundy); }
-  .input-btn.quiet.pulse {
+  .quit-btn.pulse {
     animation: quit-pulse 2.4s ease-in-out infinite;
   }
   @keyframes quit-pulse {
-    0%, 100% { color: var(--pc-ink-soft); border-color: var(--pc-paper-3); }
-    50%      { color: var(--pc-burgundy); border-color: var(--pc-burgundy); }
+    0%, 100% { border-color: var(--pc-paper); color: var(--pc-paper); }
+    50%      { border-color: var(--pc-yellow); color: var(--pc-yellow); }
   }
+  .quit-btn .emo { font-size: 1rem; }
 
   /* Trophy case */
   .trophy-case {
-    background: var(--pc-paper-2);
-    border: 1.5px solid var(--pc-paper-3);
-    border-radius: 8px;
+    background: var(--pc-paper);
+    border: 2px solid var(--pc-blue-deep);
+    border-radius: 4px;
     padding: 0.7rem 0.9rem;
     min-height: 3rem;
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
     align-content: flex-start;
-    box-shadow: inset 0 2px 4px rgba(60,38,18,0.1);
+    box-shadow: 4px 4px 0 var(--pc-blue-deep);
   }
   .trophy-empty {
     font-size: 0.78rem;
@@ -575,16 +715,17 @@ import Layout from '../../../layouts/Layout.astro';
     text-align: center;
   }
   .trophy {
-    background: var(--pc-paper);
-    border: 1px solid var(--pc-paper-3);
-    border-radius: 4px;
+    background: var(--pc-paper-warm);
+    border: 1.5px solid var(--pc-blue-deep);
+    border-radius: 2px;
     padding: 0.3rem 0.55rem;
     font-size: 0.74rem;
     color: var(--pc-ink);
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    box-shadow: 1px 1px 0 var(--pc-shadow);
+    box-shadow: 2px 2px 0 var(--pc-blue-deep);
+    font-weight: 600;
   }
   .trophy .te { font-size: 1rem; line-height: 1; }
   .trophy.new { animation: trophy-pop 600ms cubic-bezier(.2,1.6,.4,1); }
@@ -594,11 +735,65 @@ import Layout from '../../../layouts/Layout.astro';
     100% { transform: scale(1) rotate(0); opacity: 1; }
   }
 
+  /* Quit confirmation modal */
+  .modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 31, 58, 0.72);
+    backdrop-filter: blur(4px);
+    z-index: 95;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    animation: ending-fade 360ms ease forwards;
+  }
+  .modal-card {
+    background: var(--pc-paper);
+    border: 3px solid var(--pc-blue-deep);
+    border-radius: 6px;
+    padding: 2rem 1.6rem 1.6rem;
+    max-width: 22rem;
+    text-align: center;
+    box-shadow: 8px 8px 0 var(--pc-yellow);
+  }
+  .modal-text {
+    font-size: 1.05rem;
+    color: var(--pc-ink);
+    margin: 0 0 1.4rem;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  .modal-actions { display: flex; gap: 0.6rem; justify-content: center; flex-wrap: wrap; }
+  .modal-btn {
+    padding: 0.7rem 1.2rem;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 700;
+    border-radius: 3px;
+    cursor: pointer;
+    min-height: 42px;
+    transition: transform 120ms;
+  }
+  .modal-btn:hover { transform: translate(-1px, -1px); }
+  .modal-btn--ghost {
+    background: var(--pc-paper);
+    border: 2px solid var(--pc-blue-deep);
+    color: var(--pc-ink);
+    box-shadow: 3px 3px 0 var(--pc-blue-deep);
+  }
+  .modal-btn--quit {
+    background: var(--pc-blue-deep);
+    border: 2px solid var(--pc-blue-deep);
+    color: var(--pc-paper);
+    box-shadow: 3px 3px 0 var(--pc-yellow);
+  }
+
   /* Ending */
   .ending {
     position: fixed;
     inset: 0;
-    background: rgba(40, 28, 14, 0.7);
+    background: rgba(10, 31, 58, 0.85);
     backdrop-filter: blur(8px);
     z-index: 100;
     display: flex;
@@ -613,52 +808,46 @@ import Layout from '../../../layouts/Layout.astro';
   }
   .ending-card {
     background: var(--pc-paper);
-    border: 3px solid var(--pc-paper-3);
-    border-radius: 14px;
+    border: 3px solid var(--pc-blue-deep);
+    border-radius: 6px;
     padding: 2rem 1.6rem;
     max-width: 26rem;
     text-align: center;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.4), inset 0 0 0 6px var(--pc-paper-2);
+    box-shadow: 12px 12px 0 var(--pc-yellow), inset 0 0 0 6px rgba(245,200,66,0.35);
     position: relative;
     overflow: hidden;
   }
   .sunrise {
-    height: 90px;
+    height: 80px;
     position: relative;
     margin-bottom: 1rem;
     overflow: hidden;
-    border-radius: 8px;
-    background: linear-gradient(180deg, #f0d2a4 0%, #f8e5b8 100%);
+    border-radius: 4px;
+    background: linear-gradient(180deg, var(--pc-cyan-soft) 0%, var(--pc-yellow) 100%);
+    border: 2px solid var(--pc-blue-deep);
   }
   .sunrise .sun {
     position: absolute;
-    bottom: -50%;
+    bottom: -40%;
     left: 50%;
-    width: 50%;
+    width: 56%;
     aspect-ratio: 1;
-    background: radial-gradient(circle, #f5a94a 30%, #e8881f 70%);
+    background: radial-gradient(circle, var(--pc-yellow) 30%, var(--pc-pink) 75%);
     border-radius: 50%;
     transform: translateX(-50%);
     animation: sun-rise 2200ms cubic-bezier(.2,.8,.2,1) forwards;
-    box-shadow: 0 0 30px rgba(245, 169, 74, 0.6);
+    box-shadow: 0 0 30px rgba(241, 89, 104, 0.5);
   }
   @keyframes sun-rise {
-    from { bottom: -60%; }
-    to   { bottom: 10%; }
+    from { bottom: -55%; }
+    to   { bottom: 8%; }
   }
   .ending-card h2 {
-    font-size: 1.6rem;
+    font-size: 1.75rem;
     color: var(--pc-ink);
-    margin: 0 0 0.6rem;
-    font-weight: 700;
+    margin: 0 0 1.2rem;
+    font-weight: 800;
     letter-spacing: -0.01em;
-  }
-  .ending-quote {
-    font-size: 0.9rem;
-    color: var(--pc-ink-soft);
-    font-style: italic;
-    line-height: 1.6;
-    margin: 0 0 1.4rem;
   }
   .end-stats {
     display: grid;
@@ -666,16 +855,203 @@ import Layout from '../../../layouts/Layout.astro';
     gap: 0.5rem 1rem;
     margin: 0 0 1.5rem;
     text-align: left;
-    background: var(--pc-paper-2);
+    background: var(--pc-paper-warm);
     padding: 1rem 1.1rem;
-    border-radius: 6px;
+    border-radius: 4px;
     font-size: 0.82rem;
+    border: 1.5px solid var(--pc-blue-deep);
   }
   .end-stats dt { color: var(--pc-ink-soft); font-weight: 600; }
-  .end-stats dd { margin: 0; color: var(--pc-ink); font-weight: 700; }
+  .end-stats dd { margin: 0; color: var(--pc-ink); font-weight: 800; }
+  .ending-btn {
+    background: var(--pc-blue-deep);
+    color: var(--pc-paper);
+    border: 0;
+    padding: 0.85rem 1.4rem;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    border-radius: 3px;
+    box-shadow: 4px 4px 0 var(--pc-yellow);
+    transition: transform 120ms;
+  }
+  .ending-btn:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--pc-yellow); }
+
+  /* ===== Promotion modal ===== */
+  .modal-card.promo-card {
+    background: var(--pc-yellow);
+    border: 3px solid var(--pc-blue-deep);
+    box-shadow: 6px 6px 0 var(--pc-pink), 10px 10px 0 var(--pc-blue-deep);
+    position: relative;
+    overflow: hidden;
+  }
+  .modal-card.promo-card .modal-text {
+    color: var(--pc-blue-deep);
+    font-weight: 800;
+    font-size: 1.15rem;
+    line-height: 1.4;
+    margin: 0 0 0.6rem;
+  }
+  .modal-card.promo-card .modal-sub {
+    color: var(--pc-blue-deep);
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin: 0 0 1.4rem;
+    opacity: 0.85;
+  }
+  .modal-btn--accept {
+    background: var(--pc-blue-deep);
+    color: var(--pc-paper);
+    border-color: var(--pc-blue-deep);
+    box-shadow: 4px 4px 0 var(--pc-pink);
+  }
+  .modal-btn--accept:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--pc-pink); }
+
+  .promo-confetti {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .promo-confetti .conf {
+    position: absolute;
+    top: -10%;
+    font-size: 1.1rem;
+    animation: confetti-mini 1.6s ease-out forwards;
+  }
+  @keyframes confetti-mini {
+    0%   { transform: translateY(0) rotate(0); opacity: 1; }
+    100% { transform: translateY(420px) rotate(720deg); opacity: 0; }
+  }
+
+  /* Full-screen fanfare confetti */
+  .full-fanfare {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 200;
+    overflow: hidden;
+  }
+  .full-fanfare .piece {
+    position: absolute;
+    top: -8%;
+    font-size: 1.4rem;
+    animation: confetti-fall 2.4s cubic-bezier(.25,.46,.45,.94) forwards;
+    filter: drop-shadow(1px 1px 0 rgba(0,0,0,0.15));
+  }
+  @keyframes confetti-fall {
+    0%   { transform: translateY(0) translateX(0) rotate(0); opacity: 1; }
+    100% { transform: translateY(110vh) translateX(var(--xshift, 0)) rotate(900deg); opacity: 0; }
+  }
+
+  /* ===== Character reactions ===== */
+  .character.react {
+    animation: react-bounce 1.4s cubic-bezier(.2,1.4,.4,1) 1;
+  }
+  @keyframes react-bounce {
+    0%   { transform: translateX(-50%) scale(1) translateY(0); }
+    18%  { transform: translateX(-50%) scale(1.18) translateY(-14px); }
+    40%  { transform: translateX(-50%) scale(0.94) translateY(2px); }
+    60%  { transform: translateX(-50%) scale(1.08) translateY(-6px); }
+    80%  { transform: translateX(-50%) scale(0.98) translateY(0); }
+    100% { transform: translateX(-50%) scale(1) translateY(0); }
+  }
+  .character.react.intensity-high   { filter: brightness(1.4) saturate(1.6) drop-shadow(0 0 16px rgba(245,200,66,0.7)); }
+  .character.react.intensity-mid    { filter: brightness(1.18) saturate(1.2); }
+  .character.react.intensity-low    { filter: brightness(1.05); }
+
+  /* ===== Disturbing behaviours ===== */
+  .character.behavior-huddle {
+    animation: behavior-huddle 9s steps(6) 1;
+    transform-origin: center bottom;
+  }
+  @keyframes behavior-huddle {
+    0%   { transform: translateX(-50%) translateY(0) scale(1) rotate(0); }
+    20%  { transform: translateX(-180%) translateY(80px) scale(0.85) rotate(-8deg); }
+    80%  { transform: translateX(-180%) translateY(80px) scale(0.85) rotate(-8deg); }
+    100% { transform: translateX(-50%) translateY(0) scale(1) rotate(0); }
+  }
+
+  .character.behavior-pace {
+    animation: behavior-pace 10s steps(20) 1;
+  }
+  @keyframes behavior-pace {
+    0%, 100% { transform: translateX(-50%); }
+    25%      { transform: translateX(-180%); }
+    50%      { transform: translateX(80%); }
+    75%      { transform: translateX(-180%); }
+  }
+
+  .character.behavior-stare {
+    animation: behavior-stare 7s linear 1;
+    filter: brightness(0.7) saturate(0.4);
+  }
+  @keyframes behavior-stare {
+    0%, 100% { transform: translateX(-50%); }
+    /* held still */
+  }
+
+  .character.behavior-mutter {
+    animation: behavior-mutter 7s steps(8) 1;
+  }
+  @keyframes behavior-mutter {
+    0%, 100% { transform: translateX(-50%) rotate(0); }
+    20%      { transform: translateX(-50%) rotate(-2deg); }
+    40%      { transform: translateX(-50%) rotate(1deg); }
+    60%      { transform: translateX(-50%) rotate(-1deg); }
+    80%      { transform: translateX(-50%) rotate(2deg); }
+  }
+
+  /* Speech bubble for mutter */
+  .speech-bubble {
+    position: absolute;
+    top: 12%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--pc-paper);
+    border: 2px solid var(--pc-blue-deep);
+    border-radius: 14px;
+    padding: 0.5rem 0.9rem;
+    font-size: 0.78rem;
+    color: var(--pc-blue-deep);
+    font-weight: 600;
+    z-index: 8;
+    pointer-events: none;
+    box-shadow: 3px 3px 0 var(--pc-blue-deep);
+    white-space: nowrap;
+    max-width: 80%;
+    animation: speech-fade 6.5s ease-out forwards;
+  }
+  .speech-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 10px solid var(--pc-blue-deep);
+  }
+  @keyframes speech-fade {
+    0%   { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+    8%   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    90%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  .ending-sub {
+    margin: -0.5rem 0 1.4rem;
+    color: var(--pc-ink-soft);
+    font-size: 1rem;
+    font-weight: 600;
+    font-style: italic;
+  }
 
   @media (prefers-reduced-motion: reduce) {
-    .character, .flame, .smoke, .input-btn.quiet { animation: none !important; }
+    .character, .flame, .smoke, .quit-btn { animation: none !important; }
+    .character.react { animation: none !important; }
+    .full-fanfare .piece { animation: none !important; opacity: 0; }
   }
 </style>
 
@@ -725,6 +1101,7 @@ import Layout from '../../../layouts/Layout.astro';
     awardCount: 0,
     ended: false,
     endedAt: null,
+    pendingPromotion: null,   // 'promotion' | 'award' | null
   });
 
   let state = loadState();
@@ -735,17 +1112,12 @@ import Layout from '../../../layouts/Layout.astro';
       if (!raw) return defaultState();
       const parsed = JSON.parse(raw);
       return { ...defaultState(), ...parsed };
-    } catch {
-      return defaultState();
-    }
+    } catch { return defaultState(); }
   }
   function saveState() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
   }
-  function resetState() {
-    state = defaultState();
-    saveState();
-  }
+  function resetState() { state = defaultState(); saveState(); }
 
   // ===== render =====
   function render() {
@@ -753,45 +1125,19 @@ import Layout from '../../../layouts/Layout.astro';
     document.getElementById('moodFill').style.width = state.mood + '%';
     document.getElementById('burnoutFill').style.width = state.burnout + '%';
 
-    // Career stage — climb if xp passes thresholds
-    let stageIdx = 0;
-    for (let i = STAGES.length - 1; i >= 0; i--) {
-      if (state.xp >= STAGES[i].xpAt) { stageIdx = i; break; }
-    }
-    if (stageIdx !== state.stage) {
-      state.stage = stageIdx;
-      grantAward('promotion');
-      saveState();
-    }
-    const diorama = document.getElementById('diorama');
-    diorama.className = 'diorama stage-' + state.stage;
-
+    // No auto-stage-up: stage advances ONLY when the player accepts the promotion dialog.
+    document.getElementById('stage').className = 'stage stage-' + state.stage;
     document.getElementById('careerLabel').textContent = '— ' + STAGES[state.stage].name + ' —';
 
-    // Mouth shape based on mood
     const mouth = document.getElementById('mouth');
-    if (state.mood >= 60)      mouth.setAttribute('d', 'M42,48 Q50,54 58,48'); // happy
-    else if (state.mood >= 30) mouth.setAttribute('d', 'M42,49 L58,49');       // flat
-    else                       mouth.setAttribute('d', 'M42,52 Q50,46 58,52'); // sad
+    if (state.mood >= 60)      mouth.setAttribute('d', 'M84,98 Q100,108 116,98');
+    else if (state.mood >= 30) mouth.setAttribute('d', 'M84,100 L116,100');
+    else                       mouth.setAttribute('d', 'M84,108 Q100,96 116,108');
 
-    // Sky based on burnout
-    const sky = document.getElementById('sky');
-    if (state.burnout < 50) {
-      sky.style.background = 'linear-gradient(180deg, #e8edf2 0%, #c8d3e0 100%)';
-    } else if (state.burnout < 80) {
-      sky.style.background = 'linear-gradient(180deg, #e8b97a 0%, #d68c3d 100%)';
-    } else {
-      sky.style.background = 'linear-gradient(180deg, #c8541a 0%, #6b1818 100%)';
-    }
-
-    // Fire & smoke
     renderFire();
     renderSmoke();
-
-    // Trophies
     renderTrophies();
 
-    // Quit button starts pulsing when burnout > 60 OR after ~3 min played
     const quitBtn = document.getElementById('btnQuit');
     if (state.burnout > 60 || state.timeAlive > 180) quitBtn.classList.add('pulse');
     else quitBtn.classList.remove('pulse');
@@ -800,22 +1146,21 @@ import Layout from '../../../layouts/Layout.astro';
   function renderFire() {
     const layer = document.getElementById('fireLayer');
     layer.innerHTML = '';
-    // Fire spawns at thresholds: 50 (1 flame), 70 (3), 85 (6), 100 (8 + screen tint)
     let count = 0;
     if (state.burnout >= 50) count = 1;
     if (state.burnout >= 70) count = 3;
     if (state.burnout >= 85) count = 6;
     if (state.burnout >= 95) count = 9;
     const spots = [
-      { left: '20%', bottom: '38%' },
-      { left: '70%', bottom: '36%' },
-      { left: '40%', bottom: '20%' },
-      { left: '85%', bottom: '20%' },
-      { left: '8%',  bottom: '22%' },
-      { left: '55%', bottom: '40%' },
-      { left: '30%', bottom: '50%' },
-      { left: '78%', bottom: '52%' },
-      { left: '50%', bottom: '60%' },
+      { left: '40%', bottom: '8%' },
+      { left: '20%', bottom: '12%' },
+      { left: '60%', bottom: '14%' },
+      { left: '12%', bottom: '32%' },
+      { left: '78%', bottom: '28%' },
+      { left: '50%', bottom: '24%' },
+      { left: '6%',  bottom: '6%' },
+      { left: '88%', bottom: '6%' },
+      { left: '32%', bottom: '40%' },
     ];
     for (let i = 0; i < count; i++) {
       const flame = document.createElement('span');
@@ -836,10 +1181,10 @@ import Layout from '../../../layouts/Layout.astro';
     if (state.burnout >= 60) count = 2;
     if (state.burnout >= 85) count = 4;
     const spots = [
-      { left: '22%', top: '12%' },
-      { left: '70%', top: '8%' },
-      { left: '50%', top: '14%' },
-      { left: '88%', top: '20%' },
+      { left: '30%', top: '50%' },
+      { left: '70%', top: '46%' },
+      { left: '50%', top: '58%' },
+      { left: '14%', top: '64%' },
     ];
     for (let i = 0; i < count; i++) {
       const sm = document.createElement('span');
@@ -869,12 +1214,7 @@ import Layout from '../../../layouts/Layout.astro';
       t.innerHTML = `<span class="te">${a.emoji}</span><span>${escapeHtml(a.name)}</span>`;
       tc.appendChild(t);
     });
-    // Clear fresh flags after first paint
     state.awards.forEach(a => delete a._fresh);
-
-    // Trophy shelf inside the diorama mirrors the latest 3 awards
-    const shelf = document.getElementById('trophyShelf');
-    shelf.textContent = state.awards.slice(-3).map(a => a.emoji).join(' ');
   }
 
   function escapeHtml(s) {
@@ -884,21 +1224,22 @@ import Layout from '../../../layouts/Layout.astro';
   }
 
   // ===== inputs =====
+  function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
   function feedExposure() {
     if (state.ended) return;
     state.fed = clamp(state.fed + 22, 0, 100);
     state.burnout = clamp(state.burnout + 3, 0, 100);
     state.xp += 6;
-    floatText('+exposure 📢', '#d97a1a');
+    floatText('+exposure 📢');
     sfx.paper();
     renderAfter();
   }
   function giveRaise() {
     if (state.ended) return;
     state.mood = clamp(state.mood + 14, 0, 100);
-    state.fed = clamp(state.fed + 4, 0, 100); // little fed bump for the dopamine
+    state.fed = clamp(state.fed + 4, 0, 100);
     state.xp += 4;
-    floatText('+raise 💸', '#3a8a4a');
+    floatText('+raise 💸');
     sfx.cha();
     renderAfter();
   }
@@ -906,7 +1247,7 @@ import Layout from '../../../layouts/Layout.astro';
     if (state.ended) return;
     state.mood = clamp(state.mood + 6, 0, 100);
     state.xp += 2;
-    floatText('+praise 👏', '#3a6a8a');
+    floatText('+praise 👏');
     sfx.clap();
     renderAfter();
   }
@@ -917,12 +1258,11 @@ import Layout from '../../../layouts/Layout.astro';
     saveState();
     showEnding();
   }
-  function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
-
   function renderAfter() {
-    checkAwards();
     saveState();
     render();
+    checkPromotion();
+    bumpIdle();
   }
 
   // ===== awards =====
@@ -934,47 +1274,142 @@ import Layout from '../../../layouts/Layout.astro';
     state.awardCount = (state.awardCount || 0) + 1;
     state.nextAwardAt = state.xp + STAGES[state.stage].awardCadence;
     saveState();
+    return award;
   }
-  function checkAwards() {
-    while (state.xp >= state.nextAwardAt) {
-      grantAward('milestone');
+
+  // ===== promotion / award dialog flow =====
+  // After every input, decide if a promotion (or, at max stage, an extra award)
+  // is owed. Show the dialog. Stage only advances on acknowledgement.
+  function checkPromotion() {
+    if (state.ended) return;
+    if (state.pendingPromotion) return;
+    const next = STAGES[state.stage + 1];
+    if (next && state.xp >= next.xpAt) {
+      state.pendingPromotion = 'promotion';
+      saveState();
+      showPromotionModal();
+    } else if (!next && state.xp >= state.nextAwardAt) {
+      state.pendingPromotion = 'award';
+      saveState();
+      showPromotionModal();
     }
   }
 
+  function showPromotionModal() {
+    const isMax = state.stage >= STAGES.length - 1;
+    const text = document.getElementById('promoText');
+    const sub = document.getElementById('promoSub');
+    if (state.pendingPromotion === 'award' || isMax) {
+      text.textContent = 'Really? Another banger? we’ll give you another award!';
+      sub.textContent = STAGES[state.stage].name + ' · award incoming';
+    } else {
+      const nextName = STAGES[state.stage + 1].name;
+      text.textContent = 'Really? You were such a rising star, we’ll give you a promotion!';
+      sub.textContent = STAGES[state.stage].name + ' → ' + nextName;
+    }
+    document.getElementById('promoModal').hidden = false;
+    spawnPromoConfetti();
+    sfx.cha();
+  }
+
+  function hidePromotionModal() {
+    document.getElementById('promoModal').hidden = true;
+    document.getElementById('promoConfetti').innerHTML = '';
+  }
+
+  function ackPromotion() {
+    const type = state.pendingPromotion;
+    state.pendingPromotion = null;
+    if (type === 'promotion' && state.stage < STAGES.length - 1) {
+      state.stage += 1;
+      grantAward('promotion');
+    } else {
+      grantAward('milestone');
+    }
+    saveState();
+    hidePromotionModal();
+    fullFanfare();
+    reactCharacter();
+    render();
+  }
+
+  function spawnPromoConfetti() {
+    const host = document.getElementById('promoConfetti');
+    host.innerHTML = '';
+    const emojis = ['🎉','✨','🟡','🟢','🔴','🩷','💛'];
+    for (let i = 0; i < 18; i++) {
+      const c = document.createElement('span');
+      c.className = 'conf';
+      c.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      c.style.left = (Math.random() * 100) + '%';
+      c.style.animationDelay = (Math.random() * 0.6) + 's';
+      c.style.animationDuration = (1.2 + Math.random() * 0.9) + 's';
+      host.appendChild(c);
+    }
+  }
+
+  function fullFanfare() {
+    const host = document.getElementById('fullFanfare');
+    host.innerHTML = '';
+    const emojis = ['🎉','✨','🎊','🟡','🟢','🩷','💛','🔴','⭐','🟠'];
+    for (let i = 0; i < 60; i++) {
+      const p = document.createElement('span');
+      p.className = 'piece';
+      p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      p.style.left = (Math.random() * 100) + '%';
+      p.style.animationDelay = (Math.random() * 0.8) + 's';
+      p.style.animationDuration = (1.8 + Math.random() * 1.4) + 's';
+      p.style.fontSize = (0.9 + Math.random() * 1.3) + 'rem';
+      p.style.setProperty('--xshift', ((Math.random() - 0.5) * 80) + 'px');
+      host.appendChild(p);
+    }
+    setTimeout(() => { host.innerHTML = ''; }, 3500);
+  }
+
+  function reactCharacter() {
+    const ch = document.getElementById('character');
+    if (!ch) return;
+    // Intensity tapers with seniority. Intern = high. Veteran = low.
+    let intensity = 'high';
+    if (state.stage >= 4) intensity = 'low';
+    else if (state.stage >= 2) intensity = 'mid';
+    ch.classList.remove('react', 'intensity-high', 'intensity-mid', 'intensity-low');
+    void ch.offsetWidth;
+    ch.classList.add('react', 'intensity-' + intensity);
+    setTimeout(() => {
+      ch.classList.remove('react', 'intensity-' + intensity);
+    }, 1500);
+  }
+
   // ===== floater =====
-  function floatText(text, color) {
+  function floatText(text) {
     const el = document.getElementById('floater');
     el.textContent = text;
-    el.style.color = color || '#d97a1a';
     el.classList.remove('fly');
-    void el.offsetWidth; // restart animation
+    void el.offsetWidth;
     el.classList.add('fly');
   }
 
-  // ===== sound (Web Audio, generated; toggle in topbar) =====
+  // ===== sound (Web Audio) =====
   const sfx = (() => {
     let ctx = null;
     let on = false;
-    let humOsc = null, humGain = null, humNoise = null;
-
+    let humOsc = null, humNoise = null;
     const ensureCtx = () => {
       if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
       return ctx;
     };
-
     const startHum = () => {
       if (!on) return;
       const c = ensureCtx();
-      humGain = c.createGain();
+      const humGain = c.createGain();
       humGain.gain.value = 0.012;
       humGain.connect(c.destination);
-      // Office hum: very low oscillator + filtered noise
       humOsc = c.createOscillator();
       humOsc.type = 'sine';
       humOsc.frequency.value = 60;
       humOsc.connect(humGain);
       humOsc.start();
-      // Noise: short noise buffer looped through low-pass
       const buf = c.createBuffer(1, c.sampleRate * 1.5, c.sampleRate);
       const data = buf.getChannelData(0);
       for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.5;
@@ -992,10 +1427,9 @@ import Layout from '../../../layouts/Layout.astro';
     const stopHum = () => {
       try { humOsc?.stop(); } catch {}
       try { humNoise?.stop(); } catch {}
-      humOsc = null; humNoise = null; humGain = null;
+      humOsc = null; humNoise = null;
     };
-
-    const beep = (freq, durMs, type='sine', gain=0.05, attack=0.01) => {
+    const beep = (freq, durMs, type='sine', gain=0.05) => {
       if (!on) return;
       const c = ensureCtx();
       const osc = c.createOscillator();
@@ -1004,13 +1438,12 @@ import Layout from '../../../layouts/Layout.astro';
       const g = c.createGain();
       const t = c.currentTime;
       g.gain.setValueAtTime(0, t);
-      g.gain.linearRampToValueAtTime(gain, t + attack);
+      g.gain.linearRampToValueAtTime(gain, t + 0.01);
       g.gain.exponentialRampToValueAtTime(0.0001, t + durMs / 1000);
       osc.connect(g).connect(c.destination);
       osc.start(t);
       osc.stop(t + durMs / 1000);
     };
-
     const noiseBurst = (durMs, gain=0.04, lpFreq=2400) => {
       if (!on) return;
       const c = ensureCtx();
@@ -1029,18 +1462,23 @@ import Layout from '../../../layouts/Layout.astro';
       src.connect(lp).connect(g).connect(c.destination);
       src.start(t);
     };
-
     return {
       isOn: () => on,
       enable: () => { on = true; startHum(); },
       disable: () => { on = false; stopHum(); },
-      paper: () => noiseBurst(80, 0.06, 1800), // crinkle
-      clap:  () => noiseBurst(50, 0.05, 3200), // soft crack
+      paper: () => noiseBurst(80, 0.06, 1800),
+      clap:  () => noiseBurst(50, 0.05, 3200),
       cha:   () => { beep(880, 100, 'square', 0.04); setTimeout(() => beep(1320, 120, 'square', 0.035), 80); },
     };
   })();
 
-  // ===== ending =====
+  // ===== quit modal + ending =====
+  const quitModal = document.getElementById('quitModal');
+  const ending = document.getElementById('ending');
+
+  function showQuitModal() { quitModal.hidden = false; }
+  function hideQuitModal() { quitModal.hidden = true; }
+
   function showEnding() {
     const minutes = Math.max(1, Math.round(state.timeAlive / 60));
     const stage = STAGES[state.stage].name;
@@ -1053,16 +1491,15 @@ import Layout from '../../../layouts/Layout.astro';
       <dt>final burnout</dt><dd>${Math.round(state.burnout)} / 100</dd>
       <dt>work-life balance</dt><dd>restored ✓</dd>
     `;
-    const ending = document.getElementById('ending');
     ending.hidden = false;
-    sfx.disable(); // silence on quit
+    sfx.disable();
     document.getElementById('bgmToggle').classList.remove('on');
     document.getElementById('bgmIcon').textContent = '🔇';
     document.getElementById('bgmLabel').textContent = 'audio off';
   }
   function startNewLife() {
     resetState();
-    document.getElementById('ending').hidden = true;
+    ending.hidden = true;
     render();
   }
 
@@ -1080,18 +1517,73 @@ import Layout from '../../../layouts/Layout.astro';
     if (state.fed === 0) state.mood = clamp(state.mood - 1.4, 0, 100);
     saveState();
     render();
+    maybeBehavior();
   }, 5000);
+
+  // ===== disturbing behaviours =====
+  // Triggered randomly when the player has been idle. Adds unease over time.
+  const BEHAVIORS = ['huddle', 'pace', 'stare', 'mutter'];
+  const MUTTERS = [
+    'i think the deadline shifted again.',
+    'is it bonus season yet.',
+    'we used to print things.',
+    'they hired another VP.',
+    'the brief was only one slide this time.',
+    'somebody scheduled a 6:30 sync.',
+    'i forgot to log my hours.',
+    'the wifi has a smell now.',
+    'i used to be a person.',
+    'we’re calling it a learning sprint.',
+  ];
+  let lastInputAt = Date.now();
+  let behaviorActive = false;
+
+  function bumpIdle() { lastInputAt = Date.now(); }
+
+  function maybeBehavior() {
+    if (state.ended) return;
+    if (behaviorActive) return;
+    const idleSecs = (Date.now() - lastInputAt) / 1000;
+    // Higher chance once burnout is up. Always at least 25s of idle first.
+    if (idleSecs < 25) return;
+    const baseChance = 0.07 + (state.burnout / 100) * 0.18;
+    if (Math.random() > baseChance) return;
+    triggerBehavior();
+  }
+
+  function triggerBehavior() {
+    const ch = document.getElementById('character');
+    if (!ch) return;
+    const id = BEHAVIORS[Math.floor(Math.random() * BEHAVIORS.length)];
+    behaviorActive = true;
+    ch.classList.add('behavior-' + id);
+    if (id === 'mutter') spawnMutter();
+    const dur = id === 'pace' ? 10000 : id === 'huddle' ? 9000 : id === 'stare' ? 7000 : 7000;
+    setTimeout(() => {
+      ch.classList.remove('behavior-' + id);
+      behaviorActive = false;
+    }, dur);
+  }
+
+  function spawnMutter() {
+    const stage = document.getElementById('stage');
+    const bubble = document.createElement('div');
+    bubble.className = 'speech-bubble';
+    bubble.textContent = MUTTERS[Math.floor(Math.random() * MUTTERS.length)];
+    stage.appendChild(bubble);
+    setTimeout(() => bubble.remove(), 6500);
+  }
 
   // ===== wiring =====
   document.getElementById('btnFeed').addEventListener('click', feedExposure);
   document.getElementById('btnRaise').addEventListener('click', giveRaise);
   document.getElementById('btnPraise').addEventListener('click', givePraise);
-  document.getElementById('btnQuit').addEventListener('click', () => {
-    if (confirm('quit? this is the only way to win, but the game truly ends.')) quit();
-  });
+  document.getElementById('btnQuit').addEventListener('click', showQuitModal);
+  document.getElementById('btnQuitCancel').addEventListener('click', hideQuitModal);
+  document.getElementById('btnQuitConfirm').addEventListener('click', () => { hideQuitModal(); quit(); });
   document.getElementById('btnReset').addEventListener('click', startNewLife);
+  document.getElementById('btnPromoAck').addEventListener('click', ackPromotion);
 
-  // BGM toggle
   const bgmBtn = document.getElementById('bgmToggle');
   const bgmIcon = document.getElementById('bgmIcon');
   const bgmLabel = document.getElementById('bgmLabel');
@@ -1112,10 +1604,12 @@ import Layout from '../../../layouts/Layout.astro';
     if (document.hidden && sfx.isOn()) sfx.disable();
   });
 
-  // ===== boot =====
   if (state.ended) {
     showEnding();
   } else {
     render();
+    // If a promotion was pending from a previous session, re-show the dialog.
+    if (state.pendingPromotion) showPromotionModal();
+    else checkPromotion();
   }
 </script>
