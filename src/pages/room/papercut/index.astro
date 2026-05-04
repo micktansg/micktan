@@ -84,10 +84,70 @@ import Layout from '../../../layouts/Layout.astro';
       </div>
     </div>
 
-    {/* Ending overlay */}
+    {/* Ending overlay — touch grass moment */}
     <div class="ending" id="ending" hidden>
       <div class="ending-card">
-        <div class="sunrise"><div class="sun"></div></div>
+        <div class="touch-grass" aria-hidden="true">
+          <svg viewBox="0 0 80 20" preserveAspectRatio="none" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
+            {/* Sky */}
+            <rect x="0" y="0" width="80" height="14" fill="#bcdaee"/>
+
+            {/* Drifting cloud */}
+            <g class="cloud-drift">
+              <rect x="0" y="3" width="10" height="2" fill="#ffffff"/>
+              <rect x="2" y="2" width="8"  height="1" fill="#ffffff"/>
+              <rect x="1" y="5" width="3"  height="1" fill="#e0e9f2"/>
+              <rect x="6" y="5" width="3"  height="1" fill="#e0e9f2"/>
+            </g>
+
+            {/* Tall grass blades (gaps left for flowers at x=20 and x=43) */}
+            <rect x="2"  y="10" width="1" height="4" fill="#3f7e3f"/>
+            <rect x="5"  y="11" width="1" height="3" fill="#5fb35a"/>
+            <rect x="8"  y="9"  width="1" height="5" fill="#3f7e3f"/>
+            <rect x="11" y="11" width="1" height="3" fill="#5fb35a"/>
+            <rect x="14" y="10" width="1" height="4" fill="#3f7e3f"/>
+            <rect x="17" y="11" width="1" height="3" fill="#5fb35a"/>
+            <rect x="25" y="11" width="1" height="3" fill="#5fb35a"/>
+            <rect x="28" y="9"  width="1" height="5" fill="#3f7e3f"/>
+            <rect x="31" y="11" width="1" height="3" fill="#5fb35a"/>
+            <rect x="34" y="10" width="1" height="4" fill="#3f7e3f"/>
+            <rect x="37" y="11" width="1" height="3" fill="#5fb35a"/>
+            <rect x="40" y="10" width="1" height="4" fill="#3f7e3f"/>
+            <rect x="48" y="11" width="1" height="3" fill="#5fb35a"/>
+            <rect x="51" y="9"  width="1" height="5" fill="#3f7e3f"/>
+            <rect x="54" y="11" width="1" height="3" fill="#5fb35a"/>
+            <rect x="57" y="10" width="1" height="4" fill="#3f7e3f"/>
+            <rect x="60" y="11" width="1" height="3" fill="#5fb35a"/>
+            <rect x="63" y="9"  width="1" height="5" fill="#3f7e3f"/>
+            <rect x="67" y="11" width="1" height="3" fill="#5fb35a"/>
+            <rect x="71" y="10" width="1" height="4" fill="#3f7e3f"/>
+            <rect x="74" y="11" width="1" height="3" fill="#5fb35a"/>
+            <rect x="77" y="9"  width="1" height="5" fill="#3f7e3f"/>
+
+            {/* Bright tip row across the meadow */}
+            <rect x="0" y="13" width="80" height="1" fill="#95d96e"/>
+            {/* Main grass body */}
+            <rect x="0" y="14" width="80" height="3" fill="#5fb35a"/>
+            {/* Mid ground (darker) */}
+            <rect x="0" y="17" width="80" height="2" fill="#438c44"/>
+            {/* Deep ground (darkest) */}
+            <rect x="0" y="19" width="80" height="1" fill="#2f6b35"/>
+
+            {/* White daisy */}
+            <rect x="20" y="11" width="1" height="3" fill="#3f7e3f"/>
+            <rect x="19" y="10" width="1" height="1" fill="#ffffff"/>
+            <rect x="21" y="10" width="1" height="1" fill="#ffffff"/>
+            <rect x="20" y="9"  width="1" height="1" fill="#ffffff"/>
+            <rect x="20" y="10" width="1" height="1" fill="#ffd84a"/>
+
+            {/* Pink flower */}
+            <rect x="43" y="11" width="1" height="3" fill="#3f7e3f"/>
+            <rect x="42" y="10" width="1" height="1" fill="#f15968"/>
+            <rect x="44" y="10" width="1" height="1" fill="#f15968"/>
+            <rect x="43" y="9"  width="1" height="1" fill="#f15968"/>
+            <rect x="43" y="10" width="1" height="1" fill="#ffd84a"/>
+          </svg>
+        </div>
         <h2>You escaped. Congrats.</h2>
         <p class="ending-sub">Now you get to do it all over again.</p>
         <dl class="end-stats" id="endStats"></dl>
@@ -744,30 +804,40 @@ import Layout from '../../../layouts/Layout.astro';
     position: relative;
     overflow: hidden;
   }
-  .sunrise {
-    height: 80px;
-    position: relative;
+  /* Touch-grass scene — pixel-art meadow, replaces the old sunrise.
+     The joke is the visual itself; "(touch grass)" is what you say to
+     someone who needs to log off. The worker has, finally, escaped. */
+  .touch-grass {
+    height: 88px;
     margin-bottom: 1rem;
-    overflow: hidden;
-    border-radius: 4px;
-    background: linear-gradient(180deg, var(--pc-cyan-soft) 0%, var(--pc-yellow) 100%);
     border: 2px solid var(--pc-blue-deep);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    background: var(--pc-cyan-soft);
+    animation: grass-rise 1800ms cubic-bezier(.2,.8,.2,1) forwards;
   }
-  .sunrise .sun {
-    position: absolute;
-    bottom: -40%;
-    left: 50%;
-    width: 56%;
-    aspect-ratio: 1;
-    background: radial-gradient(circle, var(--pc-yellow) 30%, var(--pc-pink) 75%);
-    border-radius: 50%;
-    transform: translateX(-50%);
-    animation: sun-rise 2200ms cubic-bezier(.2,.8,.2,1) forwards;
-    box-shadow: 0 0 30px rgba(241, 89, 104, 0.5);
+  .touch-grass svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
   }
-  @keyframes sun-rise {
-    from { bottom: -55%; }
-    to   { bottom: 8%; }
+  @keyframes grass-rise {
+    0%   { transform: translateY(20px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+  /* Cloud drifts gently across the sky — uses SVG-native units
+     (viewBox is 80 wide, cloud is 10 wide → drift across once per 22s). */
+  .touch-grass .cloud-drift {
+    transform-box: fill-box;
+    transform-origin: 0 0;
+    animation: cloud-drift 22s linear infinite;
+  }
+  @keyframes cloud-drift {
+    0%   { transform: translateX(-12px); }
+    100% { transform: translateX(82px); }
   }
   .ending-card h2 {
     font-size: 1.75rem;
