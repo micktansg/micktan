@@ -869,7 +869,8 @@ import Layout from '../../../layouts/Layout.astro';
     startedAt: number; timeAlive: number;
     nextAwardAt: number; awardCount: number;
     ended: boolean; endedAt: number | null;
-    _tuneFix?: boolean; // one-time migration flag (see loadState)
+    _tuneFix?: boolean;       // first burnout migration (see loadState)
+    _reliefFix?: boolean;     // second migration after adding burnout relief
   };
 
   const defaultState = (): State => ({
@@ -881,6 +882,7 @@ import Layout from '../../../layouts/Layout.astro';
     awardCount: 0,
     ended: false, endedAt: null,
     _tuneFix: true,
+    _reliefFix: true,
   });
 
   let state: State = loadState();
@@ -891,15 +893,20 @@ import Layout from '../../../layouts/Layout.astro';
       if (!raw) return defaultState();
       const parsed = JSON.parse(raw);
       const merged: State = { ...defaultState(), ...parsed };
-      // One-time tune-fix migration: the initial v2 build had burnout
-      // climb fast and the BURNOUT sprite trigger at 75. Saves from
-      // that build commonly pinned burnout at ~100, leaving the
-      // character stuck in the asleep sprite even after the threshold
-      // was raised to 92. Cap once so the new tuning has a fair shot.
-      // Career, awards, mood, fed all preserved.
+      // First burnout migration: the initial v2 build had burnout climb
+      // fast and the BURNOUT sprite trigger at 75. Saves commonly pinned
+      // burnout at ~100. Cap once.
       if (!parsed._tuneFix) {
         if (merged.burnout > 60) merged.burnout = 60;
         merged._tuneFix = true;
+      }
+      // Second migration: actions now relieve burnout, but existing saves
+      // still have burnout that climbed under the old "no relief" rules.
+      // Give them a workable starting point so the new mechanics can
+      // actually take effect without grinding clicks. Career preserved.
+      if (!parsed._reliefFix) {
+        if (merged.burnout > 50) merged.burnout = 50;
+        merged._reliefFix = true;
       }
       return merged;
     } catch { return defaultState(); }
@@ -1056,10 +1063,15 @@ import Layout from '../../../layouts/Layout.astro';
   // ===== inputs =====
   function clamp(n: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, n)); }
 
+  // Each corporate dopamine hit relieves burnout a little — the joke is
+  // that exposure / raises / praise are how the system keeps you from
+  // collapsing. The natural ticker still adds burnout over time, so an
+  // idle worker still slides toward the asleep sprite; an actively-fed
+  // worker can hold the line, but never escape it for long.
   function feedExposure() {
     if (state.ended) return;
     state.fed = clamp(state.fed + 22, 0, 100);
-    state.burnout = clamp(state.burnout + 1.8, 0, 100);
+    state.burnout = clamp(state.burnout - 1.5, 0, 100);
     state.xp += 6;
     floatText('+exposure 📢');
     sfx.paper();
@@ -1069,6 +1081,7 @@ import Layout from '../../../layouts/Layout.astro';
     if (state.ended) return;
     state.mood = clamp(state.mood + 14, 0, 100);
     state.fed = clamp(state.fed + 4, 0, 100);
+    state.burnout = clamp(state.burnout - 4, 0, 100);
     state.xp += 4;
     floatText('+raise 💸');
     sfx.cha();
@@ -1077,6 +1090,7 @@ import Layout from '../../../layouts/Layout.astro';
   function givePraise() {
     if (state.ended) return;
     state.mood = clamp(state.mood + 6, 0, 100);
+    state.burnout = clamp(state.burnout - 2, 0, 100);
     state.xp += 2;
     floatText('+praise 👏');
     sfx.clap();
@@ -1103,6 +1117,9 @@ import Layout from '../../../layouts/Layout.astro';
     state.awards.push(award);
     state.awardCount = (state.awardCount || 0) + 1;
     state.nextAwardAt = state.xp + STAGES[state.stage].awardCadence;
+    // Awards are recognition — meaningful relief from burnout.
+    state.burnout = clamp(state.burnout - 12, 0, 100);
+    state.mood = clamp(state.mood + 8, 0, 100);
     saveState();
     return award;
   }
@@ -1133,6 +1150,11 @@ import Layout from '../../../layouts/Layout.astro';
     }
     if (stageIdx > state.stage) {
       state.stage = stageIdx;
+      // Promotion is the big reset — a real surge of "this was worth it"
+      // before the new role's pressures kick in. Combined with the award
+      // grant below (-12 burnout), a promotion erases ~42 burnout total.
+      state.burnout = clamp(state.burnout - 30, 0, 100);
+      state.mood = clamp(state.mood + 18, 0, 100);
       grantAward('promotion');
       saveState();
       const nextName = STAGES[state.stage].name;
@@ -1190,6 +1212,9 @@ import Layout from '../../../layouts/Layout.astro';
   function ackPromotion() {
     if (state.stage < STAGES.length - 1) {
       state.stage += 1;
+      // Same big reset as the auto-promotion path.
+      state.burnout = clamp(state.burnout - 30, 0, 100);
+      state.mood = clamp(state.mood + 18, 0, 100);
       grantAward('promotion');
       const nextName = STAGES[state.stage].name;
       showCelebration(PRAISE_PROMOTION[nextName] || "You're a star.");
