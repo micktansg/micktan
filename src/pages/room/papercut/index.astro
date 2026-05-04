@@ -928,26 +928,43 @@ import Layout from '../../../layouts/Layout.astro';
   type SpriteKey = { sheet: 'a' | 'c'; col: number };
   let reactUntil = 0;
 
+  // Burnout recovery hysteresis. Once burnout crosses the SLEEP threshold
+  // we lock into the BURNOUT sprite + fast recovery until we drop back
+  // below the WAKE threshold. This produces a visible "sleep then wake"
+  // beat instead of the sprite flickering on/off as burnout oscillates
+  // around 92.
+  const BURNOUT_SLEEP_AT = 92;
+  const BURNOUT_WAKE_AT  = 60;
+  let inRecovery = false;
+
   // Sprite atlas geometry — measured per sheet because ChatGPT generated
-  // each independently and cell positions don't quite line up. Using a
-  // 295 px visible window (425% bg-size) crops cleanly into the white
-  // gutters across all three sheets without leaking the next cell.
-  type SheetLayout = { col: [number, number, number, number]; row: [number, number, number, number] };
+  // each independently. Sheet C cells are noticeably shorter (~285 px)
+  // than Sheet A/B (~297 px), so a single fixed window shows different
+  // amounts of gutter per sheet. cellW/cellH are now per-sheet so each
+  // cell crops at its actual extent — visually consistent across sheets.
+  type SheetLayout = {
+    col: [number, number, number, number];
+    row: [number, number, number, number];
+    cellW: number;
+    cellH: number;
+  };
   const SHEET_LAYOUTS: Record<'a' | 'b' | 'c', SheetLayout> = {
-    a: { col: [15, 324, 638, 948], row: [14, 326, 637, 945] },
-    b: { col: [15, 327, 636, 944], row: [14, 329, 641, 944] },
-    c: { col: [16, 323, 631, 940], row: [13, 312, 611, 906] },
+    a: { col: [15, 324, 638, 948], row: [14, 326, 637, 945], cellW: 293, cellH: 297 },
+    b: { col: [15, 327, 636, 944], row: [14, 329, 641, 944], cellW: 295, cellH: 297 },
+    c: { col: [16, 323, 631, 940], row: [13, 312, 611, 906], cellW: 292, cellH: 285 },
   };
   const SHEET_DIM = 1254;
-  const CELL_PX = 295;
-  const SHEET_BG_SIZE_PCT = (SHEET_DIM / CELL_PX) * 100; // ~425%
-  const SHEET_POS_DENOM = SHEET_DIM - CELL_PX;            // 959
 
-  function bgPosForCell(sheet: 'a' | 'b' | 'c', col: number, row: number): string {
-    const layout = SHEET_LAYOUTS[sheet];
-    const posX = (layout.col[col] / SHEET_POS_DENOM) * 100;
-    const posY = (layout.row[row] / SHEET_POS_DENOM) * 100;
-    return `${posX.toFixed(3)}% ${posY.toFixed(3)}%`;
+  function bgForCell(sheet: 'a' | 'b' | 'c', col: number, row: number): { size: string; pos: string } {
+    const l = SHEET_LAYOUTS[sheet];
+    const sizeX = (SHEET_DIM / l.cellW) * 100;
+    const sizeY = (SHEET_DIM / l.cellH) * 100;
+    const posX = (l.col[col] / (SHEET_DIM - l.cellW)) * 100;
+    const posY = (l.row[row] / (SHEET_DIM - l.cellH)) * 100;
+    return {
+      size: `${sizeX.toFixed(3)}% ${sizeY.toFixed(3)}%`,
+      pos: `${posX.toFixed(3)}% ${posY.toFixed(3)}%`,
+    };
   }
 
   function ageRow(stage: number): number {
@@ -964,8 +981,10 @@ import Layout from '../../../layouts/Layout.astro';
 
     // 1. JOY — temporary on celebration (hold extended downstream)
     if (now < reactUntil) return { sheet: 'a', col: 1 };
-    // 2. BURNOUT — only at extreme exhaustion
-    if (s.burnout >= 92) return { sheet: 'a', col: 3 };
+    // 2. BURNOUT — sleeping it off. Holds through the recovery phase
+    //    (driven by the inRecovery hysteresis flag in the ticker) so the
+    //    sleep beat is visible for ~25-30s instead of one frame.
+    if (inRecovery || s.burnout >= BURNOUT_SLEEP_AT) return { sheet: 'a', col: 3 };
     // 3. CRYING — desperately low mood
     if (s.mood < 12) return { sheet: 'c', col: 2 };
     // 4. DESPAIR — low mood, especially compounded with high burnout
@@ -991,8 +1010,9 @@ import Layout from '../../../layouts/Layout.astro';
     sprite.dataset.col = String(col);
     sprite.dataset.row = String(row);
     sprite.style.backgroundImage = `url('/room/papercut/sheet-${key.sheet}-${key.sheet === 'a' ? 'core' : 'secondary'}.png')`;
-    sprite.style.backgroundSize = `${SHEET_BG_SIZE_PCT.toFixed(3)}% ${SHEET_BG_SIZE_PCT.toFixed(3)}%`;
-    sprite.style.backgroundPosition = bgPosForCell(key.sheet, col, row);
+    const bg = bgForCell(key.sheet, col, row);
+    sprite.style.backgroundSize = bg.size;
+    sprite.style.backgroundPosition = bg.pos;
   }
 
   // ===== render =====
@@ -1025,8 +1045,9 @@ import Layout from '../../../layouts/Layout.astro';
       const col = award.spriteIdx % 4;
       const row = Math.floor(award.spriteIdx / 4);
       slot.classList.add('filled');
-      slot.style.backgroundSize = `${SHEET_BG_SIZE_PCT.toFixed(3)}% ${SHEET_BG_SIZE_PCT.toFixed(3)}%`;
-      slot.style.backgroundPosition = bgPosForCell('b', col, row);
+      const bg = bgForCell('b', col, row);
+      slot.style.backgroundSize = bg.size;
+      slot.style.backgroundPosition = bg.pos;
       if (award._fresh && i === state.awards.length - 1) {
         slot.classList.add('fresh');
         window.setTimeout(() => slot.classList.remove('fresh'), 700);
@@ -1063,15 +1084,15 @@ import Layout from '../../../layouts/Layout.astro';
   // ===== inputs =====
   function clamp(n: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, n)); }
 
-  // Each corporate dopamine hit relieves burnout a little — the joke is
-  // that exposure / raises / praise are how the system keeps you from
-  // collapsing. The natural ticker still adds burnout over time, so an
-  // idle worker still slides toward the asleep sprite; an actively-fed
-  // worker can hold the line, but never escape it for long.
+  // Each corporate dopamine hit relieves burnout a little — but never
+  // enough to hold the line forever. The natural ticker climbs faster
+  // than active feeding can offset, so even a spamming worker hits
+  // burnout eventually. Once asleep, recovery is fast (see ticker)
+  // so the worker is back at the desk in ~25s. Endless loop.
   function feedExposure() {
     if (state.ended) return;
     state.fed = clamp(state.fed + 22, 0, 100);
-    state.burnout = clamp(state.burnout - 1.5, 0, 100);
+    state.burnout = clamp(state.burnout - 0.6, 0, 100);
     state.xp += 6;
     floatText('+exposure 📢');
     sfx.paper();
@@ -1081,7 +1102,7 @@ import Layout from '../../../layouts/Layout.astro';
     if (state.ended) return;
     state.mood = clamp(state.mood + 14, 0, 100);
     state.fed = clamp(state.fed + 4, 0, 100);
-    state.burnout = clamp(state.burnout - 4, 0, 100);
+    state.burnout = clamp(state.burnout - 2, 0, 100);
     state.xp += 4;
     floatText('+raise 💸');
     sfx.cha();
@@ -1090,7 +1111,7 @@ import Layout from '../../../layouts/Layout.astro';
   function givePraise() {
     if (state.ended) return;
     state.mood = clamp(state.mood + 6, 0, 100);
-    state.burnout = clamp(state.burnout - 2, 0, 100);
+    state.burnout = clamp(state.burnout - 1, 0, 100);
     state.xp += 2;
     floatText('+praise 👏');
     sfx.clap();
@@ -1117,8 +1138,9 @@ import Layout from '../../../layouts/Layout.astro';
     state.awards.push(award);
     state.awardCount = (state.awardCount || 0) + 1;
     state.nextAwardAt = state.xp + STAGES[state.stage].awardCadence;
-    // Awards are recognition — meaningful relief from burnout.
-    state.burnout = clamp(state.burnout - 12, 0, 100);
+    // Awards are recognition — meaningful relief from burnout but not
+    // a full reset.
+    state.burnout = clamp(state.burnout - 6, 0, 100);
     state.mood = clamp(state.mood + 8, 0, 100);
     saveState();
     return award;
@@ -1153,7 +1175,7 @@ import Layout from '../../../layouts/Layout.astro';
       // Promotion is the big reset — a real surge of "this was worth it"
       // before the new role's pressures kick in. Combined with the award
       // grant below (-12 burnout), a promotion erases ~42 burnout total.
-      state.burnout = clamp(state.burnout - 30, 0, 100);
+      state.burnout = clamp(state.burnout - 22, 0, 100);
       state.mood = clamp(state.mood + 18, 0, 100);
       grantAward('promotion');
       saveState();
@@ -1213,7 +1235,7 @@ import Layout from '../../../layouts/Layout.astro';
     if (state.stage < STAGES.length - 1) {
       state.stage += 1;
       // Same big reset as the auto-promotion path.
-      state.burnout = clamp(state.burnout - 30, 0, 100);
+      state.burnout = clamp(state.burnout - 22, 0, 100);
       state.mood = clamp(state.mood + 18, 0, 100);
       grantAward('promotion');
       const nextName = STAGES[state.stage].name;
@@ -1522,10 +1544,23 @@ import Layout from '../../../layouts/Layout.astro';
     const dt = (now - lastTickAt) / 1000;
     lastTickAt = now;
     state.timeAlive += dt;
-    state.fed     = clamp(state.fed     - 1.6, 0, 100);
-    state.mood    = clamp(state.mood    - 0.7, 0, 100);
-    state.burnout = clamp(state.burnout + 0.28, 0, 100);
+    state.fed  = clamp(state.fed  - 1.6, 0, 100);
+    state.mood = clamp(state.mood - 0.7, 0, 100);
     if (state.fed === 0) state.mood = clamp(state.mood - 1.4, 0, 100);
+
+    // Burnout: enter recovery on hitting SLEEP threshold; exit when
+    // dropped to WAKE. Recovery is fast (~25-30s of asleep sprite),
+    // climb is slow but unstoppable (~3-4 min from rested → asleep
+    // again). Endless loop, theme intact.
+    if (state.burnout >= BURNOUT_SLEEP_AT) inRecovery = true;
+    else if (state.burnout <= BURNOUT_WAKE_AT) inRecovery = false;
+    if (inRecovery) {
+      state.burnout = clamp(state.burnout - 6, 0, 100);
+      // mood ticks back up while sleeping it off — body resets
+      state.mood = clamp(state.mood + 1.5, 0, 100);
+    } else {
+      state.burnout = clamp(state.burnout + 1.0, 0, 100);
+    }
     saveState();
     render();
     maybeMutter();
