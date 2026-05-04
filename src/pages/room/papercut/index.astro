@@ -2,7 +2,7 @@
 import Layout from '../../../layouts/Layout.astro';
 ---
 
-<Layout title="papercut. — Mick Tan" description="feed them exposure. watch them grow.">
+<Layout title="papercut. — Mick Tan" description="tamagotchi for creative worker. feed them exposure.">
   <main class="pc">
     <div class="topbar">
       <a class="back" href="/room/" data-astro-prefetch>&larr; the room</a>
@@ -17,35 +17,6 @@ import Layout from '../../../layouts/Layout.astro';
       <p class="sub">tamagotchi for creative worker. feed them exposure.</p>
     </header>
 
-    {/* SVG defs: paper-cut filter, halftone pattern, newspaper-text pattern */}
-    <svg width="0" height="0" aria-hidden="true" style="position:absolute;width:0;height:0">
-      <defs>
-        <filter id="papercut-edge" x="-3%" y="-3%" width="106%" height="106%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="3" result="noise" />
-          <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.4" />
-        </filter>
-        <pattern id="halftone-dots" width="6" height="6" patternUnits="userSpaceOnUse">
-          <circle cx="3" cy="3" r="1.2" fill="#0a1f3a" />
-        </pattern>
-        <pattern id="newspaper" width="60" height="14" patternUnits="userSpaceOnUse">
-          <rect width="60" height="14" fill="#fafaf5" />
-          <text x="0" y="9" font-family="Georgia, serif" font-size="6" fill="#1a1a1a">die wollten,</text>
-          <text x="0" y="13" font-family="Georgia, serif" font-size="3.5" fill="#2a2a2a">nicht aber sich nahen,</text>
-        </pattern>
-        <pattern id="newspaper-2" width="80" height="22" patternUnits="userSpaceOnUse">
-          <rect width="80" height="22" fill="#f5f5ee" />
-          <text x="0" y="6" font-family="Georgia, serif" font-size="4" fill="#1a1a1a">renselbe das in vorzeichen die</text>
-          <text x="0" y="11" font-family="Georgia, serif" font-size="3.5" fill="#2a2a2a">aus rauschen sie wendet sich um</text>
-          <text x="0" y="16" font-family="Georgia, serif" font-size="4.5" fill="#1a1a1a">ein wollen, sie als kalte zahlen</text>
-          <text x="0" y="20" font-family="Georgia, serif" font-size="3" fill="#3a3a3a">ment ge,verg, kannte fra,</text>
-        </pattern>
-        <pattern id="grid-fine" width="4" height="4" patternUnits="userSpaceOnUse">
-          <rect width="4" height="4" fill="#fafaf5" />
-          <circle cx="0" cy="0" r="0.6" fill="#1a1a1a" />
-        </pattern>
-      </defs>
-    </svg>
-
     <section class="game" id="game">
      <div class="capsule">
       {/* Stat bars at top */}
@@ -55,59 +26,18 @@ import Layout from '../../../layouts/Layout.astro';
         <div class="stat burnout-stat" title="burnout — at high values, things catch fire"><span class="lbl">🔥</span><span class="bar"><span class="fill burnout-fill" id="burnoutFill"></span></span></div>
       </div>
 
-      {/* The collage stage */}
+      {/* Trophy shelf — 16 slots populated from sheet-b-trophies as awards earn. */}
+      <div class="trophy-shelf" id="trophyShelf" aria-label="trophy shelf">
+        {Array.from({ length: 16 }).map((_, i) => (
+          <span class="shelf-slot" data-idx={i}></span>
+        ))}
+      </div>
+
+      {/* The "screen" — sprite character cell + overlays */}
       <div class="stage" id="stage">
-        {/* Trophy wall — awards plastered across the back wall (his world, his decoration) */}
-        <div class="trophy-wall" id="trophyWall" aria-hidden="true"></div>
-
-        {/* The character — collage figure with newspaper-text body */}
-        <svg class="character" id="character" viewBox="0 0 200 320" aria-label="creative worker" filter="url(#papercut-edge)">
-          {/* Hair — three variants. Only the one matching the career stage shows. */}
-          <path class="hair-full" d="M62,52 Q100,18 138,52 L138,90 Q124,75 100,72 Q76,75 62,90 Z" />
-          <path class="hair-receding" d="M68,60 Q100,32 132,60 L132,82 Q120,72 100,72 Q80,72 68,82 Z" />
-          <path class="hair-sides" d="M62,70 Q66,58 78,60 L78,90 Q70,82 62,90 Z M138,70 Q134,58 122,60 L122,90 Q130,82 138,90 Z" />
-          {/* Head — skin-toned, slightly desaturated like a grayscale photo */}
-          <ellipse class="head" cx="100" cy="78" rx="38" ry="42" />
-          {/* Eye-bags (Senior+) */}
-          <path class="bag bag-left" d="M75,86 Q86,88 96,86" />
-          <path class="bag bag-right" d="M104,86 Q114,88 125,86" />
-          {/* Eyes */}
-          <circle class="eye eye-left" cx="86" cy="80" r="3" />
-          <circle class="eye eye-right" cx="114" cy="80" r="3" />
-          {/* Mouth */}
-          <path class="mouth" id="mouth" d="M84,98 Q100,108 116,98" />
-          {/* Glasses (CD+) */}
-          <g class="glasses">
-            <circle cx="86" cy="80" r="9" />
-            <circle cx="114" cy="80" r="9" />
-            <line x1="95" y1="80" x2="105" y2="80" />
-          </g>
-          {/* Neck */}
-          <rect class="neck" x="90" y="115" width="20" height="18" />
-          {/* Tie */}
-          <path class="tie" d="M94,133 L106,133 L108,180 L92,180 Z" />
-          {/* Body — newspaper-text dress */}
-          <path class="body" d="M64,128 L136,128 Q145,150 142,200 L154,260 L46,260 L58,200 Q55,150 64,128 Z" />
-          {/* Body shading (subtle stripes from a midline) */}
-          <path class="body-fold" d="M100,128 L100,260" />
-          {/* Lanyard / badge accent (Junior+) */}
-          <path class="lanyard" d="M96,128 L104,128 L102,158 L98,158 Z" />
-          <rect class="badge" x="92" y="156" width="16" height="11" rx="1" />
-          {/* Legs (white pants under dress hem) */}
-          <rect class="leg leg-left"  x="68" y="252" width="24" height="44" />
-          <rect class="leg leg-right" x="108" y="252" width="24" height="44" />
-          {/* Heels — silhouette black triangles */}
-          <path class="heel heel-left"  d="M64,296 L94,296 L92,308 L74,310 Z" />
-          <path class="heel heel-right" d="M106,296 L136,296 L132,310 L114,308 Z" />
-        </svg>
-
-        {/* Floating "+" indicators when buttons pressed */}
+        <div class="sprite" id="sprite" data-sheet="a" data-col="0" data-row="0" aria-label="creative worker"></div>
         <span class="floater" id="floater"></span>
-
-        {/* Auto-promotion celebration banner — shows empty corporate praise on stage-up */}
         <div class="celebration" id="celebrationBanner" aria-live="polite"></div>
-
-        {/* Confetti — only fires inside the stage; can never escape the gameplay window */}
         <div class="full-fanfare" id="fullFanfare" aria-hidden="true"></div>
       </div>
 
@@ -134,7 +64,7 @@ import Layout from '../../../layouts/Layout.astro';
         </button>
       </div>
 
-      {/* Trophy case */}
+      {/* Textual award log — names of every trophy, separate from the visual shelf */}
       <div class="trophy-case" id="trophyCase">
         <div class="trophy-empty">no awards yet. keep feeding.</div>
       </div>
@@ -154,8 +84,6 @@ import Layout from '../../../layouts/Layout.astro';
       </div>
     </div>
 
-    {/* Fanfare overlay is now INSIDE the stage so confetti can't escape the gameplay window. */}
-
     {/* Ending overlay */}
     <div class="ending" id="ending" hidden>
       <div class="ending-card">
@@ -171,23 +99,18 @@ import Layout from '../../../layouts/Layout.astro';
 
 <style>
   :root {
-    --pc-cyan:        #1bb4e8;
-    --pc-cyan-deep:   #0e8fbf;
-    --pc-cyan-soft:   #6ed3ee;
-    --pc-yellow:      #f5c842;
+    --pc-cyan:        #5da3c4;
+    --pc-cyan-deep:   #2e6f8f;
+    --pc-cyan-soft:   #bcdaee;
+    --pc-yellow:      #f3e09b;
+    --pc-yellow-deep: #d6bb5f;
     --pc-pink:        #f15968;
     --pc-red:         #d83b4a;
-    --pc-blue-deep:   #0a1f3a;
-    --pc-paper:       #fafaf5;
-    --pc-paper-warm:  #f0e8d4;
+    --pc-blue-deep:   #1a3a6b;
+    --pc-paper:       #f8f3e3;
+    --pc-paper-warm:  #efe6c9;
     --pc-ink:         #1a1a1a;
     --pc-ink-soft:    #4a4a4a;
-
-    /* Stage colors */
-    --stage-skin:    #e2c4a3;
-    --stage-hair:    #4a3320;
-    --stage-tie:     #1a4d8c;
-    --stage-body:    url(#newspaper-2);
   }
 
   html, body {
@@ -205,7 +128,7 @@ import Layout from '../../../layouts/Layout.astro';
     z-index: 0;
     background-image:
       radial-gradient(circle at 12% 88%, rgba(255,255,255,0.10) 0%, transparent 35%),
-      radial-gradient(circle at 88% 18%, rgba(10,31,58,0.08) 0%, transparent 40%);
+      radial-gradient(circle at 88% 18%, rgba(26,58,107,0.10) 0%, transparent 40%);
   }
 
   .pc {
@@ -220,153 +143,7 @@ import Layout from '../../../layouts/Layout.astro';
     .pc { padding: 2rem 1rem 6rem; }
   }
 
-  /* ===== The capsule — claustrophobic plastic shell around the whole game ===== */
-  .capsule {
-    background: var(--pc-paper);
-    border: 4px solid var(--pc-blue-deep);
-    border-radius: 28px 28px 24px 24px;
-    padding: 0.9rem 0.9rem 1rem;
-    box-shadow:
-      inset 0 0 0 6px var(--pc-paper-warm),
-      inset 0 0 0 8px rgba(10,31,58,0.25),
-      8px 8px 0 var(--pc-yellow),
-      14px 14px 0 var(--pc-blue-deep);
-    position: relative;
-  }
-  .capsule::before {
-    /* Top "speaker grille" — purely decorative, says 'this is a device' */
-    content: '';
-    position: absolute;
-    top: -2px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 64px;
-    height: 7px;
-    background:
-      repeating-linear-gradient(90deg,
-        var(--pc-blue-deep) 0 2px,
-        transparent 2px 5px);
-    border-radius: 0 0 4px 4px;
-  }
-  .capsule::after {
-    /* Plastic glare on the screen */
-    content: '';
-    position: absolute;
-    top: 14px;
-    right: 18px;
-    width: 10px;
-    height: 10px;
-    background: rgba(255,255,255,0.6);
-    border-radius: 50%;
-    pointer-events: none;
-  }
-
-  /* Tighten everything inside the capsule */
-  .capsule .device-stats {
-    margin: 0.2rem 0 0.7rem;
-    padding: 0.5rem;
-    gap: 0.4rem;
-    box-shadow: 3px 3px 0 var(--pc-blue-deep);
-  }
-  .capsule .device-stats .stat .lbl { font-size: 0.6rem; }
-  .capsule .device-stats .stat .bar { height: 9px; }
-
-  .capsule .stage {
-    /* The "screen" — square, framed inside the capsule */
-    aspect-ratio: 1 / 1;
-    margin-bottom: 0.6rem;
-    border-width: 3px;
-    border-radius: 4px;
-  }
-
-  .capsule .career-label {
-    font-size: 0.78rem;
-    margin: 0.3rem 0 0.6rem;
-    color: var(--pc-blue-deep);
-    text-shadow: 1px 1px 0 var(--pc-yellow);
-    letter-spacing: 0.08em;
-  }
-
-  .capsule .inputs {
-    gap: 0.4rem;
-    margin-bottom: 0.4rem;
-  }
-  .capsule .input-btn {
-    padding: 0.55rem 0.4rem;
-    font-size: 0.7rem;
-    min-height: 48px;
-    box-shadow: 2px 2px 0 var(--pc-blue-deep);
-  }
-  .capsule .input-btn:hover {
-    box-shadow: 4px 4px 0 var(--pc-blue-deep);
-  }
-  .capsule .input-btn .emo { font-size: 1.05rem; }
-  .capsule .input-btn .lbl { font-size: 0.6rem; }
-
-  .capsule .quit-row {
-    margin: 0.5rem 0 0.4rem;
-  }
-  .capsule .quit-btn {
-    padding: 0.45rem 1rem;
-    font-size: 0.7rem;
-    color: var(--pc-blue-deep);
-    border-color: var(--pc-blue-deep);
-    text-shadow: none;
-    min-height: 32px;
-  }
-
-  .capsule .trophy-case {
-    padding: 0.45rem 0.55rem;
-    min-height: 2.2rem;
-    box-shadow: inset 0 1px 2px rgba(10,31,58,0.15);
-    background: var(--pc-paper-warm);
-    overflow-x: auto;
-    flex-wrap: nowrap;
-  }
-  .capsule .trophy {
-    flex: 0 0 auto;
-    padding: 0.2rem 0.4rem;
-    font-size: 0.6rem;
-  }
-  .capsule .trophy .te { font-size: 0.85rem; }
-  .capsule .trophy-empty { font-size: 0.6rem; }
-
-  /* Smaller character and props inside the squeezed screen */
-  .capsule .character { width: 32%; }
-  .capsule .prop.monitor   { font-size: 1.4rem; }
-  .capsule .prop.mug       { font-size: 1rem; }
-  .capsule .prop.plant     { font-size: 1.2rem; }
-  .capsule .prop.books     { font-size: 1rem; }
-
-  /* Trophy wall — awards plastered across the back wall, big enough to read */
-  .trophy-wall {
-    position: absolute;
-    top: 5%;
-    left: 6%;
-    right: 6%;
-    height: 38%;
-    pointer-events: none;
-    z-index: 2;
-    display: flex;
-    flex-wrap: wrap;
-    align-content: flex-start;
-    gap: 6%;
-  }
-  /* :global because trophy emojis are created at runtime via createElement —
-     they don't get Astro's scoping data attribute, so scoped selectors miss them. */
-  :global(#trophyWall .wall-award) {
-    font-size: 4.8rem;
-    line-height: 1;
-    filter: drop-shadow(3px 3px 0 rgba(60,38,18,0.35));
-    user-select: none;
-  }
-  :global(#trophyWall .wall-award:nth-child(odd))  { transform: rotate(-4deg); }
-  :global(#trophyWall .wall-award:nth-child(even)) { transform: rotate(3deg); }
-  :global(#trophyWall .wall-award:nth-child(3n))   { transform: rotate(-1deg); }
-  :global(#trophyWall .wall-award.fresh)           { animation: trophy-pop 600ms cubic-bezier(.2,1.6,.4,1); }
-  /* Inside the capsule the screen is tighter; still 3× the previous size */
-  :global(.capsule #trophyWall .wall-award) { font-size: 3.75rem; }
-
+  /* ===== topbar ===== */
   .topbar {
     display: flex;
     align-items: center;
@@ -412,6 +189,7 @@ import Layout from '../../../layouts/Layout.astro';
     .bgm-label { display: none; }
   }
 
+  /* ===== header ===== */
   .head { margin: 1rem 0 1.5rem; }
   .head h1 {
     font-size: clamp(2.4rem, 9vw, 4rem);
@@ -433,19 +211,59 @@ import Layout from '../../../layouts/Layout.astro';
     font-weight: 600;
     text-shadow: 1px 1px 0 var(--pc-cyan-deep);
   }
-  .head .sub .nowrap { white-space: nowrap; }
+
+  /* ===== capsule (the device frame) ===== */
+  .capsule {
+    background: var(--pc-paper);
+    border: 4px solid var(--pc-blue-deep);
+    border-radius: 28px 28px 24px 24px;
+    padding: 0.9rem 0.9rem 1rem;
+    box-shadow:
+      inset 0 0 0 6px var(--pc-paper-warm),
+      inset 0 0 0 8px rgba(26,58,107,0.25),
+      8px 8px 0 var(--pc-yellow),
+      14px 14px 0 var(--pc-blue-deep);
+    position: relative;
+  }
+  .capsule::before {
+    /* Top "speaker grille" — purely decorative, says 'this is a device' */
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 64px;
+    height: 7px;
+    background:
+      repeating-linear-gradient(90deg,
+        var(--pc-blue-deep) 0 2px,
+        transparent 2px 5px);
+    border-radius: 0 0 4px 4px;
+  }
+  .capsule::after {
+    /* Plastic glare on the screen */
+    content: '';
+    position: absolute;
+    top: 14px;
+    right: 18px;
+    width: 10px;
+    height: 10px;
+    background: rgba(255,255,255,0.6);
+    border-radius: 50%;
+    pointer-events: none;
+  }
 
   /* ===== Stat bars ===== */
   .device-stats {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
-    gap: 0.6rem;
-    margin: 1.5rem 0 1rem;
-    padding: 0.7rem;
+    gap: 0.4rem;
+    margin: 0.2rem 0 0.7rem;
+    padding: 0.5rem;
     background: var(--pc-paper);
     border: 2px solid var(--pc-blue-deep);
     border-radius: 6px;
-    box-shadow: 4px 4px 0 var(--pc-blue-deep);
+    box-shadow: 3px 3px 0 var(--pc-blue-deep);
   }
   .stat {
     display: grid;
@@ -454,7 +272,7 @@ import Layout from '../../../layouts/Layout.astro';
     gap: 0.4rem;
   }
   .stat .lbl {
-    font-size: 0.72rem;
+    font-size: 0.6rem;
     color: var(--pc-ink);
     font-weight: 800;
     letter-spacing: 0.02em;
@@ -464,7 +282,7 @@ import Layout from '../../../layouts/Layout.astro';
     background: #e6e6dc;
     border: 1.5px solid var(--pc-ink);
     border-radius: 8px;
-    height: 12px;
+    height: 9px;
     overflow: hidden;
     position: relative;
   }
@@ -478,294 +296,97 @@ import Layout from '../../../layouts/Layout.astro';
     background: linear-gradient(90deg, var(--pc-yellow), var(--pc-pink), var(--pc-red));
   }
 
-  /* ===== The collage stage ===== */
+  /* ===== Trophy shelf — sits ABOVE the character, no overlap ===== */
+  .trophy-shelf {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 0.18rem;
+    padding: 0.35rem 0.4rem;
+    margin-bottom: 0.55rem;
+    background: linear-gradient(180deg, #b48b5a 0%, #8e6a3f 100%);
+    border: 2px solid var(--pc-blue-deep);
+    border-radius: 4px;
+    box-shadow: 2px 2px 0 var(--pc-blue-deep), inset 0 -3px 0 rgba(0,0,0,0.18);
+  }
+  .shelf-slot {
+    aspect-ratio: 1 / 1;
+    background-color: rgba(0,0,0,0.18);
+    background-image: none;
+    background-size: 400% 400%;
+    background-repeat: no-repeat;
+    border-radius: 2px;
+    box-shadow: inset 0 1px 1px rgba(0,0,0,0.4);
+    image-rendering: pixelated;
+    position: relative;
+    transition: transform 240ms cubic-bezier(.2,1.6,.4,1);
+  }
+  .shelf-slot.filled {
+    background-image: url('/room/papercut/sheet-b-trophies.png');
+    background-color: rgba(255,255,255,0.06);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12), 0 1px 0 rgba(0,0,0,0.25);
+  }
+  .shelf-slot.fresh { animation: trophy-pop 600ms cubic-bezier(.2,1.6,.4,1); }
+  @keyframes trophy-pop {
+    0%   { transform: scale(0.4) rotate(-12deg); }
+    60%  { transform: scale(1.2) rotate(2deg); }
+    100% { transform: scale(1) rotate(0); }
+  }
+
+  /* ===== The screen — sprite character cell ===== */
   .stage {
     position: relative;
-    aspect-ratio: 4 / 5;
-    max-width: 36rem;
-    margin: 0 auto 1.2rem;
+    aspect-ratio: 1 / 1;
+    margin-bottom: 0.6rem;
+    border: 3px solid var(--pc-blue-deep);
+    border-radius: 4px;
     overflow: hidden;
+    background: var(--pc-cyan-soft);
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,0.4);
   }
 
-  /* Connecting lines */
-  .connections {
+  .sprite {
     position: absolute;
     inset: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 1;
+    background-image: url('/room/papercut/sheet-a-core.png');
+    background-size: 400% 400%;
+    background-repeat: no-repeat;
+    background-position: 0% 0%;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    animation: sprite-bob 2.4s ease-in-out infinite;
+    transition: background-position 0ms;
   }
-  .connections path {
-    fill: none;
-    stroke: var(--pc-paper);
-    stroke-width: 0.25;
-    stroke-dasharray: 0.8 0.6;
-    stroke-linecap: round;
-    opacity: 0.85;
+  /* gentle "breathing" bob so the static frame feels alive but not bouncy */
+  @keyframes sprite-bob {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-3px); }
   }
-
-  /* Decorative scatter — absolute positioned hand-placed */
-  .scatter { position: absolute; pointer-events: none; z-index: 1; }
-  .scatter-1 { top:  4%; left:  6%; }
-  .scatter-2 { top:  6%; left: 28%; }
-  .scatter-3 { top: 12%; left: 84%; }
-  .scatter-4 { top: 38%; left:  2%; }
-  .scatter-5 { top: 62%; left: 90%; }
-  .scatter-6 { top: 84%; left:  8%; }
-  .scatter-7 { top: 92%; left: 36%; }
-  .scatter-8 { top: 80%; left: 76%; }
-
-  .halftone-circle {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background: radial-gradient(circle, var(--pc-paper) 60%, var(--pc-blue-deep) 60%);
-    background:
-      var(--pc-paper)
-      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='6' height='6'><circle cx='3' cy='3' r='1.1' fill='%230a1f3a'/></svg>")
-      repeat;
-    border: 2px solid var(--pc-blue-deep);
-    box-shadow: 2px 2px 0 var(--pc-blue-deep);
+  /* Sprite "react" — brief flash on celebration / promotion */
+  .sprite.react {
+    animation: sprite-bob 2.4s ease-in-out infinite, sprite-pop 700ms cubic-bezier(.2,1.6,.4,1);
   }
-  .halftone-circle--small { width: 36px; height: 36px; }
-
-  .dot-circle {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    background: var(--pc-blue-deep);
-    border: 2px solid var(--pc-paper);
-  }
-  .dot-circle--blue { background: var(--pc-cyan-deep); }
-  .dot-circle--dark { background: var(--pc-blue-deep); }
-
-  .triangle {
-    width: 0;
-    height: 0;
-    border-left: 22px solid transparent;
-    border-right: 22px solid transparent;
-    border-bottom: 36px solid var(--pc-yellow);
-    filter: drop-shadow(2px 2px 0 var(--pc-blue-deep));
-    transform: rotate(-12deg);
-  }
-  .triangle--yellow { border-bottom-color: var(--pc-yellow); transform: rotate(-150deg); }
-  .triangle--pink   { border-bottom-color: var(--pc-pink);   transform: rotate(-22deg); border-left-width: 14px; border-right-width: 14px; border-bottom-width: 22px; }
-
-  .dot-small {
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: var(--pc-paper);
-  }
-  .dot-small--yellow { background: var(--pc-yellow); }
-
-  /* ===== Floating orbits (input buttons) ===== */
-  .orbit {
-    position: absolute;
-    background: transparent;
-    border: 0;
-    padding: 0;
-    cursor: pointer;
-    z-index: 3;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.4rem;
-    font-family: inherit;
-  }
-  .orbit:hover .photo-circle { transform: scale(1.06) rotate(-2deg); }
-  .orbit:active .photo-circle { transform: scale(0.96) rotate(0); }
-  .orbit:disabled { opacity: 0.5; cursor: not-allowed; }
-
-  .orbit--feed   { top:  6%; left: 12%; }
-  .orbit--raise  { top:  4%; right: 14%; }
-  .orbit--praise { top: 50%; right:  4%; }
-  @media (max-width: 480px) {
-    .orbit--feed   { top: 2%; left: 4%; }
-    .orbit--raise  { top: 0%; right: 4%; }
-    .orbit--praise { top: 38%; right: 0%; }
+  @keyframes sprite-pop {
+    0%   { filter: brightness(1.4) saturate(1.4) drop-shadow(0 0 12px rgba(245,200,66,0.8)); }
+    100% { filter: brightness(1) saturate(1); }
   }
 
-  .photo-circle {
-    width: 78px;
-    height: 78px;
-    border-radius: 50%;
-    background: var(--pc-paper);
-    border: 4px solid var(--pc-paper);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow:
-      4px 4px 0 var(--pc-blue-deep),
-      inset 0 0 0 2px var(--pc-blue-deep);
-    transition: transform 220ms cubic-bezier(.2,.8,.2,1);
-    position: relative;
-    overflow: hidden;
-  }
-  .photo-circle::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image:
-      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='3' height='3'><circle cx='1.5' cy='1.5' r='0.5' fill='%230a1f3a' opacity='0.18'/></svg>");
-    background-size: 3px 3px;
-    pointer-events: none;
-  }
-  .photo-circle .emo {
-    font-size: 2.4rem;
-    line-height: 1;
-    filter: grayscale(0.3) contrast(1.05);
-    z-index: 1;
-    position: relative;
-  }
-  .photo-circle--feed   { background: linear-gradient(145deg, #fae3a8, #f5c842); }
-  .photo-circle--raise  { background: linear-gradient(145deg, #c9efb8, #6ed384); }
-  .photo-circle--praise { background: linear-gradient(145deg, #ffd0d0, #f15968); }
-  @media (max-width: 480px) {
-    .photo-circle { width: 64px; height: 64px; border-width: 3px; }
-    .photo-circle .emo { font-size: 1.9rem; }
-  }
-
-  .orbit-tag {
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: var(--pc-paper);
-    background: var(--pc-blue-deep);
-    padding: 0.18rem 0.5rem;
-    border-radius: 2px;
-    letter-spacing: 0.04em;
-    white-space: nowrap;
-    text-transform: lowercase;
-  }
-
-  /* ===== Character ===== */
-  .character {
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 50%;
-    max-width: 240px;
-    height: auto;
-    z-index: 2;
-    animation: stop-motion-bob 1.4s steps(3) infinite;
-  }
-  @keyframes stop-motion-bob {
-    0%, 100% { transform: translateX(-50%) translateY(0); }
-    33%      { transform: translateX(-50%) translateY(-3px); }
-    66%      { transform: translateX(-50%) translateY(0); }
-  }
-
-  .character .head {
-    fill: var(--stage-skin);
-    stroke: var(--pc-ink);
-    stroke-width: 1.2;
-  }
-  /* Hair — three variants. Only the one matching the career stage shows.
-     Color greys out and the shape thins as he ages. */
-  .character .hair-full,
-  .character .hair-receding,
-  .character .hair-sides {
-    display: none;
-    stroke: var(--pc-ink);
-    stroke-width: 0.8;
-  }
-  .character .eye   { fill: var(--pc-ink); }
-  .character .mouth { fill: none; stroke: var(--pc-ink); stroke-width: 2; stroke-linecap: round; transition: d 300ms; }
-  .character .bag   { fill: none; stroke: rgba(0,0,0,0.45); stroke-width: 1.2; opacity: 0; }
-  .character .glasses {
-    fill: rgba(255,255,255,0.2);
-    stroke: var(--pc-ink);
-    stroke-width: 1.4;
-    opacity: 0;
-  }
-  .character .neck { fill: var(--stage-skin); stroke: var(--pc-ink); stroke-width: 0.8; }
-  .character .tie  { fill: var(--stage-tie); stroke: var(--pc-ink); stroke-width: 0.8; }
-  .character .body {
-    fill: url(#newspaper-2);
-    stroke: var(--pc-ink);
-    stroke-width: 1.5;
-  }
-  .character .body-fold {
-    stroke: rgba(0,0,0,0.18);
-    stroke-width: 0.8;
-    fill: none;
-  }
-  .character .leg  { fill: url(#grid-fine); stroke: var(--pc-ink); stroke-width: 1; }
-  .character .heel { fill: var(--pc-ink); }
-  .character .lanyard { fill: var(--pc-red); opacity: 0; }
-  .character .badge { fill: var(--pc-paper); stroke: var(--pc-ink); stroke-width: 0.5; opacity: 0; }
-
-  /* Career-stage modifiers — set on .stage */
-  .stage.stage-0 .character .tie { fill: var(--pc-cyan-deep); }
-  .stage.stage-1 .character .lanyard { opacity: 1; }
-  .stage.stage-1 .character .badge { opacity: 1; }
-  .stage.stage-2 .character .bag { opacity: 0.8; }
-  .stage.stage-2 .character .lanyard { opacity: 1; }
-  .stage.stage-2 .character .badge { opacity: 1; }
-  .stage.stage-3 .character .bag { opacity: 1; }
-  .stage.stage-3 .character .tie { fill: var(--pc-red); }
-  .stage.stage-4 .character .bag { opacity: 1; }
-  .stage.stage-4 .character .glasses { opacity: 1; }
-  .stage.stage-5 .character .bag { opacity: 1; }
-  .stage.stage-5 .character .glasses { opacity: 1; }
-
-  /* Hair progression per career stage */
-  .stage.stage-0 .character .hair-full { display: block; fill: #3d2817; }
-  .stage.stage-1 .character .hair-full { display: block; fill: #3d2817; }
-  .stage.stage-2 .character .hair-full { display: block; fill: #5e4d3a; } /* graying */
-  .stage.stage-3 .character .hair-receding { display: block; fill: #8a7a6a; } /* receding, gray */
-  .stage.stage-4 .character .hair-sides { display: block; fill: #b8b0a0; } /* sides only, white-gray */
-  .stage.stage-5 .character .hair-sides { display: block; fill: #e0dcd2; opacity: 0.85; } /* near-bald, white wisps */
-
-  /* Fire & smoke (overlay on stage) */
-  .fire-layer, .smoke-layer {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 4;
-  }
-  .flame {
-    position: absolute;
-    font-size: 1.8rem;
-    line-height: 1;
-    filter: drop-shadow(0 0 8px rgba(220, 80, 20, 0.7));
-    animation: flame-flicker 0.36s steps(3) infinite;
-  }
-  @keyframes flame-flicker {
-    0%, 100% { transform: scale(1) translateY(0); }
-    33%      { transform: scale(1.18) translateY(-3px); }
-    66%      { transform: scale(0.92) translateY(1px); }
-  }
-  .smoke {
-    position: absolute;
-    font-size: 1.3rem;
-    line-height: 1;
-    opacity: 0.6;
-    animation: smoke-rise 3s linear infinite;
-  }
-  @keyframes smoke-rise {
-    0%   { transform: translateY(0); opacity: 0.6; }
-    100% { transform: translateY(-32px); opacity: 0; }
-  }
-
-  /* Floater */
+  /* Floater — "+exposure 📢" etc */
   .floater {
     position: absolute;
     left: 50%;
     bottom: 60%;
     transform: translateX(-50%);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     font-weight: 800;
     color: var(--pc-paper);
     background: var(--pc-blue-deep);
-    padding: 0.25rem 0.55rem;
+    padding: 0.22rem 0.5rem;
     border-radius: 2px;
     pointer-events: none;
     opacity: 0;
     z-index: 5;
     text-shadow: none;
+    white-space: nowrap;
   }
   .floater.fly { animation: float-up 900ms ease-out forwards; }
   @keyframes float-up {
@@ -774,24 +395,117 @@ import Layout from '../../../layouts/Layout.astro';
     100% { opacity: 0; transform: translateX(-50%) translateY(-50px); }
   }
 
-  /* Career label */
+  /* Speech bubble for mutter behaviour */
+  .speech-bubble {
+    position: absolute;
+    top: 8%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--pc-paper);
+    border: 2px solid var(--pc-blue-deep);
+    border-radius: 12px;
+    padding: 0.4rem 0.7rem;
+    font-size: 0.7rem;
+    color: var(--pc-blue-deep);
+    font-weight: 600;
+    z-index: 8;
+    pointer-events: none;
+    box-shadow: 2px 2px 0 var(--pc-blue-deep);
+    max-width: 80%;
+    text-align: center;
+    line-height: 1.2;
+    animation: speech-fade 6s ease-out forwards;
+  }
+  .speech-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 8px solid var(--pc-blue-deep);
+  }
+  @keyframes speech-fade {
+    0%   { opacity: 0; transform: translateX(-50%) translateY(-4px); }
+    8%   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    90%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  /* Celebration banner inside the screen */
+  .celebration {
+    position: absolute;
+    top: 6%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--pc-yellow);
+    border: 2px solid var(--pc-blue-deep);
+    border-radius: 4px;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--pc-blue-deep);
+    text-align: center;
+    line-height: 1.25;
+    max-width: 86%;
+    z-index: 9;
+    box-shadow: 2px 2px 0 var(--pc-blue-deep);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .celebration.show {
+    animation: celebration-flash 4s ease-in-out forwards;
+  }
+  @keyframes celebration-flash {
+    0%   { opacity: 0; transform: translateX(-50%) scale(0.7); }
+    10%  { opacity: 1; transform: translateX(-50%) scale(1.05); }
+    20%  { transform: translateX(-50%) scale(1); }
+    80%  { opacity: 1; transform: translateX(-50%) scale(1); }
+    100% { opacity: 0; transform: translateX(-50%) scale(0.95); }
+  }
+
+  /* ===== Pixel confetti — small coloured squares falling ===== */
+  .full-fanfare {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 7;
+    overflow: hidden;
+  }
+  /* :global because particles are created at runtime via createElement —
+     they don't pick up Astro's data-astro-cid scoping. */
+  :global(.full-fanfare .pxconf) {
+    position: absolute;
+    top: -10%;
+    width: 6px;
+    height: 6px;
+    image-rendering: pixelated;
+    animation: pxconf-fall 1.6s cubic-bezier(.25,.46,.45,.94) forwards;
+  }
+  @keyframes pxconf-fall {
+    0%   { transform: translateY(0) translateX(0) rotate(0); opacity: 1; }
+    100% { transform: translateY(120%) translateX(var(--xshift, 0)) rotate(540deg); opacity: 0; }
+  }
+
+  /* ===== Career label ===== */
   .career-label {
     text-align: center;
-    font-size: 1rem;
+    font-size: 0.78rem;
     font-weight: 800;
-    color: var(--pc-paper);
-    letter-spacing: 0.12em;
+    color: var(--pc-blue-deep);
+    letter-spacing: 0.08em;
     text-transform: lowercase;
-    margin: 0.4rem 0 1rem;
-    text-shadow: 2px 2px 0 var(--pc-blue-deep);
+    margin: 0.3rem 0 0.6rem;
+    text-shadow: 1px 1px 0 var(--pc-yellow);
   }
 
   /* ===== Bottom button row — feed / raise / praise ===== */
   .inputs {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 0.6rem;
-    margin: 0 0 0.8rem;
+    gap: 0.4rem;
+    margin: 0 0 0.4rem;
   }
   @media (max-width: 480px) {
     .inputs { grid-template-columns: 1fr; }
@@ -800,115 +514,113 @@ import Layout from '../../../layouts/Layout.astro';
     background: var(--pc-paper);
     border: 2px solid var(--pc-blue-deep);
     border-radius: 4px;
-    padding: 0.85rem 0.6rem;
+    padding: 0.55rem 0.4rem;
     font-family: inherit;
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     font-weight: 700;
     color: var(--pc-ink);
     cursor: pointer;
-    box-shadow: 4px 4px 0 var(--pc-blue-deep);
+    box-shadow: 2px 2px 0 var(--pc-blue-deep);
     transition: transform 120ms, box-shadow 120ms, background 120ms;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 0.3rem;
-    min-height: 56px;
+    min-height: 48px;
     line-height: 1.1;
     text-align: center;
   }
-  .input-btn .emo { font-size: 1.3rem; line-height: 1; }
-  .input-btn .lbl { font-size: 0.7rem; letter-spacing: 0.02em; }
-  .input-btn:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--pc-blue-deep); }
-  .input-btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--pc-blue-deep); }
+  .input-btn .emo { font-size: 1.05rem; line-height: 1; }
+  .input-btn .lbl { font-size: 0.6rem; letter-spacing: 0.02em; }
+  .input-btn:hover { transform: translate(-2px, -2px); box-shadow: 4px 4px 0 var(--pc-blue-deep); }
+  .input-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--pc-blue-deep); }
   .input-btn--feed { background: var(--pc-yellow); }
   .input-btn--raise { background: var(--pc-cyan-soft); }
   .input-btn--praise { background: var(--pc-pink); color: var(--pc-paper); }
-  .input-btn--feed:hover { background: #ffd55a; }
+  .input-btn--feed:hover { background: var(--pc-yellow-deep); }
 
-  /* Quit button — small, dashed, set apart from the input row */
+  /* ===== Quit button — small, dashed, set apart from input row ===== */
   .quit-row {
     display: flex;
     justify-content: center;
-    margin: 1.4rem 0 1.2rem;
+    margin: 0.5rem 0 0.4rem;
   }
   .quit-btn {
     background: transparent;
-    border: 2px dashed var(--pc-paper);
-    color: var(--pc-paper);
-    padding: 0.7rem 1.4rem;
+    border: 2px dashed var(--pc-blue-deep);
+    color: var(--pc-blue-deep);
+    padding: 0.45rem 1rem;
     font-family: inherit;
-    font-size: 0.85rem;
+    font-size: 0.7rem;
     font-weight: 600;
     cursor: pointer;
     border-radius: 4px;
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    min-height: 40px;
+    min-height: 32px;
     transition: all 400ms;
-    text-shadow: 1px 1px 0 var(--pc-cyan-deep);
   }
   .quit-btn:hover {
     background: var(--pc-pink);
     color: var(--pc-paper);
-    border-color: var(--pc-paper);
+    border-color: var(--pc-pink);
     border-style: solid;
   }
   .quit-btn.pulse {
     animation: quit-pulse 2.4s ease-in-out infinite;
   }
   @keyframes quit-pulse {
-    0%, 100% { border-color: var(--pc-paper); color: var(--pc-paper); }
-    50%      { border-color: var(--pc-yellow); color: var(--pc-yellow); }
+    0%, 100% { border-color: var(--pc-blue-deep); color: var(--pc-blue-deep); }
+    50%      { border-color: var(--pc-pink); color: var(--pc-pink); }
   }
-  .quit-btn .emo { font-size: 1rem; }
+  .quit-btn .emo { font-size: 0.95rem; }
 
-  /* Trophy case */
+  /* ===== Trophy case (text log of award names) ===== */
   .trophy-case {
-    background: var(--pc-paper);
+    background: var(--pc-paper-warm);
     border: 2px solid var(--pc-blue-deep);
     border-radius: 4px;
-    padding: 0.7rem 0.9rem;
-    min-height: 3rem;
+    padding: 0.45rem 0.55rem;
+    min-height: 2.2rem;
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
     gap: 0.4rem;
     align-content: flex-start;
-    box-shadow: 4px 4px 0 var(--pc-blue-deep);
+    box-shadow: inset 0 1px 2px rgba(26,58,107,0.15);
   }
   .trophy-empty {
-    font-size: 0.78rem;
+    font-size: 0.6rem;
     color: var(--pc-ink-soft);
     font-style: italic;
     width: 100%;
     text-align: center;
   }
-  .trophy {
-    background: var(--pc-paper-warm);
+  /* :global because trophies are created via createElement */
+  :global(.trophy-case .trophy) {
+    flex: 0 0 auto;
+    background: var(--pc-paper);
     border: 1.5px solid var(--pc-blue-deep);
     border-radius: 2px;
-    padding: 0.3rem 0.55rem;
-    font-size: 0.74rem;
+    padding: 0.2rem 0.4rem;
+    font-size: 0.6rem;
     color: var(--pc-ink);
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    box-shadow: 2px 2px 0 var(--pc-blue-deep);
+    gap: 0.3rem;
+    box-shadow: 1px 1px 0 var(--pc-blue-deep);
     font-weight: 600;
+    white-space: nowrap;
   }
-  .trophy .te { font-size: 1rem; line-height: 1; }
-  .trophy.new { animation: trophy-pop 600ms cubic-bezier(.2,1.6,.4,1); }
-  @keyframes trophy-pop {
-    0%   { transform: scale(0.5) rotate(-12deg); opacity: 0; }
-    60%  { transform: scale(1.15) rotate(2deg); opacity: 1; }
-    100% { transform: scale(1) rotate(0); opacity: 1; }
-  }
+  :global(.trophy-case .trophy .te) { font-size: 0.85rem; line-height: 1; }
+  :global(.trophy-case .trophy.new) { animation: trophy-pop 600ms cubic-bezier(.2,1.6,.4,1); }
 
-  /* Quit confirmation modal */
+  /* ===== Modals ===== */
   .modal {
     position: fixed;
     inset: 0;
-    background: rgba(10, 31, 58, 0.72);
+    background: rgba(26, 58, 107, 0.72);
     backdrop-filter: blur(4px);
     z-index: 95;
     display: flex;
@@ -917,7 +629,7 @@ import Layout from '../../../layouts/Layout.astro';
     padding: 1.5rem;
     animation: ending-fade 360ms ease forwards;
   }
-  /* Critical: restore [hidden] semantic when CSS sets display:flex above */
+  /* Critical: restore [hidden] when CSS sets display:flex above */
   .modal[hidden],
   .ending[hidden],
   .full-fanfare[hidden] { display: none !important; }
@@ -949,24 +661,65 @@ import Layout from '../../../layouts/Layout.astro';
     transition: transform 120ms;
   }
   .modal-btn:hover { transform: translate(-1px, -1px); }
-  .modal-btn--ghost {
-    background: var(--pc-paper);
-    border: 2px solid var(--pc-blue-deep);
-    color: var(--pc-ink);
-    box-shadow: 3px 3px 0 var(--pc-blue-deep);
+
+  /* ===== Promotion (bribe) modal ===== */
+  .modal-card.promo-card {
+    background: var(--pc-yellow);
+    border: 3px solid var(--pc-blue-deep);
+    box-shadow: 6px 6px 0 var(--pc-pink), 10px 10px 0 var(--pc-blue-deep);
+    position: relative;
+    overflow: hidden;
   }
-  .modal-btn--quit {
+  .modal-card.promo-card .modal-text {
+    color: var(--pc-blue-deep);
+    font-weight: 800;
+    font-size: 1.15rem;
+    line-height: 1.4;
+    margin: 0 0 0.6rem;
+  }
+  .modal-card.promo-card .modal-sub {
+    color: var(--pc-blue-deep);
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin: 0 0 1.4rem;
+    opacity: 0.85;
+  }
+  .modal-btn--accept {
     background: var(--pc-blue-deep);
-    border: 2px solid var(--pc-blue-deep);
     color: var(--pc-paper);
-    box-shadow: 3px 3px 0 var(--pc-yellow);
+    border: 2px solid var(--pc-blue-deep);
+    box-shadow: 4px 4px 0 var(--pc-pink);
+  }
+  .modal-btn--accept:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--pc-pink); }
+  .modal-btn--walk {
+    background: transparent;
+    color: var(--pc-blue-deep);
+    border: 2px dashed var(--pc-blue-deep);
+    box-shadow: none;
+    font-weight: 700;
+  }
+  .modal-btn--walk:hover { background: var(--pc-blue-deep); color: var(--pc-paper); border-style: solid; }
+
+  .promo-confetti {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  :global(.promo-confetti .pxconf) {
+    position: absolute;
+    top: -10%;
+    width: 6px;
+    height: 6px;
+    image-rendering: pixelated;
+    animation: pxconf-fall 1.6s cubic-bezier(.25,.46,.45,.94) forwards;
   }
 
-  /* Ending */
+  /* ===== Ending overlay ===== */
   .ending {
     position: fixed;
     inset: 0;
-    background: rgba(10, 31, 58, 0.85);
+    background: rgba(26, 58, 107, 0.85);
     backdrop-filter: blur(8px);
     z-index: 100;
     display: flex;
@@ -986,7 +739,7 @@ import Layout from '../../../layouts/Layout.astro';
     padding: 2rem 1.6rem;
     max-width: 26rem;
     text-align: center;
-    box-shadow: 12px 12px 0 var(--pc-yellow), inset 0 0 0 6px rgba(245,200,66,0.35);
+    box-shadow: 12px 12px 0 var(--pc-yellow), inset 0 0 0 6px rgba(243,224,155,0.35);
     position: relative;
     overflow: hidden;
   }
@@ -1018,9 +771,16 @@ import Layout from '../../../layouts/Layout.astro';
   .ending-card h2 {
     font-size: 1.75rem;
     color: var(--pc-ink);
-    margin: 0 0 1.2rem;
+    margin: 0 0 0.4rem;
     font-weight: 800;
     letter-spacing: -0.01em;
+  }
+  .ending-sub {
+    margin: 0 0 1.4rem;
+    color: var(--pc-ink-soft);
+    font-size: 1rem;
+    font-weight: 600;
+    font-style: italic;
   }
   .end-stats {
     display: grid;
@@ -1051,228 +811,23 @@ import Layout from '../../../layouts/Layout.astro';
   }
   .ending-btn:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--pc-yellow); }
 
-  /* ===== Promotion modal ===== */
-  .modal-card.promo-card {
-    background: var(--pc-yellow);
-    border: 3px solid var(--pc-blue-deep);
-    box-shadow: 6px 6px 0 var(--pc-pink), 10px 10px 0 var(--pc-blue-deep);
-    position: relative;
-    overflow: hidden;
-  }
-  .modal-card.promo-card .modal-text {
-    color: var(--pc-blue-deep);
-    font-weight: 800;
-    font-size: 1.15rem;
-    line-height: 1.4;
-    margin: 0 0 0.6rem;
-  }
-  .modal-card.promo-card .modal-sub {
-    color: var(--pc-blue-deep);
-    font-size: 0.85rem;
-    font-weight: 600;
-    margin: 0 0 1.4rem;
-    opacity: 0.85;
-  }
-  .modal-btn--accept {
-    background: var(--pc-blue-deep);
-    color: var(--pc-paper);
-    border-color: var(--pc-blue-deep);
-    box-shadow: 4px 4px 0 var(--pc-pink);
-  }
-  .modal-btn--accept:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--pc-pink); }
-  .modal-btn--walk {
-    background: transparent;
-    color: var(--pc-blue-deep);
-    border: 2px dashed var(--pc-blue-deep);
-    box-shadow: none;
-    font-weight: 700;
-  }
-  .modal-btn--walk:hover { background: var(--pc-blue-deep); color: var(--pc-paper); border-style: solid; }
-
-  /* ===== Auto-promotion celebration banner ===== */
-  .celebration {
-    position: absolute;
-    top: 8%;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--pc-yellow);
-    border: 2px solid var(--pc-blue-deep);
-    border-radius: 4px;
-    padding: 0.5rem 0.7rem;
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: var(--pc-blue-deep);
-    text-align: center;
-    line-height: 1.3;
-    max-width: 80%;
-    z-index: 9;
-    box-shadow: 3px 3px 0 var(--pc-blue-deep);
-    opacity: 0;
-    pointer-events: none;
-    text-shadow: 1px 1px 0 rgba(255,255,255,0.4);
-  }
-  .celebration.show {
-    animation: celebration-flash 4s ease-in-out forwards;
-  }
-  @keyframes celebration-flash {
-    0%   { opacity: 0; transform: translateX(-50%) scale(0.7); }
-    10%  { opacity: 1; transform: translateX(-50%) scale(1.05); }
-    20%  { transform: translateX(-50%) scale(1); }
-    80%  { opacity: 1; transform: translateX(-50%) scale(1); }
-    100% { opacity: 0; transform: translateX(-50%) scale(0.95); }
-  }
-
-  .promo-confetti {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    overflow: hidden;
-  }
-  .promo-confetti .conf {
-    position: absolute;
-    top: -10%;
-    font-size: 1.1rem;
-    animation: confetti-mini 1.6s ease-out forwards;
-  }
-  @keyframes confetti-mini {
-    0%   { transform: translateY(0) rotate(0); opacity: 1; }
-    100% { transform: translateY(420px) rotate(720deg); opacity: 0; }
-  }
-
-  /* Confetti shower — contained within the stage (the gameplay window) */
-  .full-fanfare {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 7;
-    overflow: hidden;
-  }
-  .full-fanfare .piece {
-    position: absolute;
-    top: -8%;
-    font-size: 0.9rem;
-    animation: confetti-fall 1.6s cubic-bezier(.25,.46,.45,.94) forwards;
-    filter: drop-shadow(1px 1px 0 rgba(0,0,0,0.15));
-  }
-  @keyframes confetti-fall {
-    0%   { transform: translateY(0) translateX(0) rotate(0); opacity: 1; }
-    100% { transform: translateY(120%) translateX(var(--xshift, 0)) rotate(720deg); opacity: 0; }
-  }
-
-  /* ===== Character reactions ===== */
-  .character.react {
-    animation: react-bounce 1.4s cubic-bezier(.2,1.4,.4,1) 1;
-  }
-  @keyframes react-bounce {
-    0%   { transform: translateX(-50%) scale(1) translateY(0); }
-    18%  { transform: translateX(-50%) scale(1.18) translateY(-14px); }
-    40%  { transform: translateX(-50%) scale(0.94) translateY(2px); }
-    60%  { transform: translateX(-50%) scale(1.08) translateY(-6px); }
-    80%  { transform: translateX(-50%) scale(0.98) translateY(0); }
-    100% { transform: translateX(-50%) scale(1) translateY(0); }
-  }
-  .character.react.intensity-high   { filter: brightness(1.4) saturate(1.6) drop-shadow(0 0 16px rgba(245,200,66,0.7)); }
-  .character.react.intensity-mid    { filter: brightness(1.18) saturate(1.2); }
-  .character.react.intensity-low    { filter: brightness(1.05); }
-
-  /* ===== Disturbing behaviours — kept INSIDE the stage box ===== */
-  .character.behavior-huddle {
-    animation: behavior-huddle 9s steps(6) 1;
-    transform-origin: center bottom;
-  }
-  @keyframes behavior-huddle {
-    0%   { transform: translateX(-50%) translateY(0) scale(1) rotate(0); }
-    20%  { transform: translateX(-110%) translateY(28px) scale(0.85) rotate(-8deg); }
-    80%  { transform: translateX(-110%) translateY(28px) scale(0.85) rotate(-8deg); }
-    100% { transform: translateX(-50%) translateY(0) scale(1) rotate(0); }
-  }
-
-  .character.behavior-pace {
-    animation: behavior-pace 10s steps(20) 1;
-  }
-  @keyframes behavior-pace {
-    0%, 100% { transform: translateX(-50%); }
-    25%      { transform: translateX(-110%); }
-    50%      { transform: translateX(10%); }
-    75%      { transform: translateX(-110%); }
-  }
-
-  .character.behavior-stare {
-    animation: behavior-stare 7s linear 1;
-    filter: brightness(0.7) saturate(0.4);
-  }
-  @keyframes behavior-stare {
-    0%, 100% { transform: translateX(-50%); }
-    /* held still */
-  }
-
-  .character.behavior-mutter {
-    animation: behavior-mutter 7s steps(8) 1;
-  }
-  @keyframes behavior-mutter {
-    0%, 100% { transform: translateX(-50%) rotate(0); }
-    20%      { transform: translateX(-50%) rotate(-2deg); }
-    40%      { transform: translateX(-50%) rotate(1deg); }
-    60%      { transform: translateX(-50%) rotate(-1deg); }
-    80%      { transform: translateX(-50%) rotate(2deg); }
-  }
-
-  /* Speech bubble for mutter */
-  .speech-bubble {
-    position: absolute;
-    top: 12%;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--pc-paper);
-    border: 2px solid var(--pc-blue-deep);
-    border-radius: 14px;
-    padding: 0.5rem 0.9rem;
-    font-size: 0.78rem;
-    color: var(--pc-blue-deep);
-    font-weight: 600;
-    z-index: 8;
-    pointer-events: none;
-    box-shadow: 3px 3px 0 var(--pc-blue-deep);
-    white-space: nowrap;
-    max-width: 80%;
-    animation: speech-fade 6.5s ease-out forwards;
-  }
-  .speech-bubble::after {
-    content: '';
-    position: absolute;
-    bottom: -10px;
-    left: 50%;
-    transform: translateX(-50%);
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-top: 10px solid var(--pc-blue-deep);
-  }
-  @keyframes speech-fade {
-    0%   { opacity: 0; transform: translateX(-50%) translateY(-6px); }
-    8%   { opacity: 1; transform: translateX(-50%) translateY(0); }
-    90%  { opacity: 1; }
-    100% { opacity: 0; }
-  }
-
-  .ending-sub {
-    margin: -0.5rem 0 1.4rem;
-    color: var(--pc-ink-soft);
-    font-size: 1rem;
-    font-weight: 600;
-    font-style: italic;
-  }
-
   @media (prefers-reduced-motion: reduce) {
-    .character, .flame, .smoke, .quit-btn { animation: none !important; }
-    .character.react { animation: none !important; }
-    .full-fanfare .piece { animation: none !important; opacity: 0; }
+    .sprite, .quit-btn { animation: none !important; }
+    :global(.full-fanfare .pxconf),
+    :global(.promo-confetti .pxconf) { animation: none !important; opacity: 0; }
   }
 </style>
 
 <script>
-  // ===== state model =====
-  const STORAGE_KEY = 'papercut.state.v1';
-  const STAGES = [
+  // ============================================================================
+  // papercut. — tamagotchi for creative worker
+  // Sprite-based reskin: state → cell mapping on a 4×4 sheet.
+  // ============================================================================
+
+  const STORAGE_KEY = 'papercut.state.v2'; // v2 — sprite reskin (old v1 state intentionally orphaned)
+
+  type Stage = { id: number; name: string; xpAt: number; awardCadence: number };
+  const STAGES: Stage[] = [
     { id: 0, name: 'intern',            xpAt: 0,    awardCadence: 50 },
     { id: 1, name: 'junior',            xpAt: 50,   awardCadence: 80 },
     { id: 2, name: 'senior',            xpAt: 150,  awardCadence: 120 },
@@ -1281,46 +836,53 @@ import Layout from '../../../layouts/Layout.astro';
     { id: 5, name: 'veteran',           xpAt: 1300, awardCadence: 320 },
   ];
 
-  const AWARD_POOL = [
-    { name: 'Spec Ad Champion',         emoji: '🏆' },
-    { name: 'Best Headline (Bronze)',   emoji: '🥈' },
-    { name: 'Lifetime Achievement (Trying)', emoji: '📜' },
-    { name: 'D&AD Wood Pencil',         emoji: '🪵' },
-    { name: 'Cannes Lion (Shortlist)',  emoji: '🦁' },
-    { name: 'Effie Bronze',             emoji: '🥉' },
-    { name: 'Adweek Top 50',            emoji: '📰' },
-    { name: 'LBB Talent Spotter',       emoji: '✨' },
-    { name: 'Industry Disruptor',       emoji: '🚀' },
-    { name: 'Mentorship Honoured',      emoji: '🎖️' },
-    { name: 'LinkedIn Thought Leader',  emoji: '💡' },
-    { name: 'Industry Veteran',         emoji: '🦴' },
-    { name: 'Founder Feature',          emoji: '📰' },
-    { name: 'Pitch Deck Hall of Fame',  emoji: '📊' },
-    { name: 'Most Posts About Process', emoji: '🧵' },
-    { name: 'Beloved by Brand X',       emoji: '🤝' },
-    { name: 'Scrappy Award Loser',      emoji: '😅' },
-    { name: 'Headlines a Webinar',      emoji: '🎤' },
+  // Each award maps to a trophy sprite in sheet-b-trophies.png (16-cell 4×4).
+  // spriteIdx: 0–15. col = idx%4, row = floor(idx/4).
+  type AwardDef = { name: string; emoji: string; spriteIdx: number };
+  const AWARD_POOL: AwardDef[] = [
+    { name: 'Spec Ad Champion',              emoji: '🏆', spriteIdx: 0  },
+    { name: 'Best Headline (Bronze)',        emoji: '🥈', spriteIdx: 1  },
+    { name: 'Lifetime Achievement (Trying)', emoji: '📜', spriteIdx: 2  },
+    { name: 'D&AD Wood Pencil',              emoji: '🪵', spriteIdx: 3  },
+    { name: 'Cannes Lion (Shortlist)',       emoji: '🦁', spriteIdx: 4  },
+    { name: 'Effie Bronze',                  emoji: '🥉', spriteIdx: 5  },
+    { name: 'Adweek Top 50',                 emoji: '📰', spriteIdx: 6  },
+    { name: 'LBB Talent Spotter',            emoji: '✨', spriteIdx: 7  },
+    { name: 'Industry Disruptor',            emoji: '🚀', spriteIdx: 8  },
+    { name: 'Mentorship Honoured',           emoji: '🎖️', spriteIdx: 9  },
+    { name: 'LinkedIn Thought Leader',       emoji: '💡', spriteIdx: 10 },
+    { name: 'Industry Veteran',              emoji: '🦴', spriteIdx: 11 },
+    { name: 'Founder Feature',               emoji: '📰', spriteIdx: 12 },
+    { name: 'Pitch Deck Hall of Fame',       emoji: '📊', spriteIdx: 13 },
+    { name: 'Most Posts About Process',      emoji: '🧵', spriteIdx: 14 },
+    { name: 'Beloved by Brand X',            emoji: '🤝', spriteIdx: 15 },
+    { name: 'Scrappy Award Loser',           emoji: '😅', spriteIdx: 0  },
+    { name: 'Headlines a Webinar',           emoji: '🎤', spriteIdx: 9  },
   ];
 
-  const defaultState = () => ({
-    fed: 70,
-    mood: 70,
-    burnout: 5,
-    xp: 0,
-    stage: 0,
+  type AwardInstance = AwardDef & { ts: number; reason: string; _fresh?: boolean };
+  type State = {
+    fed: number; mood: number; burnout: number;
+    xp: number; stage: number;
+    awards: AwardInstance[];
+    startedAt: number; timeAlive: number;
+    nextAwardAt: number; awardCount: number;
+    ended: boolean; endedAt: number | null;
+  };
+
+  const defaultState = (): State => ({
+    fed: 70, mood: 70, burnout: 5,
+    xp: 0, stage: 0,
     awards: [],
-    startedAt: Date.now(),
-    timeAlive: 0,
+    startedAt: Date.now(), timeAlive: 0,
     nextAwardAt: STAGES[0].awardCadence,
     awardCount: 0,
-    ended: false,
-    endedAt: null,
-    pendingPromotion: null,   // 'promotion' | 'award' | null
+    ended: false, endedAt: null,
   });
 
-  let state = loadState();
+  let state: State = loadState();
 
-  function loadState() {
+  function loadState(): State {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return defaultState();
@@ -1333,73 +895,125 @@ import Layout from '../../../layouts/Layout.astro';
   }
   function resetState() { state = defaultState(); saveState(); }
 
+  // ===== sprite state mapping =====
+  // Sheet A columns: 0=WORKING, 1=JOY, 2=DESPAIR, 3=BURNOUT
+  // Sheet C columns: 0=IDLE, 1=HUNGRY, 2=CRYING, 3=ZOMBIE
+  // Rows = age tier from career stage:
+  //   stages 0+1 → row 0 (age 25)
+  //   stage 2    → row 1 (age 38)
+  //   stages 3+4 → row 2 (age 52)
+  //   stage 5    → row 3 (age 65)
+
+  type SpriteKey = { sheet: 'a' | 'c'; col: number };
+  let reactUntil = 0;
+
+  function ageRow(stage: number): number {
+    if (stage <= 1) return 0;
+    if (stage === 2) return 1;
+    if (stage <= 4) return 2;
+    return 3;
+  }
+
+  function spriteForState(s: State, now: number): SpriteKey {
+    // 1. JOY — temporary on celebration
+    if (now < reactUntil) return { sheet: 'a', col: 1 };
+    // 2. BURNOUT — exhausted at desk
+    if (s.burnout >= 75) return { sheet: 'a', col: 3 };
+    // 3. CRYING — very low mood
+    if (s.mood < 20) return { sheet: 'c', col: 2 };
+    // 4. DESPAIR — low mood, especially with high burnout
+    if (s.mood < 35 || (s.mood < 50 && s.burnout > 55)) return { sheet: 'a', col: 2 };
+    // 5. HUNGRY — starving for exposure
+    if (s.fed < 20) return { sheet: 'c', col: 1 };
+    // 6. ZOMBIE — burnt out and unhappy
+    if (s.burnout > 60 && s.mood < 50) return { sheet: 'c', col: 3 };
+    // 7. IDLE — high mood, daydreaming
+    if (s.mood >= 70) return { sheet: 'c', col: 0 };
+    // 8. WORKING — default
+    return { sheet: 'a', col: 0 };
+  }
+
+  function applySprite() {
+    const sprite = document.getElementById('sprite');
+    if (!sprite) return;
+    const now = Date.now();
+    const key = spriteForState(state, now);
+    const row = ageRow(state.stage);
+    const col = key.col;
+    sprite.dataset.sheet = key.sheet;
+    sprite.dataset.col = String(col);
+    sprite.dataset.row = String(row);
+    sprite.style.backgroundImage = `url('/room/papercut/sheet-${key.sheet}-${key.sheet === 'a' ? 'core' : 'secondary'}.png')`;
+    // 4×4 grid: position 0/33.333/66.667/100% per cell
+    sprite.style.backgroundPosition = `${(col * 100) / 3}% ${(row * 100) / 3}%`;
+  }
+
   // ===== render =====
   function render() {
-    document.getElementById('fedFill').style.width = state.fed + '%';
-    document.getElementById('moodFill').style.width = state.mood + '%';
-    document.getElementById('burnoutFill').style.width = state.burnout + '%';
+    (document.getElementById('fedFill') as HTMLElement).style.width = state.fed + '%';
+    (document.getElementById('moodFill') as HTMLElement).style.width = state.mood + '%';
+    (document.getElementById('burnoutFill') as HTMLElement).style.width = state.burnout + '%';
 
-    // Auto-stage-up on XP threshold (no modal). Just a celebration.
-    document.getElementById('stage').className = 'stage stage-' + state.stage;
-    document.getElementById('careerLabel').textContent = '— ' + STAGES[state.stage].name + ' —';
+    document.getElementById('careerLabel')!.textContent = '— ' + STAGES[state.stage].name + ' —';
 
-    const mouth = document.getElementById('mouth');
-    if (state.mood >= 60)      mouth.setAttribute('d', 'M84,98 Q100,108 116,98');
-    else if (state.mood >= 30) mouth.setAttribute('d', 'M84,100 L116,100');
-    else                       mouth.setAttribute('d', 'M84,108 Q100,96 116,108');
+    applySprite();
+    renderShelf();
+    renderTrophyCase();
 
-    renderTrophies();
-
-    const quitBtn = document.getElementById('btnQuit');
+    const quitBtn = document.getElementById('btnQuit')!;
     if (state.burnout > 60 || state.timeAlive > 180) quitBtn.classList.add('pulse');
     else quitBtn.classList.remove('pulse');
   }
 
-  function renderTrophies() {
-    const tc = document.getElementById('trophyCase');
+  function renderShelf() {
+    const slots = document.querySelectorAll<HTMLElement>('.shelf-slot');
+    slots.forEach((slot, i) => {
+      const award = state.awards[i];
+      if (!award) {
+        slot.classList.remove('filled', 'fresh');
+        slot.style.backgroundPosition = '';
+        return;
+      }
+      const col = award.spriteIdx % 4;
+      const row = Math.floor(award.spriteIdx / 4);
+      slot.classList.add('filled');
+      slot.style.backgroundPosition = `${(col * 100) / 3}% ${(row * 100) / 3}%`;
+      if (award._fresh && i === state.awards.length - 1) {
+        slot.classList.add('fresh');
+        window.setTimeout(() => slot.classList.remove('fresh'), 700);
+      }
+    });
+  }
+
+  function renderTrophyCase() {
+    const tc = document.getElementById('trophyCase')!;
     tc.innerHTML = '';
     if (state.awards.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'trophy-empty';
       empty.textContent = 'no awards yet. keep feeding.';
       tc.appendChild(empty);
-    } else {
-      state.awards.slice().reverse().forEach((a, i) => {
-        const t = document.createElement('span');
-        t.className = 'trophy';
-        if (i === 0 && a._fresh) { t.classList.add('new'); }
-        t.innerHTML = `<span class="te">${a.emoji}</span><span>${escapeHtml(a.name)}</span>`;
-        tc.appendChild(t);
-      });
-      state.awards.forEach(a => delete a._fresh);
+      return;
     }
-
-    // Trophy WALL inside the diorama — large award emojis plastered on the back wall.
-    const wall = document.getElementById('trophyWall');
-    if (wall) {
-      wall.innerHTML = '';
-      // Latest 6 awards (most recent first → looks freshest on the wall)
-      const recent = state.awards.slice(-6).reverse();
-      recent.forEach((a, i) => {
-        const w = document.createElement('span');
-        w.className = 'wall-award' + ((i === 0 && a._fresh_wall) ? ' fresh' : '');
-        w.textContent = a.emoji;
-        w.title = a.name;
-        wall.appendChild(w);
-      });
-    }
-    // mark fresh state for the next paint
-    state.awards.forEach(a => { if (a._fresh) { a._fresh_wall = true; } });
+    state.awards.slice().reverse().forEach((a, i) => {
+      const t = document.createElement('span');
+      t.className = 'trophy';
+      if (i === 0 && a._fresh) t.classList.add('new');
+      t.innerHTML = `<span class="te">${a.emoji}</span><span>${escapeHtml(a.name)}</span>`;
+      tc.appendChild(t);
+    });
+    state.awards.forEach(a => delete a._fresh);
   }
 
-  function escapeHtml(s) {
+  function escapeHtml(s: string): string {
     return String(s).replace(/[&<>"']/g, c => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[c]));
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    } as Record<string, string>)[c]);
   }
 
   // ===== inputs =====
-  function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
+  function clamp(n: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, n)); }
+
   function feedExposure() {
     if (state.ended) return;
     state.fed = clamp(state.fed + 22, 0, 100);
@@ -1441,10 +1055,9 @@ import Layout from '../../../layouts/Layout.astro';
   }
 
   // ===== awards =====
-  function grantAward(reason) {
-    const pool = AWARD_POOL;
-    const pick = pool[Math.floor(Math.random() * pool.length)];
-    const award = { ...pick, ts: Date.now(), reason, _fresh: true };
+  function grantAward(reason: string) {
+    const pick = AWARD_POOL[Math.floor(Math.random() * AWARD_POOL.length)];
+    const award: AwardInstance = { ...pick, ts: Date.now(), reason, _fresh: true };
     state.awards.push(award);
     state.awardCount = (state.awardCount || 0) + 1;
     state.nextAwardAt = state.xp + STAGES[state.stage].awardCadence;
@@ -1452,9 +1065,8 @@ import Layout from '../../../layouts/Layout.astro';
     return award;
   }
 
-  // ===== auto-promotion (no modal) — just a celebration banner =====
-  // Empty corporate praise indexed by the stage you just got promoted INTO.
-  const PRAISE_PROMOTION = {
+  // ===== auto-promotion (no modal) — celebration banner only =====
+  const PRAISE_PROMOTION: Record<string, string> = {
     junior:              "You're amazing! I can't wait to see what you can do!",
     senior:              "You're a star. We're so lucky to have you.",
     'art director':      "You're absolutely killing it. Future of this place.",
@@ -1471,8 +1083,7 @@ import Layout from '../../../layouts/Layout.astro';
     "Your name in their decks. Permanently.",
   ];
 
-  // Idempotent: call from renderAfter — applies one stage-up OR one milestone award.
-  function applyAutoAdvancement() {
+  function applyAutoAdvancement(): boolean {
     if (state.ended) return false;
     let stageIdx = 0;
     for (let i = STAGES.length - 1; i >= 0; i--) {
@@ -1484,8 +1095,9 @@ import Layout from '../../../layouts/Layout.astro';
       saveState();
       const nextName = STAGES[state.stage].name;
       showCelebration(PRAISE_PROMOTION[nextName] || "You're a star.");
-      fullFanfare();
+      pixelFanfare();
       reactCharacter();
+      render();
       return true;
     }
     if (state.stage === STAGES.length - 1 && state.xp >= state.nextAwardAt) {
@@ -1493,16 +1105,16 @@ import Layout from '../../../layouts/Layout.astro';
       saveState();
       const line = PRAISE_VETERAN_AWARD[Math.floor(Math.random() * PRAISE_VETERAN_AWARD.length)];
       showCelebration(line);
-      fullFanfare();
+      pixelFanfare();
       reactCharacter();
+      render();
       return true;
     }
     return false;
   }
 
-  function showCelebration(text) {
-    const banner = document.getElementById('celebrationBanner');
-    if (!banner) return;
+  function showCelebration(text: string) {
+    const banner = document.getElementById('celebrationBanner')!;
     banner.textContent = text;
     banner.classList.remove('show');
     void banner.offsetWidth;
@@ -1510,13 +1122,10 @@ import Layout from '../../../layouts/Layout.astro';
   }
 
   // ===== quit-attempt dialog (the bribe) =====
-  // Pressing the QUIT button summons the boss with a promotion offer.
-  // 'accept it' → another promotion / award + celebration.
-  // 'walk away' → ends the game (the only true win).
   function showQuitAttempt() {
     if (state.ended) return;
-    const text = document.getElementById('promoText');
-    const sub = document.getElementById('promoSub');
+    const text = document.getElementById('promoText')!;
+    const sub = document.getElementById('promoSub')!;
     const isMax = state.stage >= STAGES.length - 1;
     if (isMax) {
       text.textContent = "Really? You were such a rising star, we'll give you another award!";
@@ -1526,18 +1135,17 @@ import Layout from '../../../layouts/Layout.astro';
       text.textContent = "Really? You were such a rising star, we'll give you a promotion!";
       sub.textContent = STAGES[state.stage].name + " → " + nextName + ".";
     }
-    document.getElementById('promoModal').hidden = false;
+    document.getElementById('promoModal')!.hidden = false;
     spawnPromoConfetti();
     sfx.cha();
   }
 
   function hidePromotionModal() {
-    document.getElementById('promoModal').hidden = true;
-    document.getElementById('promoConfetti').innerHTML = '';
+    document.getElementById('promoModal')!.hidden = true;
+    document.getElementById('promoConfetti')!.innerHTML = '';
   }
 
   function ackPromotion() {
-    // The "accept it" path — the boss's bribe wins. Apply a promotion or award.
     if (state.stage < STAGES.length - 1) {
       state.stage += 1;
       grantAward('promotion');
@@ -1550,71 +1158,73 @@ import Layout from '../../../layouts/Layout.astro';
     }
     saveState();
     hidePromotionModal();
-    fullFanfare();
+    pixelFanfare();
     reactCharacter();
     render();
   }
 
   function walkAway() {
-    // The only true win: leave.
     hidePromotionModal();
     quit();
   }
 
-  function spawnPromoConfetti() {
-    const host = document.getElementById('promoConfetti');
-    host.innerHTML = '';
-    const emojis = ['🎉','✨','🟡','🟢','🔴','🩷','💛'];
-    for (let i = 0; i < 18; i++) {
-      const c = document.createElement('span');
-      c.className = 'conf';
-      c.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-      c.style.left = (Math.random() * 100) + '%';
-      c.style.animationDelay = (Math.random() * 0.6) + 's';
-      c.style.animationDuration = (1.2 + Math.random() * 0.9) + 's';
-      host.appendChild(c);
-    }
-  }
+  // ===== pixel confetti — small coloured squares falling =====
+  const CONFETTI_PALETTE = [
+    '#f3e09b', // pastel yellow
+    '#f15968', // pink
+    '#5da3c4', // cyan
+    '#bcdaee', // sky blue
+    '#1a3a6b', // deep navy
+    '#e8c547', // gold
+    '#ffffff',
+  ];
 
-  function fullFanfare() {
-    // Stage-scoped now (the .full-fanfare element lives inside the screen).
-    // Smaller piece count + smaller sizes since it's a tiny window.
-    const host = document.getElementById('fullFanfare');
+  function spawnPxConfetti(host: HTMLElement, count: number, durationMs: number) {
     if (!host) return;
     host.innerHTML = '';
-    const emojis = ['🎉','✨','🎊','🟡','🟢','🩷','💛','🔴','⭐','🟠'];
-    for (let i = 0; i < 22; i++) {
+    for (let i = 0; i < count; i++) {
       const p = document.createElement('span');
-      p.className = 'piece';
-      p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      p.className = 'pxconf';
       p.style.left = (Math.random() * 100) + '%';
-      p.style.animationDelay = (Math.random() * 0.5) + 's';
-      p.style.animationDuration = (1.2 + Math.random() * 0.8) + 's';
-      p.style.fontSize = (0.7 + Math.random() * 0.8) + 'rem';
-      p.style.setProperty('--xshift', ((Math.random() - 0.5) * 24) + 'px');
+      p.style.background = CONFETTI_PALETTE[Math.floor(Math.random() * CONFETTI_PALETTE.length)];
+      p.style.animationDelay = (Math.random() * 0.4) + 's';
+      p.style.animationDuration = (1.0 + Math.random() * 0.9) + 's';
+      const size = 4 + Math.floor(Math.random() * 5);
+      p.style.width = size + 'px';
+      p.style.height = size + 'px';
+      p.style.setProperty('--xshift', ((Math.random() - 0.5) * 60) + 'px');
       host.appendChild(p);
     }
-    setTimeout(() => { host.innerHTML = ''; }, 2200);
+    window.setTimeout(() => { host.innerHTML = ''; }, durationMs);
+  }
+
+  function pixelFanfare() {
+    spawnPxConfetti(document.getElementById('fullFanfare')!, 32, 2400);
+  }
+  function spawnPromoConfetti() {
+    spawnPxConfetti(document.getElementById('promoConfetti')!, 24, 2200);
   }
 
   function reactCharacter() {
-    const ch = document.getElementById('character');
-    if (!ch) return;
-    // Intensity tapers with seniority. Intern = high. Veteran = low.
-    let intensity = 'high';
-    if (state.stage >= 4) intensity = 'low';
-    else if (state.stage >= 2) intensity = 'mid';
-    ch.classList.remove('react', 'intensity-high', 'intensity-mid', 'intensity-low');
-    void ch.offsetWidth;
-    ch.classList.add('react', 'intensity-' + intensity);
-    setTimeout(() => {
-      ch.classList.remove('react', 'intensity-' + intensity);
-    }, 1500);
+    // Brief JOY sprite + flash effect on the character.
+    // Intensity tapers with seniority — but here we just hold the JOY pose
+    // for ~1.5s; aging is in the sprite itself.
+    reactUntil = Date.now() + 1500;
+    applySprite();
+    const sprite = document.getElementById('sprite');
+    if (sprite) {
+      sprite.classList.remove('react');
+      void sprite.offsetWidth;
+      sprite.classList.add('react');
+      window.setTimeout(() => sprite.classList.remove('react'), 1500);
+    }
+    // Schedule a render so we drop the JOY sprite when reactUntil expires.
+    window.setTimeout(() => { applySprite(); }, 1550);
   }
 
   // ===== floater =====
-  function floatText(text) {
-    const el = document.getElementById('floater');
+  function floatText(text: string) {
+    const el = document.getElementById('floater')!;
     el.textContent = text;
     el.classList.remove('fly');
     void el.offsetWidth;
@@ -1623,12 +1233,16 @@ import Layout from '../../../layouts/Layout.astro';
 
   // ===== sound (Web Audio) =====
   const sfx = (() => {
-    let ctx = null;
+    let ctx: AudioContext | null = null;
     let on = false;
-    let humOsc = null, humNoise = null;
+    let humOsc: OscillatorNode | null = null;
+    let humNoise: AudioBufferSourceNode | null = null;
     const ensureCtx = () => {
-      if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
-      return ctx;
+      if (!ctx) {
+        const C = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        ctx = new C();
+      }
+      return ctx!;
     };
     const startHum = () => {
       if (!on) return;
@@ -1660,7 +1274,7 @@ import Layout from '../../../layouts/Layout.astro';
       try { humNoise?.stop(); } catch {}
       humOsc = null; humNoise = null;
     };
-    const beep = (freq, durMs, type='sine', gain=0.05) => {
+    const beep = (freq: number, durMs: number, type: OscillatorType = 'sine', gain = 0.05) => {
       if (!on) return;
       const c = ensureCtx();
       const osc = c.createOscillator();
@@ -1675,7 +1289,7 @@ import Layout from '../../../layouts/Layout.astro';
       osc.start(t);
       osc.stop(t + durMs / 1000);
     };
-    const noiseBurst = (durMs, gain=0.04, lpFreq=2400) => {
+    const noiseBurst = (durMs: number, gain = 0.04, lpFreq = 2400) => {
       if (!on) return;
       const c = ensureCtx();
       const buf = c.createBuffer(1, c.sampleRate * (durMs / 1000), c.sampleRate);
@@ -1699,17 +1313,17 @@ import Layout from '../../../layouts/Layout.astro';
       disable: () => { on = false; stopHum(); },
       paper: () => noiseBurst(80, 0.06, 1800),
       clap:  () => noiseBurst(50, 0.05, 3200),
-      cha:   () => { beep(880, 100, 'square', 0.04); setTimeout(() => beep(1320, 120, 'square', 0.035), 80); },
+      cha:   () => { beep(880, 100, 'square', 0.04); window.setTimeout(() => beep(1320, 120, 'square', 0.035), 80); },
     };
   })();
 
   // ===== ending =====
-  const ending = document.getElementById('ending');
+  const endingEl = document.getElementById('ending')!;
 
   function showEnding() {
     const minutes = Math.max(1, Math.round(state.timeAlive / 60));
     const stage = STAGES[state.stage].name;
-    const stats = document.getElementById('endStats');
+    const stats = document.getElementById('endStats')!;
     stats.innerHTML = `
       <dt>time spent feeding</dt><dd>${minutes} min</dd>
       <dt>stage at quit</dt><dd>${stage}</dd>
@@ -1718,15 +1332,15 @@ import Layout from '../../../layouts/Layout.astro';
       <dt>final burnout</dt><dd>${Math.round(state.burnout)} / 100</dd>
       <dt>work-life balance</dt><dd>restored ✓</dd>
     `;
-    ending.hidden = false;
+    endingEl.hidden = false;
     sfx.disable();
-    document.getElementById('bgmToggle').classList.remove('on');
-    document.getElementById('bgmIcon').textContent = '🔇';
-    document.getElementById('bgmLabel').textContent = 'audio off';
+    document.getElementById('bgmToggle')!.classList.remove('on');
+    document.getElementById('bgmIcon')!.textContent = '🔇';
+    document.getElementById('bgmLabel')!.textContent = 'audio off';
   }
   function startNewLife() {
     resetState();
-    ending.hidden = true;
+    endingEl.hidden = true;
     render();
   }
 
@@ -1744,12 +1358,12 @@ import Layout from '../../../layouts/Layout.astro';
     if (state.fed === 0) state.mood = clamp(state.mood - 1.4, 0, 100);
     saveState();
     render();
-    maybeBehavior();
+    maybeMutter();
   }, 5000);
 
-  // ===== disturbing behaviours =====
-  // Triggered randomly when the player has been idle. Adds unease over time.
-  const BEHAVIORS = ['huddle', 'pace', 'stare', 'mutter'];
+  // ===== mutter speech bubbles =====
+  // The body animations from the SVG era are gone (the sprite is the mood now),
+  // but mutter remains — quiet bursts of ad-agency intrusive thoughts.
   const MUTTERS = [
     'i think the deadline shifted again.',
     'is it bonus season yet.',
@@ -1760,60 +1374,48 @@ import Layout from '../../../layouts/Layout.astro';
     'i forgot to log my hours.',
     'the wifi has a smell now.',
     'i used to be a person.',
-    'we’re calling it a learning sprint.',
+    "we're calling it a learning sprint.",
   ];
   let lastInputAt = Date.now();
-  let behaviorActive = false;
+  let mutterActive = false;
 
   function bumpIdle() { lastInputAt = Date.now(); }
 
-  function maybeBehavior() {
-    if (state.ended) return;
-    if (behaviorActive) return;
+  function maybeMutter() {
+    if (state.ended || mutterActive) return;
     const idleSecs = (Date.now() - lastInputAt) / 1000;
-    // Higher chance once burnout is up. Always at least 25s of idle first.
     if (idleSecs < 25) return;
     const baseChance = 0.07 + (state.burnout / 100) * 0.18;
     if (Math.random() > baseChance) return;
-    triggerBehavior();
-  }
-
-  function triggerBehavior() {
-    const ch = document.getElementById('character');
-    if (!ch) return;
-    const id = BEHAVIORS[Math.floor(Math.random() * BEHAVIORS.length)];
-    behaviorActive = true;
-    ch.classList.add('behavior-' + id);
-    if (id === 'mutter') spawnMutter();
-    const dur = id === 'pace' ? 10000 : id === 'huddle' ? 9000 : id === 'stare' ? 7000 : 7000;
-    setTimeout(() => {
-      ch.classList.remove('behavior-' + id);
-      behaviorActive = false;
-    }, dur);
+    spawnMutter();
   }
 
   function spawnMutter() {
     const stage = document.getElementById('stage');
+    if (!stage) return;
+    mutterActive = true;
     const bubble = document.createElement('div');
     bubble.className = 'speech-bubble';
     bubble.textContent = MUTTERS[Math.floor(Math.random() * MUTTERS.length)];
     stage.appendChild(bubble);
-    setTimeout(() => bubble.remove(), 6500);
+    window.setTimeout(() => {
+      bubble.remove();
+      mutterActive = false;
+    }, 6000);
   }
 
   // ===== wiring =====
-  document.getElementById('btnFeed').addEventListener('click', feedExposure);
-  document.getElementById('btnRaise').addEventListener('click', giveRaise);
-  document.getElementById('btnPraise').addEventListener('click', givePraise);
-  // QUIT now opens the bribe modal — the only path to actually quitting is the 'walk away' button inside it.
-  document.getElementById('btnQuit').addEventListener('click', showQuitAttempt);
-  document.getElementById('btnPromoAck').addEventListener('click', ackPromotion);
-  document.getElementById('btnWalkAway').addEventListener('click', walkAway);
-  document.getElementById('btnReset').addEventListener('click', startNewLife);
+  document.getElementById('btnFeed')!.addEventListener('click', feedExposure);
+  document.getElementById('btnRaise')!.addEventListener('click', giveRaise);
+  document.getElementById('btnPraise')!.addEventListener('click', givePraise);
+  document.getElementById('btnQuit')!.addEventListener('click', showQuitAttempt);
+  document.getElementById('btnPromoAck')!.addEventListener('click', ackPromotion);
+  document.getElementById('btnWalkAway')!.addEventListener('click', walkAway);
+  document.getElementById('btnReset')!.addEventListener('click', startNewLife);
 
-  const bgmBtn = document.getElementById('bgmToggle');
-  const bgmIcon = document.getElementById('bgmIcon');
-  const bgmLabel = document.getElementById('bgmLabel');
+  const bgmBtn = document.getElementById('bgmToggle')!;
+  const bgmIcon = document.getElementById('bgmIcon')!;
+  const bgmLabel = document.getElementById('bgmLabel')!;
   bgmBtn.addEventListener('click', () => {
     if (sfx.isOn()) {
       sfx.disable();
@@ -1835,7 +1437,6 @@ import Layout from '../../../layouts/Layout.astro';
     showEnding();
   } else {
     render();
-    // Catch up on any auto-promotions that were owed from a stale session.
     applyAutoAdvancement();
   }
 </script>
