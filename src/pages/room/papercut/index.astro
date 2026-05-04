@@ -312,8 +312,9 @@ import Layout from '../../../layouts/Layout.astro';
     aspect-ratio: 1 / 1;
     background-color: rgba(0,0,0,0.18);
     background-image: none;
-    background-size: 400% 400%;
     background-repeat: no-repeat;
+    /* bg-size + bg-position set per-slot in JS (sheet-b cells aren't on
+       a clean 1/4 grid; see SHEET_LAYOUTS). */
     border-radius: 2px;
     box-shadow: inset 0 1px 1px rgba(0,0,0,0.4);
     image-rendering: pixelated;
@@ -348,9 +349,9 @@ import Layout from '../../../layouts/Layout.astro';
     position: absolute;
     inset: 0;
     background-image: url('/room/papercut/sheet-a-core.png');
-    background-size: 400% 400%;
     background-repeat: no-repeat;
-    background-position: 0% 0%;
+    /* bg-size + bg-position set per-render in JS to handle each sheet's
+       measured cell coordinates (cells aren't on a clean 1/4 grid). */
     image-rendering: pixelated;
     image-rendering: crisp-edges;
     animation: sprite-bob 2.4s ease-in-out infinite;
@@ -920,6 +921,28 @@ import Layout from '../../../layouts/Layout.astro';
   type SpriteKey = { sheet: 'a' | 'c'; col: number };
   let reactUntil = 0;
 
+  // Sprite atlas geometry — measured per sheet because ChatGPT generated
+  // each independently and cell positions don't quite line up. Using a
+  // 295 px visible window (425% bg-size) crops cleanly into the white
+  // gutters across all three sheets without leaking the next cell.
+  type SheetLayout = { col: [number, number, number, number]; row: [number, number, number, number] };
+  const SHEET_LAYOUTS: Record<'a' | 'b' | 'c', SheetLayout> = {
+    a: { col: [15, 324, 638, 948], row: [14, 326, 637, 945] },
+    b: { col: [15, 327, 636, 944], row: [14, 329, 641, 944] },
+    c: { col: [16, 323, 631, 940], row: [13, 312, 611, 906] },
+  };
+  const SHEET_DIM = 1254;
+  const CELL_PX = 295;
+  const SHEET_BG_SIZE_PCT = (SHEET_DIM / CELL_PX) * 100; // ~425%
+  const SHEET_POS_DENOM = SHEET_DIM - CELL_PX;            // 959
+
+  function bgPosForCell(sheet: 'a' | 'b' | 'c', col: number, row: number): string {
+    const layout = SHEET_LAYOUTS[sheet];
+    const posX = (layout.col[col] / SHEET_POS_DENOM) * 100;
+    const posY = (layout.row[row] / SHEET_POS_DENOM) * 100;
+    return `${posX.toFixed(3)}% ${posY.toFixed(3)}%`;
+  }
+
   function ageRow(stage: number): number {
     if (stage <= 1) return 0;
     if (stage === 2) return 1;
@@ -961,8 +984,8 @@ import Layout from '../../../layouts/Layout.astro';
     sprite.dataset.col = String(col);
     sprite.dataset.row = String(row);
     sprite.style.backgroundImage = `url('/room/papercut/sheet-${key.sheet}-${key.sheet === 'a' ? 'core' : 'secondary'}.png')`;
-    // 4×4 grid: position 0/33.333/66.667/100% per cell
-    sprite.style.backgroundPosition = `${(col * 100) / 3}% ${(row * 100) / 3}%`;
+    sprite.style.backgroundSize = `${SHEET_BG_SIZE_PCT.toFixed(3)}% ${SHEET_BG_SIZE_PCT.toFixed(3)}%`;
+    sprite.style.backgroundPosition = bgPosForCell(key.sheet, col, row);
   }
 
   // ===== render =====
@@ -989,12 +1012,14 @@ import Layout from '../../../layouts/Layout.astro';
       if (!award) {
         slot.classList.remove('filled', 'fresh');
         slot.style.backgroundPosition = '';
+        slot.style.backgroundSize = '';
         return;
       }
       const col = award.spriteIdx % 4;
       const row = Math.floor(award.spriteIdx / 4);
       slot.classList.add('filled');
-      slot.style.backgroundPosition = `${(col * 100) / 3}% ${(row * 100) / 3}%`;
+      slot.style.backgroundSize = `${SHEET_BG_SIZE_PCT.toFixed(3)}% ${SHEET_BG_SIZE_PCT.toFixed(3)}%`;
+      slot.style.backgroundPosition = bgPosForCell('b', col, row);
       if (award._fresh && i === state.awards.length - 1) {
         slot.classList.add('fresh');
         window.setTimeout(() => slot.classList.remove('fresh'), 700);
