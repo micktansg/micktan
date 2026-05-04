@@ -915,21 +915,25 @@ import Layout from '../../../layouts/Layout.astro';
   }
 
   function spriteForState(s: State, now: number): SpriteKey {
-    // 1. JOY — temporary on celebration
+    // WORKING is the dominant state — these are the *exception* conditions.
+    // Tightened thresholds so the worker is at the laptop most of the time;
+    // the other moods are brief reactions to extremes, not steady states.
+
+    // 1. JOY — temporary on celebration (hold extended downstream)
     if (now < reactUntil) return { sheet: 'a', col: 1 };
-    // 2. BURNOUT — exhausted at desk
-    if (s.burnout >= 75) return { sheet: 'a', col: 3 };
-    // 3. CRYING — very low mood
-    if (s.mood < 20) return { sheet: 'c', col: 2 };
-    // 4. DESPAIR — low mood, especially with high burnout
-    if (s.mood < 35 || (s.mood < 50 && s.burnout > 55)) return { sheet: 'a', col: 2 };
+    // 2. BURNOUT — only at extreme exhaustion
+    if (s.burnout >= 92) return { sheet: 'a', col: 3 };
+    // 3. CRYING — desperately low mood
+    if (s.mood < 12) return { sheet: 'c', col: 2 };
+    // 4. DESPAIR — low mood, especially compounded with high burnout
+    if (s.mood < 22 || (s.mood < 32 && s.burnout > 75)) return { sheet: 'a', col: 2 };
     // 5. HUNGRY — starving for exposure
-    if (s.fed < 20) return { sheet: 'c', col: 1 };
-    // 6. ZOMBIE — burnt out and unhappy
-    if (s.burnout > 60 && s.mood < 50) return { sheet: 'c', col: 3 };
-    // 7. IDLE — high mood, daydreaming
-    if (s.mood >= 70) return { sheet: 'c', col: 0 };
-    // 8. WORKING — default
+    if (s.fed < 12) return { sheet: 'c', col: 1 };
+    // 6. ZOMBIE — burnt out AND unhappy (rare combo)
+    if (s.burnout > 80 && s.mood < 32) return { sheet: 'c', col: 3 };
+    // 7. IDLE — only on near-perfect mood (rare moment of daydream)
+    if (s.mood >= 88) return { sheet: 'c', col: 0 };
+    // 8. WORKING — default, dominant
     return { sheet: 'a', col: 0 };
   }
 
@@ -1017,7 +1021,7 @@ import Layout from '../../../layouts/Layout.astro';
   function feedExposure() {
     if (state.ended) return;
     state.fed = clamp(state.fed + 22, 0, 100);
-    state.burnout = clamp(state.burnout + 3, 0, 100);
+    state.burnout = clamp(state.burnout + 1.8, 0, 100);
     state.xp += 6;
     floatText('+exposure 📢');
     sfx.paper();
@@ -1199,27 +1203,30 @@ import Layout from '../../../layouts/Layout.astro';
   }
 
   function pixelFanfare() {
-    spawnPxConfetti(document.getElementById('fullFanfare')!, 32, 2400);
+    // More particles, longer fall — celebration registers as a real moment.
+    spawnPxConfetti(document.getElementById('fullFanfare')!, 56, 3800);
   }
   function spawnPromoConfetti() {
-    spawnPxConfetti(document.getElementById('promoConfetti')!, 24, 2200);
+    spawnPxConfetti(document.getElementById('promoConfetti')!, 28, 2800);
   }
 
   function reactCharacter() {
-    // Brief JOY sprite + flash effect on the character.
-    // Intensity tapers with seniority — but here we just hold the JOY pose
-    // for ~1.5s; aging is in the sprite itself.
-    reactUntil = Date.now() + 1500;
+    // Hold the JOY pose for ~3.6s — long enough to register and savour.
+    // Aging is already in the sprite itself; here we just gloat.
+    const HOLD_MS = 3600;
+    reactUntil = Date.now() + HOLD_MS;
     applySprite();
     const sprite = document.getElementById('sprite');
     if (sprite) {
       sprite.classList.remove('react');
       void sprite.offsetWidth;
       sprite.classList.add('react');
-      window.setTimeout(() => sprite.classList.remove('react'), 1500);
+      window.setTimeout(() => sprite.classList.remove('react'), HOLD_MS);
     }
-    // Schedule a render so we drop the JOY sprite when reactUntil expires.
-    window.setTimeout(() => { applySprite(); }, 1550);
+    // Snap back to current mood once the JOY window expires.
+    window.setTimeout(() => { applySprite(); }, HOLD_MS + 50);
+    // 8-bit "you won!" fanfare layered over the BGM
+    sfx.fanfare();
   }
 
   // ===== floater =====
@@ -1232,11 +1239,13 @@ import Layout from '../../../layouts/Layout.astro';
   }
 
   // ===== sound (Web Audio) =====
+  // 8-bit chiptune background loop in A minor — square-wave melody over a
+  // triangle-wave bass. Designed to feel like office hold music: cheerful
+  // on the surface, repetitive enough to feel like dread. Plus action
+  // SFX (paper / clap / cha-ching) and a winning fanfare.
   const sfx = (() => {
     let ctx: AudioContext | null = null;
     let on = false;
-    let humOsc: OscillatorNode | null = null;
-    let humNoise: AudioBufferSourceNode | null = null;
     const ensureCtx = () => {
       if (!ctx) {
         const C = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
@@ -1244,36 +1253,109 @@ import Layout from '../../../layouts/Layout.astro';
       }
       return ctx!;
     };
-    const startHum = () => {
-      if (!on) return;
+
+    // ----- chiptune note scheduler -----
+    // Schedules a single note with a quick attack, decay, sustain, release
+    // envelope so it sounds like a NES-era voice rather than a flat tone.
+    const playNoteAt = (
+      freq: number, startTime: number, dur: number,
+      type: OscillatorType, gain: number,
+    ) => {
+      if (freq <= 0 || !ctx) return;
+      const c = ctx;
+      const osc = c.createOscillator();
+      osc.type = type;
+      osc.frequency.value = freq;
+      const g = c.createGain();
+      const a = 0.005, d = 0.04, sLevel = 0.65, r = 0.04;
+      g.gain.setValueAtTime(0, startTime);
+      g.gain.linearRampToValueAtTime(gain, startTime + a);
+      g.gain.linearRampToValueAtTime(gain * sLevel, startTime + a + d);
+      const releaseStart = Math.max(startTime + a + d, startTime + dur - r);
+      g.gain.setValueAtTime(gain * sLevel, releaseStart);
+      g.gain.linearRampToValueAtTime(0, startTime + dur);
+      osc.connect(g).connect(c.destination);
+      osc.start(startTime);
+      osc.stop(startTime + dur);
+    };
+
+    // ----- bgm loop (A minor pentatonic, 110 BPM, 8-beat phrase) -----
+    const BPM = 110;
+    const BEAT = 60 / BPM;
+    // Frequencies (Hz)
+    const Fr = {
+      E2: 82.41, F2: 87.31, G2: 98.00, A2: 110.00,
+      G4: 392.00, A4: 440.00, B4: 493.88,
+      C5: 523.25, D5: 587.33, E5: 659.25,
+    };
+    // Each entry: [freq, beats]. freq=0 means rest.
+    type Step = [number, number];
+    const MELODY: Step[] = [
+      [Fr.A4, 0.5], [Fr.C5, 0.5],
+      [Fr.E5, 1.0],
+      [Fr.D5, 0.5], [Fr.C5, 0.5],
+      [Fr.A4, 1.0],
+      [Fr.G4, 0.5], [Fr.A4, 0.5],
+      [Fr.C5, 1.0],
+      [Fr.B4, 0.5], [Fr.A4, 0.5],
+      [0,      1.0],
+    ];
+    const BASS: Step[] = [
+      [Fr.A2, 1], [Fr.A2, 1],
+      [Fr.F2, 1], [Fr.F2, 1],
+      [Fr.G2, 1], [Fr.G2, 1],
+      [Fr.A2, 1], [Fr.E2, 1],
+    ];
+
+    let bgmStop = false;
+    let bgmTimer: number | null = null;
+    let bgmNextLoopAt = 0;
+
+    const scheduleOneLoop = (startTime: number): number => {
+      let t = startTime;
+      for (const [f, beats] of MELODY) {
+        if (f > 0) playNoteAt(f, t, beats * BEAT * 0.92, 'square', 0.024);
+        t += beats * BEAT;
+      }
+      let bt = startTime;
+      for (const [f, beats] of BASS) {
+        if (f > 0) playNoteAt(f, bt, beats * BEAT * 0.92, 'triangle', 0.034);
+        bt += beats * BEAT;
+      }
+      return t - startTime;
+    };
+
+    const loopBgm = () => {
+      if (bgmStop || !on) return;
       const c = ensureCtx();
-      const humGain = c.createGain();
-      humGain.gain.value = 0.012;
-      humGain.connect(c.destination);
-      humOsc = c.createOscillator();
-      humOsc.type = 'sine';
-      humOsc.frequency.value = 60;
-      humOsc.connect(humGain);
-      humOsc.start();
-      const buf = c.createBuffer(1, c.sampleRate * 1.5, c.sampleRate);
-      const data = buf.getChannelData(0);
-      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.5;
-      humNoise = c.createBufferSource();
-      humNoise.buffer = buf;
-      humNoise.loop = true;
-      const lp = c.createBiquadFilter();
-      lp.type = 'lowpass';
-      lp.frequency.value = 380;
-      const noiseGain = c.createGain();
-      noiseGain.gain.value = 0.018;
-      humNoise.connect(lp).connect(noiseGain).connect(c.destination);
-      humNoise.start();
+      const len = scheduleOneLoop(bgmNextLoopAt);
+      bgmNextLoopAt += len;
+      // schedule next iteration ~0.4s before this one ends so playback
+      // stays continuous even if the timer slips
+      const msUntilNext = (bgmNextLoopAt - c.currentTime - 0.4) * 1000;
+      bgmTimer = window.setTimeout(loopBgm, Math.max(50, msUntilNext));
     };
-    const stopHum = () => {
-      try { humOsc?.stop(); } catch {}
-      try { humNoise?.stop(); } catch {}
-      humOsc = null; humNoise = null;
+
+    const startBgm = () => {
+      if (!on) return;
+      bgmStop = false;
+      const c = ensureCtx();
+      // Browsers suspend the AudioContext until a user gesture — toggling
+      // BGM on counts. resume() is a no-op if already running.
+      if (c.state === 'suspended') c.resume();
+      bgmNextLoopAt = c.currentTime + 0.05;
+      loopBgm();
     };
+
+    const stopBgm = () => {
+      bgmStop = true;
+      if (bgmTimer !== null) {
+        window.clearTimeout(bgmTimer);
+        bgmTimer = null;
+      }
+    };
+
+    // ----- one-shot SFX -----
     const beep = (freq: number, durMs: number, type: OscillatorType = 'sine', gain = 0.05) => {
       if (!on) return;
       const c = ensureCtx();
@@ -1307,13 +1389,38 @@ import Layout from '../../../layouts/Layout.astro';
       src.connect(lp).connect(g).connect(c.destination);
       src.start(t);
     };
+
+    // ----- celebratory fanfare on awards / promotions -----
+    // 8-bit "you won!" — rising arpeggio resolving on a held high tonic.
+    const fanfare = () => {
+      if (!on) return;
+      const c = ensureCtx();
+      const t = c.currentTime;
+      type FanfareNote = { f: number; at: number; dur: number; harm?: number };
+      const seq: FanfareNote[] = [
+        { f: 523.25, at: 0.00, dur: 0.10 }, // C5
+        { f: 659.25, at: 0.10, dur: 0.10 }, // E5
+        { f: 783.99, at: 0.20, dur: 0.10 }, // G5
+        { f: 1046.5, at: 0.30, dur: 0.10 }, // C6
+        { f: 783.99, at: 0.40, dur: 0.10 }, // G5
+        { f: 1046.5, at: 0.50, dur: 0.55, harm: 1318.5 }, // C6 held with E6 harmony
+      ];
+      for (const n of seq) {
+        playNoteAt(n.f, t + n.at, n.dur * 0.92, 'square', 0.07);
+        if (n.harm) playNoteAt(n.harm, t + n.at, n.dur * 0.92, 'triangle', 0.05);
+      }
+      // Tonic underneath the held note
+      playNoteAt(261.63, t + 0.5, 0.55 * 0.92, 'triangle', 0.045);
+    };
+
     return {
       isOn: () => on,
-      enable: () => { on = true; startHum(); },
-      disable: () => { on = false; stopHum(); },
+      enable: () => { on = true; startBgm(); },
+      disable: () => { on = false; stopBgm(); },
       paper: () => noiseBurst(80, 0.06, 1800),
       clap:  () => noiseBurst(50, 0.05, 3200),
       cha:   () => { beep(880, 100, 'square', 0.04); window.setTimeout(() => beep(1320, 120, 'square', 0.035), 80); },
+      fanfare,
     };
   })();
 
@@ -1354,7 +1461,7 @@ import Layout from '../../../layouts/Layout.astro';
     state.timeAlive += dt;
     state.fed     = clamp(state.fed     - 1.6, 0, 100);
     state.mood    = clamp(state.mood    - 0.7, 0, 100);
-    state.burnout = clamp(state.burnout + 0.5, 0, 100);
+    state.burnout = clamp(state.burnout + 0.28, 0, 100);
     if (state.fed === 0) state.mood = clamp(state.mood - 1.4, 0, 100);
     saveState();
     render();
