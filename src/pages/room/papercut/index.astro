@@ -194,13 +194,13 @@ import Layout from '../../../layouts/Layout.astro';
   .pc {
     max-width: 28rem;
     margin: 0 auto;
-    padding: 1.2rem 1rem 6rem;
+    padding: 1.2rem 1rem 2rem;
     min-height: 100vh;
     position: relative;
     z-index: 1;
   }
   @media (min-width: 720px) {
-    .pc { padding: 2rem 1rem 6rem; }
+    .pc { padding: 2rem 1rem 4rem; }
   }
 
   /* ===== topbar ===== */
@@ -222,6 +222,7 @@ import Layout from '../../../layouts/Layout.astro';
     align-items: center;
     font-weight: 600;
     text-shadow: 1px 1px 0 var(--pc-cyan-deep);
+    touch-action: manipulation;
   }
   .back:hover { color: var(--pc-yellow); }
 
@@ -241,6 +242,7 @@ import Layout from '../../../layouts/Layout.astro';
     transition: all 200ms;
     box-shadow: 3px 3px 0 var(--pc-blue-deep);
     font-weight: 600;
+    touch-action: manipulation;
   }
   .bgm-toggle:hover { background: var(--pc-yellow); }
   .bgm-toggle.on { background: var(--pc-yellow); }
@@ -568,9 +570,8 @@ import Layout from '../../../layouts/Layout.astro';
     gap: 0.4rem;
     margin: 0 0 0.4rem;
   }
-  @media (max-width: 480px) {
-    .inputs { grid-template-columns: 1fr; }
-  }
+  /* inputs stay 3-across on all screen sizes — stacking vertically makes
+     the page too tall on phones and forces unwanted scrolling */
   .input-btn {
     background: var(--pc-paper);
     border: 2px solid var(--pc-blue-deep);
@@ -590,6 +591,7 @@ import Layout from '../../../layouts/Layout.astro';
     min-height: 48px;
     line-height: 1.1;
     text-align: center;
+    touch-action: manipulation;
   }
   .input-btn .emo { font-size: 1.05rem; line-height: 1; }
   .input-btn .lbl { font-size: 0.6rem; letter-spacing: 0.02em; }
@@ -621,6 +623,7 @@ import Layout from '../../../layouts/Layout.astro';
     gap: 0.5rem;
     min-height: 32px;
     transition: all 400ms;
+    touch-action: manipulation;
   }
   .quit-btn:hover {
     background: var(--pc-pink);
@@ -720,6 +723,7 @@ import Layout from '../../../layouts/Layout.astro';
     cursor: pointer;
     min-height: 42px;
     transition: transform 120ms;
+    touch-action: manipulation;
   }
   .modal-btn:hover { transform: translate(-1px, -1px); }
 
@@ -879,6 +883,7 @@ import Layout from '../../../layouts/Layout.astro';
     border-radius: 3px;
     box-shadow: 4px 4px 0 var(--pc-yellow);
     transition: transform 120ms;
+    touch-action: manipulation;
   }
   .ending-btn:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--pc-yellow); }
 
