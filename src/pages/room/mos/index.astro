@@ -563,11 +563,15 @@ import Layout from '../../../layouts/Layout.astro';
       drawShoe(ctx, leg.joints.endX, leg.joints.endY, leg.joints.a2, scale);
     }
 
-    ctx.lineWidth = M.torsoW * scale;
-    ctx.beginPath();
-    ctx.moveTo(hipX, hipY);
-    ctx.lineTo(shoulderX, shoulderY);
-    ctx.stroke();
+    if (SPRITES['torso']) {
+      drawPart(ctx, 'torso', hipX, hipY, Math.PI - torsoAng, scale);
+    } else {
+      ctx.lineWidth = M.torsoW * scale;
+      ctx.beginPath();
+      ctx.moveTo(hipX, hipY);
+      ctx.lineTo(shoulderX, shoulderY);
+      ctx.stroke();
+    }
 
     const lArm = limb(shoulderX, shoulderY, pose.Lshoulder + torsoAng, pose.Lelbow, M.upperArm * scale, M.forearm * scale);
     const rArm = limb(shoulderX, shoulderY, pose.Rshoulder + torsoAng, pose.Relbow, M.upperArm * scale, M.forearm * scale);
@@ -586,7 +590,11 @@ import Layout from '../../../layouts/Layout.astro';
     ctx.stroke();
 
     // briefcase is rendered by the caller (it has its own swing physics).
-    drawHead(ctx, headCX, headCY, headAng, scale);
+    if (SPRITES['head']) {
+      drawPart(ctx, 'head', headCX, headCY, Math.PI - headAng, scale);
+    } else {
+      drawHead(ctx, headCX, headCY, headAng, scale);
+    }
 
     ctx.restore();
 
@@ -722,10 +730,12 @@ import Layout from '../../../layouts/Layout.astro';
   // site (see drawFigureSprite below).
   // ============================================================================
 
-  // Master toggle. Set USE_SPRITES=false to fall back to the stick figure.
-  const USE_SPRITES = true;
+  // Master toggle. true = full puppet rig (needs limbs in neutral T-pose).
+  // false = stick figure for limbs, but head/torso/briefcase sprites still
+  // get layered on top of the stick figure where they're available.
+  const USE_SPRITES = false;
   // Draw small dots at every joint. Turn off once pivots look right.
-  const DEBUG_PIVOTS = true;
+  const DEBUG_PIVOTS = false;
 
   type PartKey =
     | 'head' | 'torso'
@@ -991,7 +1001,7 @@ import Layout from '../../../layouts/Layout.astro';
   type Phase = 'idle' | 'walking' | 'falling' | 'dead';
 
   function init() {
-    if (USE_SPRITES && spritesAttempted === 0) loadSprites();
+    if (spritesAttempted === 0) loadSprites();
     const canvas = document.querySelector<HTMLCanvasElement>('canvas[data-stage]');
     const counterEl = document.querySelector<HTMLElement>('[data-counter]');
     const bestEl = document.querySelector<HTMLElement>('[data-best]');
@@ -1522,7 +1532,7 @@ import Layout from '../../../layouts/Layout.astro';
       if (briefcaseAngle > 2.0) { briefcaseAngle = 2.0; briefcaseVel = 0; }
       if (briefcaseAngle < -2.0) { briefcaseAngle = -2.0; briefcaseVel = 0; }
 
-      if (useSpr) {
+      if (SPRITES['briefcase']) {
         drawBriefcaseSprite(ctx!, handX, handY, figureScale, briefcaseAngle);
       } else {
         drawBriefcase(ctx!, handX, handY, figureScale, briefcaseAngle);
