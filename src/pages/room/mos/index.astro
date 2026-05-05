@@ -730,12 +730,11 @@ import Layout from '../../../layouts/Layout.astro';
   // site (see drawFigureSprite below).
   // ============================================================================
 
-  // Master toggle. true = full puppet rig (needs limbs in neutral T-pose).
-  // false = stick figure for limbs, but head/torso/briefcase sprites still
-  // get layered on top of the stick figure where they're available.
-  const USE_SPRITES = false;
+  // Master toggle. true = full puppet rig with neutral-pose limbs.
+  // false = stick limbs + sprite head/torso/briefcase fallback.
+  const USE_SPRITES = true;
   // Draw small dots at every joint. Turn off once pivots look right.
-  const DEBUG_PIVOTS = false;
+  const DEBUG_PIVOTS = true;
 
   type PartKey =
     | 'head' | 'torso'
@@ -759,22 +758,24 @@ import Layout from '../../../layouts/Layout.astro';
     worldLen: number;
   };
 
-  // First-pass best-guesses. Tune visually with DEBUG_PIVOTS=true.
+  // Each L/R pair shares one sprite (side-profile silhouette) — both keys
+  // point at the same file. Pivot fractions are first-pass; tune visually
+  // with DEBUG_PIVOTS=true.
   const PART_META: Record<PartKey, PartMeta> = {
-    head:      { src: '/room/mos/head.png',           pivotFx: 0.50, pivotFy: 0.75, natural: 'up',    lengthPx: 130, worldLen: 32 },
-    torso:     { src: '/room/mos/torso.png',          pivotFx: 0.50, pivotFy: 0.94, natural: 'up',    lengthPx: 280, worldLen: 64 },
-    thighR:    { src: '/room/mos/leg_right_upper.png', pivotFx: 0.50, pivotFy: 0.05, natural: 'down',  lengthPx: 212, worldLen: 56 },
-    shinR:     { src: '/room/mos/leg_right_lower.png', pivotFx: 0.10, pivotFy: 0.50, natural: 'right', lengthPx: 185, worldLen: 56 },
-    footR:     { src: '/room/mos/foot_right.png',      pivotFx: 0.50, pivotFy: 0.10, natural: 'down',  lengthPx: 142, worldLen: 30 },
-    thighL:    { src: '/room/mos/leg_left_upper.png',  pivotFx: 0.20, pivotFy: 0.10, natural: 'down',  lengthPx: 191, worldLen: 56 },
-    shinL:     { src: '/room/mos/leg_left_lower.png',  pivotFx: 0.50, pivotFy: 0.05, natural: 'down',  lengthPx: 195, worldLen: 56 },
-    footL:     { src: '/room/mos/foot_left.png',       pivotFx: 0.20, pivotFy: 0.40, natural: 'right', lengthPx: 168, worldLen: 30 },
-    upperArmR: { src: '/room/mos/arm_right_upper.png', pivotFx: 0.50, pivotFy: 0.08, natural: 'down',  lengthPx: 120, worldLen: 42 },
-    forearmR:  { src: '/room/mos/arm_right_lower.png', pivotFx: 0.50, pivotFy: 0.08, natural: 'down',  lengthPx: 123, worldLen: 38 },
-    handR:     { src: '/room/mos/hand_right.png',      pivotFx: 0.10, pivotFy: 0.50, natural: 'right', lengthPx: 187, worldLen: 22 },
-    upperArmL: { src: '/room/mos/arm_left_upper.png',  pivotFx: 0.50, pivotFy: 0.08, natural: 'down',  lengthPx: 206, worldLen: 42 },
-    forearmL:  { src: '/room/mos/arm_left_lower.png',  pivotFx: 0.10, pivotFy: 0.50, natural: 'right', lengthPx: 177, worldLen: 38 },
-    briefcase: { src: '/room/mos/briefcase.png',       pivotFx: 0.50, pivotFy: 0.10, natural: 'down',  lengthPx: 215, worldLen: 38 },
+    head:      { src: '/room/mos/head.png',      pivotFx: 0.50, pivotFy: 0.93, natural: 'up',   lengthPx: 320, worldLen: 36 },
+    torso:     { src: '/room/mos/torso.png',     pivotFx: 0.50, pivotFy: 0.97, natural: 'up',   lengthPx: 460, worldLen: 70 },
+    thighR:    { src: '/room/mos/thigh.png',     pivotFx: 0.50, pivotFy: 0.05, natural: 'down', lengthPx: 260, worldLen: 50 },
+    shinR:     { src: '/room/mos/shin.png',      pivotFx: 0.50, pivotFy: 0.05, natural: 'down', lengthPx: 330, worldLen: 50 },
+    footR:     { src: '/room/mos/shoe.png',      pivotFx: 0.22, pivotFy: 0.20, natural: 'right', lengthPx: 320, worldLen: 32 },
+    thighL:    { src: '/room/mos/thigh.png',     pivotFx: 0.50, pivotFy: 0.05, natural: 'down', lengthPx: 260, worldLen: 50 },
+    shinL:     { src: '/room/mos/shin.png',      pivotFx: 0.50, pivotFy: 0.05, natural: 'down', lengthPx: 330, worldLen: 50 },
+    footL:     { src: '/room/mos/shoe.png',      pivotFx: 0.22, pivotFy: 0.20, natural: 'right', lengthPx: 320, worldLen: 32 },
+    upperArmR: { src: '/room/mos/upper_arm.png', pivotFx: 0.50, pivotFy: 0.08, natural: 'down', lengthPx: 290, worldLen: 40 },
+    forearmR:  { src: '/room/mos/forearm.png',   pivotFx: 0.50, pivotFy: 0.08, natural: 'down', lengthPx: 290, worldLen: 36 },
+    handR:     { src: '/room/mos/hand.png',      pivotFx: 0.50, pivotFy: 0.10, natural: 'down', lengthPx: 170, worldLen: 18 },
+    upperArmL: { src: '/room/mos/upper_arm.png', pivotFx: 0.50, pivotFy: 0.08, natural: 'down', lengthPx: 290, worldLen: 40 },
+    forearmL:  { src: '/room/mos/forearm.png',   pivotFx: 0.50, pivotFy: 0.08, natural: 'down', lengthPx: 290, worldLen: 36 },
+    briefcase: { src: '/room/mos/briefcase.png', pivotFx: 0.50, pivotFy: 0.05, natural: 'down', lengthPx: 280, worldLen: 36 },
   };
 
   const SPRITES: Partial<Record<PartKey, HTMLImageElement>> = {};
