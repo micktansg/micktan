@@ -712,12 +712,286 @@ import Layout from '../../../layouts/Layout.astro';
   }
 
   // ============================================================================
+  // Sprite renderer (puppet rig over the same pose system)
+  // ----------------------------------------------------------------------------
+  // PNGs were sliced from the high-kick reference pose, so each part has its
+  // own "natural angle" — the direction it points in the source image. To
+  // render at a target bone angle we apply ctx.rotate(naturalAngle - target),
+  // both in the limb convention (CCW from "down"). Torso/head pose params
+  // use a different convention (CW from "up") and get converted at the call
+  // site (see drawFigureSprite below).
+  // ============================================================================
+
+  // Master toggle. Set USE_SPRITES=false to fall back to the stick figure.
+  const USE_SPRITES = true;
+  // Draw small dots at every joint. Turn off once pivots look right.
+  const DEBUG_PIVOTS = true;
+
+  type PartKey =
+    | 'head' | 'torso'
+    | 'thighL' | 'shinL' | 'footL'
+    | 'thighR' | 'shinR' | 'footR'
+    | 'upperArmL' | 'forearmL'
+    | 'upperArmR' | 'forearmR' | 'handR'
+    | 'briefcase';
+
+  type PartMeta = {
+    src: string;
+    // Pivot location inside the source image, as fractions of width/height.
+    pivotFx: number; pivotFy: number;
+    // Direction the part's "tip" points in the source image, in limb
+    // convention (CCW from down): 'down'=0, 'right'=π/2, 'up'=π, 'left'=-π/2.
+    natural: 'down' | 'up' | 'right' | 'left';
+    // Length of the part along its long axis, in source pixels — used to
+    // derive a per-part draw scale from the world-space target length.
+    lengthPx: number;
+    // Target world length (CSS pixels at scale=1).
+    worldLen: number;
+  };
+
+  // First-pass best-guesses. Tune visually with DEBUG_PIVOTS=true.
+  const PART_META: Record<PartKey, PartMeta> = {
+    head:      { src: '/room/mos/head.png',           pivotFx: 0.50, pivotFy: 0.92, natural: 'up',    lengthPx: 167, worldLen: 42 },
+    torso:     { src: '/room/mos/torso.png',          pivotFx: 0.50, pivotFy: 0.97, natural: 'up',    lengthPx: 303, worldLen: 70 },
+    thighR:    { src: '/room/mos/leg_right_upper.png', pivotFx: 0.50, pivotFy: 0.05, natural: 'down',  lengthPx: 212, worldLen: 56 },
+    shinR:     { src: '/room/mos/leg_right_lower.png', pivotFx: 0.10, pivotFy: 0.50, natural: 'right', lengthPx: 185, worldLen: 56 },
+    footR:     { src: '/room/mos/foot_right.png',      pivotFx: 0.50, pivotFy: 0.10, natural: 'down',  lengthPx: 142, worldLen: 30 },
+    thighL:    { src: '/room/mos/leg_left_upper.png',  pivotFx: 0.20, pivotFy: 0.10, natural: 'down',  lengthPx: 191, worldLen: 56 },
+    shinL:     { src: '/room/mos/leg_left_lower.png',  pivotFx: 0.50, pivotFy: 0.05, natural: 'down',  lengthPx: 195, worldLen: 56 },
+    footL:     { src: '/room/mos/foot_left.png',       pivotFx: 0.20, pivotFy: 0.40, natural: 'right', lengthPx: 168, worldLen: 30 },
+    upperArmR: { src: '/room/mos/arm_right_upper.png', pivotFx: 0.50, pivotFy: 0.08, natural: 'down',  lengthPx: 120, worldLen: 42 },
+    forearmR:  { src: '/room/mos/arm_right_lower.png', pivotFx: 0.50, pivotFy: 0.08, natural: 'down',  lengthPx: 123, worldLen: 38 },
+    handR:     { src: '/room/mos/hand_right.png',      pivotFx: 0.10, pivotFy: 0.50, natural: 'right', lengthPx: 187, worldLen: 22 },
+    upperArmL: { src: '/room/mos/arm_left_upper.png',  pivotFx: 0.50, pivotFy: 0.08, natural: 'down',  lengthPx: 206, worldLen: 42 },
+    forearmL:  { src: '/room/mos/arm_left_lower.png',  pivotFx: 0.10, pivotFy: 0.50, natural: 'right', lengthPx: 177, worldLen: 38 },
+    briefcase: { src: '/room/mos/briefcase.png',       pivotFx: 0.50, pivotFy: 0.10, natural: 'down',  lengthPx: 215, worldLen: 38 },
+  };
+
+  const SPRITES: Partial<Record<PartKey, HTMLImageElement>> = {};
+  let spritesLoaded = 0;
+  let spritesAttempted = 0;
+  function spritesReady(): boolean {
+    return spritesAttempted > 0 && spritesLoaded >= spritesAttempted;
+  }
+  function loadSprites() {
+    const keys = Object.keys(PART_META) as PartKey[];
+    spritesAttempted = keys.length;
+    for (const key of keys) {
+      const img = new Image();
+      img.onload = () => { SPRITES[key] = img; spritesLoaded++; };
+      img.onerror = () => {
+        console.warn('[mos] sprite failed to load:', PART_META[key].src);
+        spritesLoaded++; // count even failures so spritesReady eventually flips
+      };
+      img.src = PART_META[key].src;
+    }
+  }
+
+  // Map "natural orientation" string to its limb-convention angle.
+  function naturalLimbAngle(natural: PartMeta['natural']): number {
+    switch (natural) {
+      case 'down': return 0;
+      case 'right': return Math.PI / 2;
+      case 'up': return Math.PI;
+      case 'left': return -Math.PI / 2;
+    }
+  }
+
+  // Draw one rigged part. (x, y) is where the part's pivot sits in canvas
+  // space. targetAngle is the desired direction in LIMB convention
+  // (0 = down, +π/2 = right, +π = up). Torso/head callers convert their
+  // pose-angle convention before calling.
+  function drawPart(
+    ctx: CanvasRenderingContext2D,
+    key: PartKey,
+    x: number, y: number,
+    targetAngle: number,
+    scale: number,
+  ) {
+    const img = SPRITES[key];
+    const meta = PART_META[key];
+    if (!img || !meta) return;
+    const natAng = naturalLimbAngle(meta.natural);
+    const drawScale = (meta.worldLen * scale) / meta.lengthPx;
+    const dw = img.width * drawScale;
+    const dh = img.height * drawScale;
+    const px = meta.pivotFx * dw;
+    const py = meta.pivotFy * dh;
+    ctx.save();
+    ctx.translate(x, y);
+    // ctx.rotate(R) takes a sprite at limb angle N to limb angle (N - R),
+    // so to land on `target` from `natAng` we set R = natAng - target.
+    ctx.rotate(natAng - targetAngle);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(img, -px, -py, dw, dh);
+    ctx.restore();
+  }
+
+  function drawDot(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, r = 3) {
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawFigureSprite(
+    ctx: CanvasRenderingContext2D,
+    cx: number, groundY: number,
+    pose: Pose, scale = 1,
+  ): { handX: number; handY: number } {
+    ctx.save();
+
+    const drift = pose.bodyDrift;
+    if (drift && (drift.x || drift.y || drift.rot)) {
+      ctx.translate(cx + drift.x, groundY + drift.y);
+      ctx.rotate(drift.rot);
+      ctx.translate(-cx, -groundY);
+    }
+
+    const hipX = cx;
+    const hipY = groundY - (M.shin + M.thigh) * scale + pose.hipLift * scale;
+
+    const torsoAng = pose.torso;
+    // Torso/head shoulder/neck positions use the (sin, -cos) "up" convention.
+    const shoulderX = hipX + Math.sin(torsoAng) * M.torso * scale;
+    const shoulderY = hipY - Math.cos(torsoAng) * M.torso * scale;
+
+    const headAng = torsoAng + pose.head;
+    const headDist = (M.head + 6) * scale;
+    const headCX = shoulderX + Math.sin(headAng) * headDist;
+    const headCY = shoulderY - Math.cos(headAng) * headDist;
+
+    // Limbs: (sin, +cos) "down" convention. Same math as the original limb()
+    // helper but inlined here so we have every joint position by name.
+    const lThighAng = pose.Lhip;
+    const lShinAng = pose.Lhip + pose.Lknee;
+    const rThighAng = pose.Rhip;
+    const rShinAng = pose.Rhip + pose.Rknee;
+    const lKneeX = hipX + Math.sin(lThighAng) * M.thigh * scale;
+    const lKneeY = hipY + Math.cos(lThighAng) * M.thigh * scale;
+    const lAnkleX = lKneeX + Math.sin(lShinAng) * M.shin * scale;
+    const lAnkleY = lKneeY + Math.cos(lShinAng) * M.shin * scale;
+    const rKneeX = hipX + Math.sin(rThighAng) * M.thigh * scale;
+    const rKneeY = hipY + Math.cos(rThighAng) * M.thigh * scale;
+    const rAnkleX = rKneeX + Math.sin(rShinAng) * M.shin * scale;
+    const rAnkleY = rKneeY + Math.cos(rShinAng) * M.shin * scale;
+
+    // Arms: shoulder is RELATIVE to torso, elbow RELATIVE to upper arm.
+    // Existing code adds torsoAng directly — keep the same formula.
+    const lShoulderAng = pose.Lshoulder + torsoAng;
+    const lElbowAng = lShoulderAng + pose.Lelbow;
+    const lElbowX = shoulderX + Math.sin(lShoulderAng) * M.upperArm * scale;
+    const lElbowY = shoulderY + Math.cos(lShoulderAng) * M.upperArm * scale;
+    const lWristX = lElbowX + Math.sin(lElbowAng) * M.forearm * scale;
+    const lWristY = lElbowY + Math.cos(lElbowAng) * M.forearm * scale;
+    const rShoulderAng = pose.Rshoulder + torsoAng;
+    const rElbowAng = rShoulderAng + pose.Relbow;
+    const rElbowX = shoulderX + Math.sin(rShoulderAng) * M.upperArm * scale;
+    const rElbowY = shoulderY + Math.cos(rShoulderAng) * M.upperArm * scale;
+    const rWristX = rElbowX + Math.sin(rElbowAng) * M.forearm * scale;
+    const rWristY = rElbowY + Math.cos(rElbowAng) * M.forearm * scale;
+
+    // Z-order: back leg → torso → back arm (R, free arm) → head → front leg
+    // → front arm (L, briefcase arm). Briefcase itself is drawn by the
+    // caller after this returns.
+    const lLegFront = Math.abs(pose.Lhip) > Math.abs(pose.Rhip);
+
+    const drawLeg = (side: 'L' | 'R') => {
+      const isL = side === 'L';
+      const shinAng = isL ? lShinAng : rShinAng;
+      const kneeX = isL ? lKneeX : rKneeX;
+      const kneeY = isL ? lKneeY : rKneeY;
+      const ankleX = isL ? lAnkleX : rAnkleX;
+      const ankleY = isL ? lAnkleY : rAnkleY;
+      const thighAng = isL ? lThighAng : rThighAng;
+      drawPart(ctx, isL ? 'thighL' : 'thighR', hipX, hipY, thighAng, scale);
+      drawPart(ctx, isL ? 'shinL' : 'shinR', kneeX, kneeY, shinAng, scale);
+      // Foot rigid to shin: foot world angle = shin + π/2 so when shin
+      // points down, foot points right (toe forward).
+      drawPart(ctx, isL ? 'footL' : 'footR', ankleX, ankleY, shinAng + Math.PI / 2, scale);
+    };
+
+    if (lLegFront) drawLeg('R'); else drawLeg('L');
+
+    // Torso: pose convention has 0 = up. Convert to limb convention.
+    drawPart(ctx, 'torso', hipX, hipY, Math.PI - torsoAng, scale);
+
+    // Free (R) arm
+    drawPart(ctx, 'upperArmR', shoulderX, shoulderY, rShoulderAng, scale);
+    drawPart(ctx, 'forearmR', rElbowX, rElbowY, rElbowAng, scale);
+    drawPart(ctx, 'handR', rWristX, rWristY, rElbowAng + Math.PI / 2, scale);
+
+    // Head
+    drawPart(ctx, 'head', headCX, headCY, Math.PI - headAng, scale);
+
+    if (lLegFront) drawLeg('L'); else drawLeg('R');
+
+    // Briefcase (L) arm — drawn last so it sits in front of torso/head.
+    drawPart(ctx, 'upperArmL', shoulderX, shoulderY, lShoulderAng, scale);
+    drawPart(ctx, 'forearmL', lElbowX, lElbowY, lElbowAng, scale);
+
+    if (DEBUG_PIVOTS) {
+      drawDot(ctx, hipX, hipY, '#e91e63', 4);             // hip
+      drawDot(ctx, shoulderX, shoulderY, '#3f51b5', 4);   // shoulder/neck base
+      drawDot(ctx, headCX, headCY, '#ff9800', 4);         // head pivot
+      drawDot(ctx, lKneeX, lKneeY, '#4caf50');
+      drawDot(ctx, rKneeX, rKneeY, '#4caf50');
+      drawDot(ctx, lAnkleX, lAnkleY, '#009688');
+      drawDot(ctx, rAnkleX, rAnkleY, '#009688');
+      drawDot(ctx, lElbowX, lElbowY, '#9c27b0');
+      drawDot(ctx, rElbowX, rElbowY, '#9c27b0');
+      drawDot(ctx, lWristX, lWristY, '#795548');
+      drawDot(ctx, rWristX, rWristY, '#795548');
+    }
+
+    ctx.restore();
+
+    // Apply body-drift transform to the briefcase-hand position the caller
+    // uses for the briefcase pendulum.
+    let handX = lWristX, handY = lWristY;
+    if (drift && (drift.x || drift.y || drift.rot)) {
+      const sx = handX - cx, sy = handY - groundY;
+      const c = Math.cos(drift.rot), s = Math.sin(drift.rot);
+      handX = cx + drift.x + c * sx - s * sy;
+      handY = groundY + drift.y + s * sx + c * sy;
+    }
+    return { handX, handY };
+  }
+
+  function drawBriefcaseSprite(
+    ctx: CanvasRenderingContext2D,
+    handX: number, handY: number,
+    scale: number, swingAngle = 0,
+  ) {
+    const img = SPRITES['briefcase'];
+    if (!img) return;
+    // The briefcase sprite hangs DOWN from a handle at (pivotFx, pivotFy).
+    // swingAngle is "angle from straight down", so apply directly: when
+    // swingAngle=0 the case hangs straight down.
+    const meta = PART_META['briefcase'];
+    const drawScale = (meta.worldLen * scale) / meta.lengthPx;
+    const dw = img.width * drawScale;
+    const dh = img.height * drawScale;
+    const px = meta.pivotFx * dw;
+    const py = meta.pivotFy * dh;
+    ctx.save();
+    ctx.translate(handX, handY);
+    ctx.rotate(swingAngle);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(img, -px, -py, dw, dh);
+    ctx.restore();
+  }
+
+  // ============================================================================
   // Game
   // ============================================================================
 
   type Phase = 'idle' | 'walking' | 'falling' | 'dead';
 
   function init() {
+    if (USE_SPRITES && spritesAttempted === 0) loadSprites();
     const canvas = document.querySelector<HTMLCanvasElement>('canvas[data-stage]');
     const counterEl = document.querySelector<HTMLElement>('[data-counter]');
     const bestEl = document.querySelector<HTMLElement>('[data-best]');
@@ -1221,7 +1495,10 @@ import Layout from '../../../layouts/Layout.astro';
         ? currentPose
         : applyWobble(currentPose, _now);
 
-      const { handX, handY } = drawFigure(ctx!, figureCX, groundY, wobblePose, figureScale);
+      const useSpr = USE_SPRITES && spritesReady();
+      const { handX, handY } = (useSpr ? drawFigureSprite : drawFigure)(
+        ctx!, figureCX, groundY, wobblePose, figureScale,
+      );
 
       // ----- briefcase pendulum simulation -----
       // Treat briefcase as a damped torsion pendulum hanging from the hand.
@@ -1245,7 +1522,11 @@ import Layout from '../../../layouts/Layout.astro';
       if (briefcaseAngle > 2.0) { briefcaseAngle = 2.0; briefcaseVel = 0; }
       if (briefcaseAngle < -2.0) { briefcaseAngle = -2.0; briefcaseVel = 0; }
 
-      drawBriefcase(ctx!, handX, handY, figureScale, briefcaseAngle);
+      if (useSpr) {
+        drawBriefcaseSprite(ctx!, handX, handY, figureScale, briefcaseAngle);
+      } else {
+        drawBriefcase(ctx!, handX, handY, figureScale, briefcaseAngle);
+      }
 
       // subtle vignette at edges, cream-tinted, to focus on figure
       const grad = ctx!.createLinearGradient(0, 0, W, 0);
