@@ -531,7 +531,9 @@ import Layout from '../../../layouts/Layout.astro';
     const shoulderY = hipY - Math.cos(torsoAng) * M.torso * scale;
 
     const headAng = torsoAng + pose.head;
-    const headDist = (M.head + 6) * scale;
+    // sprite head pivot is at the chin/neck stub, so we don't need the
+    // extra radius the stick-figure circle head needed.
+    const headDist = (SPRITES['head'] ? 6 : (M.head + 6)) * scale;
     const headCX = shoulderX + Math.sin(headAng) * headDist;
     const headCY = shoulderY - Math.cos(headAng) * headDist;
 
@@ -734,7 +736,7 @@ import Layout from '../../../layouts/Layout.astro';
   // false = stick limbs + sprite head/torso/briefcase fallback.
   const USE_SPRITES = true;
   // Draw small dots at every joint. Turn off once pivots look right.
-  const DEBUG_PIVOTS = true;
+  const DEBUG_PIVOTS = false;
 
   type PartKey =
     | 'head' | 'torso'
@@ -870,7 +872,9 @@ import Layout from '../../../layouts/Layout.astro';
     const shoulderY = hipY - Math.cos(torsoAng) * M.torso * scale;
 
     const headAng = torsoAng + pose.head;
-    const headDist = (M.head + 6) * scale;
+    // sprite head pivot is at the chin/neck stub, so we don't need the
+    // extra radius the stick-figure circle head needed.
+    const headDist = (SPRITES['head'] ? 6 : (M.head + 6)) * scale;
     const headCX = shoulderX + Math.sin(headAng) * headDist;
     const headCY = shoulderY - Math.cos(headAng) * headDist;
 
