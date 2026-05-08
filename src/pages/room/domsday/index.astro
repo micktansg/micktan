@@ -211,6 +211,7 @@ import Layout from '../../../layouts/Layout.astro';
           <p class="dm-eyebrow" data-bind="hero-eyebrow">Your protocol</p>
           <div class="dm-hero-actions">
             <button class="dm-btn dm-btn-ghost dm-btn-sm" type="button" data-action="jump-today" hidden>Today</button>
+            <button class="dm-btn dm-btn-ghost dm-btn-sm" type="button" data-action="revert" hidden>Restore previous</button>
             <button class="dm-btn dm-btn-ghost dm-btn-sm" type="button" data-action="edit-intake">Edit intake</button>
             <button class="dm-btn dm-btn-ghost dm-btn-sm" type="button" data-action="regen">Regenerate</button>
             <button class="dm-btn dm-btn-ghost dm-btn-sm" type="button" data-action="reset">Start over</button>
@@ -1853,6 +1854,10 @@ import Layout from '../../../layouts/Layout.astro';
         const jumpBtn = $('[data-action="jump-today"]') as HTMLButtonElement | null;
         if (jumpBtn) jumpBtn.toggleAttribute('hidden', curWk === null);
 
+        // restore previous (visible only when history has entries)
+        const revertBtn = $('[data-action="revert"]') as HTMLButtonElement | null;
+        if (revertBtn) revertBtn.toggleAttribute('hidden', !(app.state.history?.length));
+
         // phases
         const phaseEl = $('[data-bind="phases"]') as HTMLElement | null;
         if (phaseEl) {
@@ -2700,6 +2705,26 @@ import Layout from '../../../layouts/Layout.astro';
             app.selectedDay = null;
             renderDashboard();
           }
+        }, { signal: sig });
+
+        $('[data-action="revert"]')?.addEventListener('click', async () => {
+          if (!app.state?.history?.length) return;
+          if (!confirm('Restore your previous plan? Your current plan moves to history (you can re-restore later). Logs and metrics stay.')) return;
+          try {
+            const r = await fetch('/api/domsday?action=revert', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId: app.userId }),
+            });
+            if (!r.ok) { const err = await r.json().catch(() => ({})); alert(`Restore failed: ${(err as any).error || r.status}`); return; }
+            const data = await r.json();
+            if (data?.state) {
+              app.state = data.state as State;
+              app.selectedWeek = currentWeekIndex(app.state.plan!) ?? 0;
+              app.selectedDay = null;
+              renderDashboard();
+            }
+          } catch { alert('Restore failed (network).'); }
         }, { signal: sig });
 
         $('[data-action="jump-today"]')?.addEventListener('click', () => {
