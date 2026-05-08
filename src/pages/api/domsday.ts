@@ -7,6 +7,7 @@
 //   refine  { userId, message }                       → Coach replies, may revise plan
 //   metric  { userId, metric: {...} }                 → log daily metrics (sleep/weight/etc)
 //   evolve  { userId, intake }                        → adapt plan from revised intake; preserves logs/metrics
+//   revert  { userId }                                → restore the previous plan from history (undo a refine/regen)
 //   delete  { userId }                                → wipe stored state for this user
 //
 // Falls back to a deterministic stubbed plan when GEMINI_API_KEY is unset (dev),
@@ -164,6 +165,17 @@ const json = (obj: any, status = 200) =>
 const isoDate = (d = new Date()) => {
   const y = d.getFullYear(); const m = String(d.getMonth() + 1).padStart(2, '0'); const dd = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${dd}`;
+};
+
+// Plans are Monday-anchored. If today is Monday, start today; else next Monday.
+// Avoids the "training generated for days before today" problem when a user
+// creates a plan mid-week.
+const isoNextMonday = (d = new Date()) => {
+  const day = d.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  const daysToAdd = day === 1 ? 0 : (8 - day) % 7;
+  const next = new Date(d);
+  next.setDate(d.getDate() + daysToAdd);
+  return isoDate(next);
 };
 
 // ---------- Gemini: plan ----------
@@ -452,13 +464,15 @@ DECIDE
 
 Coach reply: 60-140 words, warm, attentive. If the client is making excuses or skipping repeatedly without good reason, be FIRM but not cold — name what's happening and ask them to commit. Acknowledge metric trends if relevant (sleep dropping, weight changing, low mood). Praise honest effort. No emojis. No signoff name.
 
-If updating the plan, only revise WEEKS that need changing — keep prior weeks already lived through intact unless they explicitly ask. Use Google Search to ground new prescriptions in research when adding/changing exercises or methods.
+If updating the plan: in updated_plan.weeks, return ONLY the weeks you are changing (we'll merge them with the existing plan by weekNum on the server). Each returned week MUST be complete — weekNum, focus, and a non-empty sessions array. Don't return weeks the client has already trained through unless they explicitly asked you to revise them.
+
+KEEP IT TERSE: title ≤ 6 words; focus ≤ 15 words; session details ≤ 25 words. The JSON must complete — don't truncate.
 
 OUTPUT — a single JSON object, no markdown fences:
 {
   "should_update_plan": true|false,
   "coach_reply": "...",
-  "updated_plan": { "title": "...", "summary": "...", "phases": [...], "weeks": [...], "diet_tips": [...], "lifestyle_tips": [...] }
+  "updated_plan": { "title": "...", "summary": "...", "phases": [...], "weeks": [...only changed weeks...], "diet_tips": [...], "lifestyle_tips": [...] }
 }`;
 };
 
@@ -490,24 +504,59 @@ const callGeminiRefine = async (
   let updatedPlan: Plan | null = null;
   if (p.should_update_plan && p.updated_plan && typeof p.updated_plan === 'object') {
     const up = p.updated_plan;
-    const mergedCitations = [...plan.citations, ...r.citations.filter(c => !plan.citations.some(x => x.url === c.url))].slice(0, 60);
-    updatedPlan = {
-      title: String(up.title || plan.title).slice(0, 80),
-      summary: String(up.summary || plan.summary).slice(0, 400),
-      durationWeeks: plan.durationWeeks,
-      startDate: plan.startDate,
-      phases: Array.isArray(up.phases) && up.phases.length ? up.phases.slice(0, 8).map((ph: any) => ({
-        name: String(ph.name || 'Phase').slice(0, 40),
-        description: String(ph.description || '').slice(0, 240),
-        startWeek: Math.max(1, Number(ph.startWeek) || 1),
-        endWeek: Math.max(1, Number(ph.endWeek) || 1),
-      })) : plan.phases,
-      weeks: Array.isArray(up.weeks) ? up.weeks.slice(0, 60) : plan.weeks,
-      diet_tips: Array.isArray(up.diet_tips) ? up.diet_tips.slice(0, 8) : plan.diet_tips,
-      lifestyle_tips: Array.isArray(up.lifestyle_tips) ? up.lifestyle_tips.slice(0, 8) : plan.lifestyle_tips,
-      citations: mergedCitations,
-      source_themes: plan.source_themes, // keep grouping; user can regen for fresh themes
-    };
+
+    // MERGE weeks by weekNum. Gemini often returns ONLY the weeks it changed in
+    // updated_plan.weeks (despite the prompt). Old behavior of "replace whole
+    // weeks array" turned a 26-week plan into 1-2 weeks of new content.
+    const upWeeksRaw: any[] = Array.isArray(up.weeks) ? up.weeks : [];
+    let mergedWeeks: Week[] = plan.weeks;
+    const validateWeek = (w: any): boolean =>
+      Number.isFinite(Number(w?.weekNum)) && Number(w.weekNum) >= 1 &&
+      Array.isArray(w?.sessions) && w.sessions.length > 0;
+    if (upWeeksRaw.length > 0) {
+      const incoming = new Map<number, any>();
+      upWeeksRaw.forEach((w: any) => {
+        if (validateWeek(w)) incoming.set(Number(w.weekNum), w);
+      });
+      mergedWeeks = plan.weeks.map(w => incoming.get(w.weekNum) || w);
+      const maxExisting = plan.weeks.reduce((m, w) => Math.max(m, w.weekNum), 0);
+      upWeeksRaw.forEach((w: any) => {
+        const wn = Number(w?.weekNum);
+        if (validateWeek(w) && wn > maxExisting) mergedWeeks.push(w);
+      });
+      mergedWeeks = mergedWeeks.slice(0, 60);
+    }
+
+    // VALIDATE the merged result before letting it overwrite a working plan.
+    // Each week needs sessions; total non-rest count can't collapse below 30%.
+    const allHaveSessions = mergedWeeks.every(w => Array.isArray(w.sessions) && w.sessions.length > 0);
+    const priorTraining = plan.weeks.reduce((n, w) => n + w.sessions.filter(s => s.type !== 'rest').length, 0);
+    const newTraining = mergedWeeks.reduce((n, w) => n + (w.sessions || []).filter((s: any) => s?.type !== 'rest').length, 0);
+    const trainingFloor = Math.max(0, Math.floor(priorTraining * 0.3));
+    const planLooksHealthy = allHaveSessions && mergedWeeks.length >= Math.min(plan.weeks.length, 1) && newTraining >= trainingFloor;
+
+    if (planLooksHealthy) {
+      const mergedCitations = [...plan.citations, ...r.citations.filter(c => !plan.citations.some(x => x.url === c.url))].slice(0, 60);
+      updatedPlan = {
+        title: String(up.title || plan.title).slice(0, 80),
+        summary: String(up.summary || plan.summary).slice(0, 400),
+        durationWeeks: plan.durationWeeks,
+        startDate: plan.startDate,
+        phases: Array.isArray(up.phases) && up.phases.length ? up.phases.slice(0, 8).map((ph: any) => ({
+          name: String(ph.name || 'Phase').slice(0, 40),
+          description: String(ph.description || '').slice(0, 240),
+          startWeek: Math.max(1, Number(ph.startWeek) || 1),
+          endWeek: Math.max(1, Number(ph.endWeek) || 1),
+        })) : plan.phases,
+        weeks: mergedWeeks,
+        diet_tips: Array.isArray(up.diet_tips) ? up.diet_tips.slice(0, 8) : plan.diet_tips,
+        lifestyle_tips: Array.isArray(up.lifestyle_tips) ? up.lifestyle_tips.slice(0, 8) : plan.lifestyle_tips,
+        citations: mergedCitations,
+        source_themes: plan.source_themes,
+      };
+    } else {
+      console.warn('[domsday] refine returned a malformed plan; discarding update, keeping coach reply only');
+    }
   }
   return { coachReply, updatedPlan };
 };
@@ -892,7 +941,8 @@ export const POST: APIRoute = async ({ request, url }) => {
     if (!intake) return json({ error: 'invalid intake' }, 400);
 
     const apiKey = env('GEMINI_API_KEY');
-    const startDate = isoDate();
+    // Anchor plan start to next Monday so weeks line up cleanly with calendar days.
+    const startDate = isoNextMonday();
     let plan: Plan;
     let coachMessageBody: string;
 
@@ -943,6 +993,27 @@ export const POST: APIRoute = async ({ request, url }) => {
     if (redisClient) await redisClient.del(stateKey(userId));
     else localStore.delete(userId);
     return json({ ok: true });
+  }
+
+  if (action === 'revert') {
+    const existing = await loadState(userId);
+    if (!existing) return json({ error: 'no state' }, 400);
+    ensureArrays(existing);
+    if (!existing.history?.length) return json({ error: 'no previous plan to restore' }, 400);
+    const previous = existing.history[0];
+    const remainingHistory = existing.history.slice(1);
+    // archive the (possibly broken) current plan so user can re-revert if they want
+    const archived = existing.plan
+      ? [{ ts: existing.updatedAt, plan: existing.plan }, ...remainingHistory].slice(0, 12)
+      : remainingHistory;
+    existing.plan = previous.plan;
+    existing.history = archived;
+    existing.coachLog = [
+      { ts: Date.now(), kind: 'regen', body: 'Restored your previous plan. Logs and metrics kept intact.' },
+      ...(existing.coachLog || []).slice(0, 60),
+    ];
+    await saveState(existing);
+    return json({ state: existing });
   }
 
   if (action === 'save') {
