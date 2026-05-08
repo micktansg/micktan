@@ -15,6 +15,9 @@ import type { APIRoute } from 'astro';
 import { Redis } from '@upstash/redis';
 
 export const prerender = false;
+// Allow long generations (Gemini grounded plans for 26-52 weeks can take 30-50s).
+// Default Vercel function timeout is 10s on Hobby; this raises it to the cap (60s).
+export const maxDuration = 60;
 
 type Intake = {
   goalTags: string[];
@@ -211,6 +214,7 @@ REQUIREMENTS
 5. Diet & lifestyle tips: 3-5 each, each one actionable, each with a short rationale.
 6. source_themes: group the search results you cited into 2-5 broad TOPIC themes (e.g. "Protein intake & recovery", "Aerobic base building", "Periodization", "Mobility & joint health"). Each theme: name (short), description (one sentence), match_titles (array of 1-3 substrings that appear in the titles of grounding results that fall under this theme — used to associate citations server-side).
 7. coach_message: warm welcome from Coach (90-130 words). Restate the goal in your own words. Acknowledge any restrictions/conditions with care. Set the stake of week 1 specifically. No signoff name.
+8. KEEP IT TERSE. session "details" ≤ 25 words. "title" ≤ 6 words. "focus" ≤ 15 words. The full JSON must complete — do not truncate. Better to be brief and complete than detailed and cut off.
 
 OUTPUT — a single valid JSON object, no markdown fences, no commentary:
 {
@@ -299,7 +303,7 @@ const callGemini = async (apiKey: string, prompt: string, useGrounding = true): 
         ...(useGrounding ? { tools: [{ googleSearch: {} }] } : {}),
         generationConfig: {
           temperature: 0.7,
-          maxOutputTokens: 16000,
+          maxOutputTokens: 32000,
         },
       }),
     });
@@ -371,10 +375,19 @@ const associateThemes = (themes: Array<{ name: string; description: string; matc
 };
 
 const callGeminiPlan = async (apiKey: string, intake: Intake, startDate: string): Promise<{ plan: Plan; coachMessage: string } | null> => {
-  const r = await callGemini(apiKey, buildPlanPrompt(intake, startDate), true);
-  if (!r) return null;
-  const parsed = parseGroundedJson(r.text, { groundingMetadata: { groundingChunks: r.citations.map(c => ({ web: { uri: c.url, title: c.title } })) } });
-  if (!parsed) return null;
+  // First try with grounded search (gives real citations).
+  let r = await callGemini(apiKey, buildPlanPrompt(intake, startDate), true);
+  let parsed = r ? parseGroundedJson(r.text, { groundingMetadata: { groundingChunks: r.citations.map(c => ({ web: { uri: c.url, title: c.title } })) } }) : null;
+
+  // Fallback: if grounded JSON parsing failed (often due to truncation on long
+  // timelines), retry without grounding. The plan will lack citations but at
+  // least the user gets a real plan instead of the stub.
+  if (!parsed) {
+    console.warn('[domsday] grounded plan parse failed, retrying without grounding');
+    r = await callGemini(apiKey, buildPlanPrompt(intake, startDate), false);
+    parsed = r ? parseGroundedJson(r.text, { groundingMetadata: { groundingChunks: [] } }) : null;
+  }
+  if (!parsed || !r) return null;
   const p = parsed.parsed;
   const sourceThemes = associateThemes(p.source_themes || [], r.citations);
   const plan: Plan = {
