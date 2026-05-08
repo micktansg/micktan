@@ -6,6 +6,7 @@
 //   log     { userId, log: {...} }                    → log a session
 //   refine  { userId, message }                       → Coach replies, may revise plan
 //   metric  { userId, metric: {...} }                 → log daily metrics (sleep/weight/etc)
+//   delete  { userId }                                → wipe stored state for this user
 //
 // Falls back to a deterministic stubbed plan when GEMINI_API_KEY is unset (dev),
 // and to in-memory storage when Upstash isn't configured (also dev).
@@ -253,7 +254,20 @@ const parseGroundedJson = (text: string, candidate: any): { parsed: any; citatio
 
   let parsed: any;
   try { parsed = JSON.parse(jsonStr); }
-  catch { return null; }
+  catch (e1) {
+    // Try stripping inline citation markers Gemini often inserts (e.g. [1], [1, 2], [3,4,5])
+    // when grounding is enabled. Only strip ones that look like citations (single or
+    // comma-separated digits inside brackets, not inside word chars).
+    const stripped = jsonStr
+      .replace(/(?<=[^\w])\[\s*\d+(?:\s*,\s*\d+)*\s*\](?=[^\w]|$)/g, '')
+      .replace(/\s+,/g, ',') // tidy double commas left behind
+      .replace(/,(\s*[}\]])/g, '$1'); // remove trailing commas
+    try { parsed = JSON.parse(stripped); }
+    catch (e2) {
+      console.error('[domsday] JSON parse fail', (e1 as Error).message);
+      return null;
+    }
+  }
 
   const groundingChunks = candidate?.groundingMetadata?.groundingChunks || [];
   const citations: Citation[] = [];
@@ -442,10 +456,20 @@ const callGeminiRefine = async (
   recentMetrics: MetricEntry[],
   message: string
 ): Promise<{ coachReply: string; updatedPlan: Plan | null } | null> => {
-  const r = await callGemini(apiKey, buildRefinePrompt(intake, plan, recentLogs, recentMetrics, message), true);
+  // Drop grounding for refine — grounded JSON output from Gemini is finicky and
+  // breaks too often. Coach can talk about training without live search; plan
+  // revisions inherit existing citations.
+  const r = await callGemini(apiKey, buildRefinePrompt(intake, plan, recentLogs, recentMetrics, message), false);
   if (!r) return null;
-  const parsed = parseGroundedJson(r.text, { groundingMetadata: { groundingChunks: r.citations.map(c => ({ web: { uri: c.url, title: c.title } })) } });
-  if (!parsed) return null;
+  const parsed = parseGroundedJson(r.text, { groundingMetadata: { groundingChunks: [] } });
+  if (!parsed) {
+    // Last-resort: extract a coach_reply field by regex so the user gets *something*.
+    const m = r.text.match(/"coach_reply"\s*:\s*"([\s\S]*?)"\s*[,}]/);
+    if (m && m[1]) {
+      return { coachReply: m[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').slice(0, 1200), updatedPlan: null };
+    }
+    return null;
+  }
   const p = parsed.parsed;
   const coachReply = String(p.coach_reply || '').slice(0, 1200);
   if (!coachReply) return null;
@@ -760,6 +784,12 @@ export const POST: APIRoute = async ({ request, url }) => {
     let state = await loadState(userId);
     if (state) state = ensureArrays(state);
     return json({ state });
+  }
+
+  if (action === 'delete') {
+    if (redisClient) await redisClient.del(stateKey(userId));
+    else localStore.delete(userId);
+    return json({ ok: true });
   }
 
   if (action === 'save') {
