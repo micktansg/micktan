@@ -1186,20 +1186,24 @@ import Layout from '../../../layouts/Layout.astro';
       font-variant-numeric: tabular-nums;
     }
     :global(.dm-source-theme) {
-      margin-top: 1.2rem;
+      padding: 0.7rem 0.9rem;
+      margin-top: 0.5rem;
+      background: var(--surface-2);
+      border-radius: 10px;
     }
     :global(.dm-source-theme:first-child) { margin-top: 0; }
-    :global(.dm-source-theme-head) {
-      display: flex; flex-direction: column;
-      margin-bottom: 0.5rem;
-    }
     :global(.dm-source-theme-name) {
-      font-size: 0.95rem; font-weight: 600;
+      font-size: 0.92rem; font-weight: 600;
       color: var(--ink); margin: 0;
     }
     :global(.dm-source-theme-desc) {
-      font-size: 0.8rem; color: var(--ink-3);
-      margin: 0.15rem 0 0;
+      font-size: 0.85rem; color: var(--ink-2);
+      margin: 0.2rem 0 0; line-height: 1.45;
+    }
+    :global(.dm-source-theme-count) {
+      font-size: 0.74rem; color: var(--ink-3);
+      margin: 0.35rem 0 0;
+      font-variant-numeric: tabular-nums;
     }
     :global(.dm-cites) {
       list-style: none; margin: 0; padding: 0;
@@ -1429,6 +1433,7 @@ import Layout from '../../../layouts/Layout.astro';
         state: State | null;
         intakeStep: 1 | 2 | 3;
         intake: Partial<Intake>;
+        evolveMode: boolean;
         selectedWeek: number;
         selectedDay: string | null;
         logDraft: { status: SessionLog['status']; rpe: number | null; energy: number | null; soreness: number | null; notes: string };
@@ -1436,6 +1441,7 @@ import Layout from '../../../layouts/Layout.astro';
       } = {
         view: 'loading', userId: '', state: null,
         intakeStep: 1,
+        evolveMode: false,
         intake: {
           goalTags: [], goalNarrative: '', experience: 'beginner',
           daysPerWeek: 3, minutesPerSession: 45, timelineWeeks: 26,
@@ -1691,8 +1697,9 @@ import Layout from '../../../layouts/Layout.astro';
       const submitIntake = async () => {
         setView('generating');
         rotateGeneratingStatus();
+        const action = app.evolveMode ? 'evolve' : 'plan';
         try {
-          const r = await fetch('/api/domsday?action=plan', {
+          const r = await fetch(`/api/domsday?action=${action}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: app.userId, intake: app.intake }),
@@ -1705,6 +1712,7 @@ import Layout from '../../../layouts/Layout.astro';
           const data = await r.json();
           if (!data?.state?.plan) { showError('Coach returned an empty plan. Try again.'); return; }
           app.state = data.state as State;
+          app.evolveMode = false;
           // Default selected week = current week (or 0)
           app.selectedWeek = currentWeekIndex(app.state.plan!) ?? 0;
           app.selectedDay = null;
@@ -2444,57 +2452,43 @@ import Layout from '../../../layouts/Layout.astro';
         } catch { alert('save failed (network)'); }
       };
 
-      // ---- SOURCES ----
+      // ---- SOURCES (themes only — Gemini grounding URLs all redirect through
+      // the same vertexaisearch domain so the link list is misleading.
+      // Themes give the user a topic to verify themselves.) ----
       const renderSources = (plan: Plan) => {
         const bodyEl = $('[data-bind="sources-body"]') as HTMLElement | null;
         const countEl = $('[data-bind="cite-count"]');
         const cites = plan.citations || [];
         const themes = plan.source_themes || [];
-        if (countEl) countEl.textContent = `${cites.length} ${cites.length === 1 ? 'source' : 'sources'}`;
-
+        if (countEl) {
+          countEl.textContent = cites.length
+            ? `${cites.length} ${cites.length === 1 ? 'source' : 'sources'} grounded via Google Search`
+            : '';
+        }
         if (!bodyEl) return;
         bodyEl.innerHTML = '';
+
         if (!cites.length) {
-          bodyEl.innerHTML = '<div class="dm-cite-empty">No sources captured yet (stub mode or grounding empty).</div>';
+          bodyEl.innerHTML = '<p class="dm-cite-empty">No sources captured for this plan (regenerate to retry grounding).</p>';
           return;
         }
+
         if (!themes.length) {
-          // flat fallback
-          const ul = document.createElement('ul');
-          ul.className = 'dm-cites';
-          cites.forEach(c => ul.appendChild(buildCite(c)));
-          bodyEl.appendChild(ul);
+          bodyEl.innerHTML = `<p class="dm-helper" style="margin:0;">${cites.length} sources cited. Themes will appear after the next regeneration.</p>`;
           return;
         }
+
         themes.forEach(t => {
-          if (!t.citationIndices.length) return;
+          if (!t.name) return;
           const sec = document.createElement('section');
           sec.className = 'dm-source-theme';
-          const head = document.createElement('div');
-          head.className = 'dm-source-theme-head';
-          head.innerHTML = `<h3 class="dm-source-theme-name">${escape(t.name)}</h3>${t.description ? `<p class="dm-source-theme-desc">${escape(t.description)}</p>` : ''}`;
-          sec.appendChild(head);
-          const ul = document.createElement('ul');
-          ul.className = 'dm-cites';
-          t.citationIndices.forEach(idx => {
-            const c = cites[idx];
-            if (c) ul.appendChild(buildCite(c));
-          });
-          sec.appendChild(ul);
+          sec.innerHTML = `
+            <h3 class="dm-source-theme-name">${escape(t.name)}</h3>
+            ${t.description ? `<p class="dm-source-theme-desc">${escape(t.description)}</p>` : ''}
+            ${t.citationIndices.length ? `<p class="dm-source-theme-count">${t.citationIndices.length} ${t.citationIndices.length === 1 ? 'source' : 'sources'} referenced</p>` : ''}
+          `;
           bodyEl.appendChild(sec);
         });
-      };
-
-      const buildCite = (c: Citation): HTMLLIElement => {
-        const li = document.createElement('li');
-        const a = document.createElement('a');
-        a.className = 'dm-cite';
-        a.href = c.url;
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
-        a.innerHTML = `<span class="dm-cite-title">${escape(c.title)}</span><span class="dm-cite-domain">${escape(c.domain || c.url)}</span>`;
-        li.appendChild(a);
-        return li;
       };
 
       // ---- chat ----
@@ -2604,12 +2598,20 @@ import Layout from '../../../layouts/Layout.astro';
 
         $('[data-action="edit-intake"]')?.addEventListener('click', () => {
           if (!app.state?.intake) return;
-          if (!confirm('Edit your intake? When you submit, Coach generates a fresh plan from the new answers and your current plan moves to history. Logs reset.')) return;
-          // load current intake into draft
+          // Edit intake = evolve path: keeps logs, metrics, history, and adapts forward weeks.
           app.intake = { ...app.state.intake };
           app.intakeStep = 1;
+          app.evolveMode = true;
           setView('intake');
           syncIntakeUi();
+          // Update intake header copy for evolve flow
+          const head = $('.dm-intake-head');
+          if (head) {
+            const h = head.querySelector('.dm-h1');
+            const lede = head.querySelector('.dm-lede');
+            if (h) h.textContent = 'Update your direction.';
+            if (lede) lede.textContent = 'Coach will adapt your remaining weeks based on what you change. Your logs, metrics, and completed weeks all stay — they\'re what makes the next plan smarter.';
+          }
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }, { signal: sig });
 

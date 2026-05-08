@@ -6,6 +6,7 @@
 //   log     { userId, log: {...} }                    → log a session
 //   refine  { userId, message }                       → Coach replies, may revise plan
 //   metric  { userId, metric: {...} }                 → log daily metrics (sleep/weight/etc)
+//   evolve  { userId, intake }                        → adapt plan from revised intake; preserves logs/metrics
 //   delete  { userId }                                → wipe stored state for this user
 //
 // Falls back to a deterministic stubbed plan when GEMINI_API_KEY is unset (dev),
@@ -511,6 +512,145 @@ const callGeminiRefine = async (
   return { coachReply, updatedPlan };
 };
 
+// ---------- Gemini: evolve (adapt from revised intake, preserve progress) ----------
+
+const diffIntake = (prev: Intake, next: Intake): string => {
+  const lines: string[] = [];
+  const eq = (a: any, b: any) => JSON.stringify(a) === JSON.stringify(b);
+  if (!eq(prev.goalTags, next.goalTags)) lines.push(`goal tags: [${prev.goalTags.join(', ')}] → [${next.goalTags.join(', ')}]`);
+  if (prev.goalNarrative !== next.goalNarrative) lines.push(`narrative: "${prev.goalNarrative}" → "${next.goalNarrative}"`);
+  if (prev.experience !== next.experience) lines.push(`experience: ${prev.experience} → ${next.experience}`);
+  if (prev.daysPerWeek !== next.daysPerWeek) lines.push(`days/wk: ${prev.daysPerWeek} → ${next.daysPerWeek}`);
+  if (prev.minutesPerSession !== next.minutesPerSession) lines.push(`min/session: ${prev.minutesPerSession} → ${next.minutesPerSession}`);
+  if (prev.timelineWeeks !== next.timelineWeeks) lines.push(`timeline: ${prev.timelineWeeks}w → ${next.timelineWeeks}w`);
+  if (prev.restrictions !== next.restrictions) lines.push(`restrictions: "${prev.restrictions}" → "${next.restrictions}"`);
+  if (!eq(prev.healthFlags, next.healthFlags)) lines.push(`health flags: [${prev.healthFlags.join(', ')}] → [${next.healthFlags.join(', ')}]`);
+  if (prev.weightKg !== next.weightKg) lines.push(`weight: ${prev.weightKg} → ${next.weightKg}kg`);
+  return lines.length ? lines.join('\n') : '(no structural changes; client is recalibrating with same inputs)';
+};
+
+const buildEvolvePrompt = (
+  prevIntake: Intake,
+  newIntake: Intake,
+  plan: Plan,
+  currentWeekNum: number,
+  logs: SessionLog[],
+  metrics: MetricEntry[]
+) => {
+  const logsLine = logs.length
+    ? logs.slice(0, 30).map(l => `  - W${l.weekNum} ${l.day} ${l.status}${l.rpe ? ` rpe=${l.rpe}` : ''}${l.energy ? ` E=${l.energy}` : ''}${l.soreness ? ` S=${l.soreness}` : ''}${l.notes ? ` "${l.notes.slice(0, 60)}"` : ''}`).join('\n')
+    : '  (none)';
+  const metricsLine = metrics.length
+    ? metrics.slice(0, 14).map(m => `  - ${m.date}${m.sleepHours ? ` sleep=${m.sleepHours}h` : ''}${m.weightKg ? ` ${m.weightKg}kg` : ''}${m.energy ? ` E${m.energy}` : ''}${m.mood ? ` M${m.mood}` : ''}`).join('\n')
+    : '  (none)';
+  const adherence = (() => {
+    const done = logs.filter(l => l.status === 'done').length;
+    const skipped = logs.filter(l => l.status === 'skipped').length;
+    const modified = logs.filter(l => l.status === 'modified').length;
+    return `${done} done · ${modified} modified · ${skipped} skipped · over ${logs.length} sessions logged`;
+  })();
+  const flagsLine = newIntake.healthFlags.length
+    ? `Flagged conditions: ${newIntake.healthFlags.join(', ')} — be CONSERVATIVE.`
+    : 'No flagged conditions.';
+
+  return `${COACH_PERSONA}
+
+The client is updating an existing plan. They've revised their intake. You are ADAPTING the plan, not regenerating from scratch. The client's accumulated logs and metrics tell you what's actually been happening — use them.
+
+WHAT CHANGED IN INTAKE
+${diffIntake(prevIntake, newIntake)}
+
+NEW INTAKE (full)
+Goals: ${newIntake.goalTags.join(', ') || 'general fitness'}
+Narrative: ${newIntake.goalNarrative || '(none)'}
+Experience: ${newIntake.experience}
+Time: ${newIntake.daysPerWeek}d/wk, ${newIntake.minutesPerSession}min
+Timeline: ${newIntake.timelineWeeks} weeks total
+Restrictions: ${newIntake.restrictions || 'none'}
+${flagsLine}
+
+CURRENT PLAN
+Title: ${plan.title}
+Started: ${plan.startDate}
+Current week: ${currentWeekNum} of ${plan.durationWeeks}
+Phases: ${plan.phases.map(ph => `${ph.name} (W${ph.startWeek}-${ph.endWeek})`).join(' → ')}
+
+ADHERENCE: ${adherence}
+
+RECENT LOGS
+${logsLine}
+
+RECENT METRICS
+${metricsLine}
+
+REQUIREMENTS
+1. PRESERVE completed weeks (weeks 1 to ${currentWeekNum - 1}). Do not rewrite them. Echo them back unchanged.
+2. ADAPT upcoming weeks (week ${currentWeekNum} onwards) to the new intake. Reflect what changed:
+   - new goal tags / narrative → reshape session types, intensities, focus
+   - more days/longer sessions → add volume; fewer → cut conservatively
+   - new restrictions/conditions → swap out problem movements
+   - new timeline length → expand or contract the remaining arc; rebuild phases for the rest
+3. Honor adherence: if the client has been crushing it (high done %, low skip), you can push more. If they've been skipping, lower the load and address why in coach_message.
+4. Preserve the original startDate. durationWeeks = the new timeline.
+5. Adjust phases array to reflect both completed phases (kept) and revised forward phases.
+6. Diet & lifestyle tips: refresh if the new goal warrants it (e.g. fat loss vs. strength), otherwise keep most of them.
+7. coach_message: 80-130 words explaining what you adapted and why. Reference what they did well or struggled with. No signoff name.
+
+OUTPUT — single JSON object, no fences, no commentary. KEEP TERSE: session details ≤ 25 words, titles ≤ 6 words, focus ≤ 15 words.
+{
+  "title": "string",
+  "summary": "1-2 sentence overview of the adapted plan",
+  "phases": [{ "name": "...", "description": "...", "startWeek": 1, "endWeek": 4 }],
+  "weeks": [{ "weekNum": 1, "focus": "...", "sessions": [{ "day": "mon", "type": "...", "title": "...", "duration": 45, "intensity": "...", "details": "..." }] }],
+  "diet_tips": [{ "tip": "...", "rationale": "..." }],
+  "lifestyle_tips": [{ "tip": "...", "rationale": "..." }],
+  "coach_message": "..."
+}`;
+};
+
+const callGeminiEvolve = async (
+  apiKey: string,
+  prevIntake: Intake,
+  newIntake: Intake,
+  plan: Plan,
+  currentWeekNum: number,
+  logs: SessionLog[],
+  metrics: MetricEntry[]
+): Promise<{ plan: Plan; coachMessage: string } | null> => {
+  // Skip grounding for evolve — we're adapting, not researching.
+  const r = await callGemini(apiKey, buildEvolvePrompt(prevIntake, newIntake, plan, currentWeekNum, logs, metrics), false);
+  if (!r) return null;
+  const parsed = parseGroundedJson(r.text, { groundingMetadata: { groundingChunks: [] } });
+  if (!parsed) return null;
+  const p = parsed.parsed;
+  const adapted: Plan = {
+    title: String(p.title || plan.title).slice(0, 80),
+    summary: String(p.summary || plan.summary).slice(0, 400),
+    durationWeeks: newIntake.timelineWeeks,
+    startDate: plan.startDate, // preserve
+    phases: Array.isArray(p.phases) && p.phases.length ? p.phases.slice(0, 8).map((ph: any) => ({
+      name: String(ph.name || 'Phase').slice(0, 40),
+      description: String(ph.description || '').slice(0, 240),
+      startWeek: Math.max(1, Number(ph.startWeek) || 1),
+      endWeek: Math.max(1, Number(ph.endWeek) || 1),
+    })) : plan.phases,
+    weeks: Array.isArray(p.weeks) ? p.weeks.slice(0, 60) : plan.weeks,
+    diet_tips: Array.isArray(p.diet_tips) ? p.diet_tips.slice(0, 8) : plan.diet_tips,
+    lifestyle_tips: Array.isArray(p.lifestyle_tips) ? p.lifestyle_tips.slice(0, 8) : plan.lifestyle_tips,
+    citations: plan.citations, // keep originals; sources panel intentionally minimal
+    source_themes: plan.source_themes,
+  };
+  return { plan: adapted, coachMessage: String(p.coach_message || 'Plan adapted to your new direction.').slice(0, 1200) };
+};
+
+const stubEvolve = (newIntake: Intake, plan: Plan): { plan: Plan; coachMessage: string } => {
+  // Dev stub — just return the same plan with revised durationWeeks.
+  return {
+    plan: { ...plan, durationWeeks: newIntake.timelineWeeks, summary: `${plan.summary} (stub-evolved)` },
+    coachMessage: `Stub mode — I'd adapt the upcoming weeks to your new intake here. With Gemini connected, I'd factor in your logs and metrics too. For now: same plan, new timeline target.`,
+  };
+};
+
 // ---------- Local stubs ----------
 
 const stubPlan = (intake: Intake, startDate: string): { plan: Plan; coachMessage: string } => {
@@ -866,6 +1006,50 @@ export const POST: APIRoute = async ({ request, url }) => {
       { ts: Date.now(), kind: 'metric', body: reply },
       ...(existing.coachLog || []).slice(0, 60),
     ];
+
+    await saveState(existing);
+    return json({ state: existing });
+  }
+
+  if (action === 'evolve') {
+    const newIntake = cleanIntake(body?.intake);
+    if (!newIntake) return json({ error: 'invalid intake' }, 400);
+    const existing = await loadState(userId);
+    if (!existing || !existing.plan) return json({ error: 'no plan to evolve from' }, 400);
+    ensureArrays(existing);
+
+    // figure out current week number from startDate
+    const startMs = new Date((existing.plan.startDate || isoDate()) + 'T00:00:00').getTime();
+    const daysSince = Math.max(0, Math.floor((Date.now() - startMs) / 86400000));
+    const currentWeekNum = Math.max(1, Math.floor(daysSince / 7) + 1);
+
+    const apiKey = env('GEMINI_API_KEY');
+    let result: { plan: Plan; coachMessage: string } | null = null;
+    if (apiKey) {
+      result = await callGeminiEvolve(apiKey, existing.intake, newIntake, existing.plan, currentWeekNum, existing.sessionLogs, existing.metricsLog);
+      if (!result) {
+        // fallback: stub adapt so the user still gets *something*
+        result = stubEvolve(newIntake, existing.plan);
+        result.coachMessage += '  (Live evolve call failed — minimal adapt.)';
+      }
+    } else {
+      result = stubEvolve(newIntake, existing.plan);
+    }
+
+    // archive old plan
+    existing.history = [
+      { ts: existing.updatedAt, plan: existing.plan },
+      ...(existing.history || []),
+    ].slice(0, 12);
+    existing.plan = result.plan;
+    existing.intake = newIntake; // remember the new direction
+
+    const now = Date.now();
+    existing.coachLog = [
+      { ts: now, kind: 'regen', body: result.coachMessage },
+      ...(existing.coachLog || []).slice(0, 60),
+    ];
+    // PRESERVE sessionLogs and metricsLog — that's the whole point.
 
     await saveState(existing);
     return json({ state: existing });
