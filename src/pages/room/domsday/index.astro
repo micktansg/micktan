@@ -1,7 +1,7 @@
 ---
 // /room/domsday/ — DOMSDAY MACHINE
-// Light, modern training-coach dashboard. UUID-bookmark auth.
-// Phase 2.1: design refresh — calendar grid, progress hero, chat-style coach.
+// Modern training-coach dashboard with phases, today-awareness, daily metrics,
+// themed sources, and chat refine.
 import Layout from '../../../layouts/Layout.astro';
 ---
 
@@ -11,7 +11,7 @@ import Layout from '../../../layouts/Layout.astro';
     <!-- Top nav -->
     <header class="dm-nav">
       <a class="dm-back" href="/room/" data-astro-prefetch>&larr; the room</a>
-      <div class="dm-brand">domsday</div>
+      <div class="dm-brand">domsday machine</div>
       <button class="dm-bookmark" type="button" data-action="bookmark">
         <svg class="dm-icon-bookmark" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
           <path d="M3.5 2.5h9v11l-4.5-3-4.5 3v-11z"/>
@@ -71,6 +71,19 @@ import Layout from '../../../layouts/Layout.astro';
                 <button type="button" class="dm-chip" data-tag="intermediate">Intermediate</button>
                 <button type="button" class="dm-chip" data-tag="advanced">Advanced</button>
               </div>
+            </div>
+
+            <div class="dm-field">
+              <label class="dm-label">How long do you want this plan to run?</label>
+              <div class="dm-chips" data-bind="timeline" data-single>
+                <button type="button" class="dm-chip" data-tag="6">6 weeks</button>
+                <button type="button" class="dm-chip" data-tag="12">3 months</button>
+                <button type="button" class="dm-chip" data-tag="16">4 months</button>
+                <button type="button" class="dm-chip" data-tag="26">6 months</button>
+                <button type="button" class="dm-chip" data-tag="36">9 months</button>
+                <button type="button" class="dm-chip" data-tag="52">1 year</button>
+              </div>
+              <p class="dm-helper">Real adaptation runs in months. Default 6 months. You can revise the plan via chat any time.</p>
             </div>
           </fieldset>
 
@@ -167,7 +180,7 @@ import Layout from '../../../layouts/Layout.astro';
         <div class="dm-spinner" aria-hidden="true"></div>
         <p class="dm-eyebrow">Coach is reading your file</p>
         <h2 class="dm-h2" data-bind="generating-status">Cross-referencing the literature…</h2>
-        <p class="dm-helper">First generation can take 20–40s with grounded search. Don't refresh.</p>
+        <p class="dm-helper">Longer plans take longer. Don't refresh.</p>
       </div>
     </section>
 
@@ -177,8 +190,9 @@ import Layout from '../../../layouts/Layout.astro';
       <!-- HERO -->
       <div class="dm-hero">
         <div class="dm-hero-top">
-          <p class="dm-eyebrow">Your protocol</p>
+          <p class="dm-eyebrow" data-bind="hero-eyebrow">Your protocol</p>
           <div class="dm-hero-actions">
+            <button class="dm-btn dm-btn-ghost dm-btn-sm" type="button" data-action="jump-today" hidden>Today</button>
             <button class="dm-btn dm-btn-ghost dm-btn-sm" type="button" data-action="regen">Regenerate</button>
             <button class="dm-btn dm-btn-ghost dm-btn-sm" type="button" data-action="reset">Start over</button>
           </div>
@@ -196,7 +210,13 @@ import Layout from '../../../layouts/Layout.astro';
           </div>
           <div class="dm-progress-meta" data-bind="progress-meta"></div>
         </div>
+
+        <!-- Phases -->
+        <div class="dm-phases" data-bind="phases" hidden></div>
       </div>
+
+      <!-- TODAY strip -->
+      <div class="dm-today" data-bind="today" hidden></div>
 
       <div class="dm-grid">
 
@@ -211,7 +231,7 @@ import Layout from '../../../layouts/Layout.astro';
               <button class="dm-icon-btn" type="button" data-action="prev-week" aria-label="Previous week">
                 <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 12 6 8l4-4"/></svg>
               </button>
-              <div class="dm-week-pages" data-bind="week-pages"></div>
+              <select class="dm-week-select" data-bind="week-select" aria-label="Select week"></select>
               <button class="dm-icon-btn" type="button" data-action="next-week" aria-label="Next week">
                 <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m6 4 4 4-4 4"/></svg>
               </button>
@@ -243,6 +263,21 @@ import Layout from '../../../layouts/Layout.astro';
 
       </div>
 
+      <!-- DAILY METRICS -->
+      <section class="dm-panel dm-panel-metrics">
+        <header class="dm-panel-head">
+          <div>
+            <h2 class="dm-h3" data-bind="metrics-title">Daily metrics — Today</h2>
+            <p class="dm-panel-sub">Sleep, weight, energy, mood. The more you log, the sharper Coach gets.</p>
+          </div>
+          <div class="dm-metrics-streak" data-bind="metrics-streak"></div>
+        </header>
+
+        <div class="dm-metrics-form" data-bind="metrics-form"></div>
+
+        <div class="dm-metrics-recent" data-bind="metrics-recent"></div>
+      </section>
+
       <!-- TIPS row -->
       <div class="dm-tips-grid">
         <section class="dm-panel">
@@ -262,7 +297,7 @@ import Layout from '../../../layouts/Layout.astro';
           <h2 class="dm-h3">Sources</h2>
           <span class="dm-sources-count" data-bind="cite-count">0</span>
         </header>
-        <ul class="dm-cites" data-bind="citations"></ul>
+        <div class="dm-sources-body" data-bind="sources-body"></div>
         <p class="dm-disclaim-foot">Not medical advice. Experimental. Your data lives at this URL — bookmark it. Flagged conditions get conservative defaults; clear with a clinician before training.</p>
       </section>
 
@@ -323,16 +358,9 @@ import Layout from '../../../layouts/Layout.astro';
       display: flex; align-items: center; justify-content: space-between;
       gap: 1rem; padding: 0.4rem 0 2rem; flex-wrap: wrap;
     }
-    .dm-back {
-      color: var(--ink-3); text-decoration: none;
-      font-size: 0.875rem;
-      transition: color 180ms;
-    }
+    .dm-back { color: var(--ink-3); text-decoration: none; font-size: 0.875rem; transition: color 180ms; }
     .dm-back:hover { color: var(--ink); }
-    .dm-brand {
-      font-size: 0.84rem; font-weight: 500;
-      letter-spacing: 0.02em; color: var(--ink);
-    }
+    .dm-brand { font-size: 0.95rem; font-weight: 600; letter-spacing: -0.01em; color: var(--ink); }
     .dm-bookmark {
       display: inline-flex; align-items: center; gap: 0.45rem;
       background: var(--surface);
@@ -353,7 +381,6 @@ import Layout from '../../../layouts/Layout.astro';
     }
     .dm-bookmark.dm-copied .dm-bookmark-id { color: var(--green); }
 
-    /* ---- views ---- */
     .dm-view { max-width: 84rem; margin: 0 auto; }
     .dm-view[hidden] { display: none !important; }
 
@@ -370,33 +397,16 @@ import Layout from '../../../layouts/Layout.astro';
       line-height: 1.05; margin: 0;
       color: var(--ink);
     }
-    .dm-h2 {
-      font-size: clamp(1.25rem, 2.6vw, 1.6rem);
-      font-weight: 600; letter-spacing: -0.015em;
-      margin: 0 0 0.4rem;
-    }
-    .dm-h3 {
-      font-size: 1.05rem; font-weight: 600;
-      letter-spacing: -0.01em;
-      margin: 0; color: var(--ink);
-    }
-    .dm-lede {
-      margin-top: 0.85rem;
-      color: var(--ink-2); font-size: 1.02rem;
-      max-width: 36rem;
-    }
-    .dm-summary {
-      margin: 0.65rem 0 0;
-      color: var(--ink-2); font-size: 1.02rem;
-      max-width: 50rem;
-    }
+    .dm-h2 { font-size: clamp(1.25rem, 2.6vw, 1.6rem); font-weight: 600; margin: 0 0 0.4rem; }
+    .dm-h3 { font-size: 1.05rem; font-weight: 600; letter-spacing: -0.01em; margin: 0; color: var(--ink); }
+    .dm-lede { margin-top: 0.85rem; color: var(--ink-2); font-size: 1.02rem; max-width: 36rem; }
+    .dm-summary { margin: 0.65rem 0 0; color: var(--ink-2); font-size: 1.02rem; max-width: 50rem; }
     .dm-helper { font-size: 0.85rem; color: var(--ink-3); margin: 0.4rem 0 0; }
 
     .dm-center {
       display: flex; flex-direction: column; align-items: center;
       gap: 1rem; padding: 6rem 1rem; text-align: center; color: var(--ink-2);
     }
-
     .dm-spinner {
       width: 28px; height: 28px;
       border: 2px solid var(--line);
@@ -408,10 +418,7 @@ import Layout from '../../../layouts/Layout.astro';
 
     /* ---- intake ---- */
     .dm-intake-shell { max-width: 36rem; margin: 1rem auto 0; }
-    .dm-progress {
-      height: 3px; background: var(--line); border-radius: 2px;
-      overflow: hidden; margin: 1.6rem 0 1.8rem;
-    }
+    .dm-progress { height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; margin: 1.6rem 0 1.8rem; }
     .dm-progress-bar {
       height: 100%;
       background: linear-gradient(90deg, var(--accent) 0%, #fbbf24 100%);
@@ -471,16 +478,12 @@ import Layout from '../../../layouts/Layout.astro';
       height: 4px; background: #ececea; border-radius: 2px; outline: none;
     }
     :global(.dm-slider::-webkit-slider-thumb) {
-      -webkit-appearance: none;
-      width: 18px; height: 18px;
-      border-radius: 50%; background: #f97316;
-      cursor: pointer;
+      -webkit-appearance: none; width: 18px; height: 18px;
+      border-radius: 50%; background: #f97316; cursor: pointer;
       box-shadow: 0 0 0 3px rgba(249,115,22,0.18);
       transition: box-shadow 160ms;
     }
-    :global(.dm-slider::-webkit-slider-thumb:hover) {
-      box-shadow: 0 0 0 5px rgba(249,115,22,0.28);
-    }
+    :global(.dm-slider::-webkit-slider-thumb:hover) { box-shadow: 0 0 0 5px rgba(249,115,22,0.28); }
     :global(.dm-slider::-moz-range-thumb) {
       width: 18px; height: 18px; border: none; border-radius: 50%;
       background: #f97316; cursor: pointer;
@@ -520,17 +523,13 @@ import Layout from '../../../layouts/Layout.astro';
     }
 
     /* buttons */
-    .dm-actions {
-      display: flex; justify-content: space-between; align-items: center;
-      gap: 0.6rem; margin-top: 1.8rem;
-    }
+    .dm-actions { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; margin-top: 1.8rem; }
     .dm-actions-right { margin-left: auto; }
     :global(.dm-btn) {
       font-family: inherit; font-size: 0.9rem; font-weight: 500;
       padding: 0.65rem 1.3rem; border-radius: 8px;
       border: 1px solid transparent;
-      cursor: pointer;
-      transition: all 160ms;
+      cursor: pointer; transition: all 160ms;
       letter-spacing: -0.005em;
     }
     :global(.dm-btn-primary) {
@@ -548,20 +547,18 @@ import Layout from '../../../layouts/Layout.astro';
       border-color: #ececea;
       box-shadow: 0 1px 2px rgba(20,15,10,0.04);
     }
-    :global(.dm-btn-ghost:hover) {
-      color: #0e0e0c; border-color: #d8d6d2;
-    }
+    :global(.dm-btn-ghost:hover) { color: #0e0e0c; border-color: #d8d6d2; }
     :global(.dm-btn-sm) { padding: 0.45rem 0.9rem; font-size: 0.85rem; }
     :global(.dm-btn[hidden]) { display: none !important; }
     :global(.dm-btn:disabled) { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 
-    /* ---- DASHBOARD: hero ---- */
-    .dm-hero { margin-bottom: 1.75rem; }
+    /* ---- HERO ---- */
+    .dm-hero { margin-bottom: 1.5rem; }
     .dm-hero-top {
       display: flex; align-items: flex-start; justify-content: space-between;
       gap: 1rem; margin-bottom: 0.4rem;
     }
-    .dm-hero-actions { display: flex; gap: 0.4rem; flex-shrink: 0; }
+    .dm-hero-actions { display: flex; gap: 0.4rem; flex-shrink: 0; flex-wrap: wrap; }
 
     .dm-progress-card {
       margin-top: 1.4rem;
@@ -575,10 +572,7 @@ import Layout from '../../../layouts/Layout.astro';
       display: flex; justify-content: space-between; align-items: baseline;
       margin-bottom: 0.6rem;
     }
-    .dm-progress-label {
-      font-size: 0.92rem; color: var(--ink-2);
-      font-variant-numeric: tabular-nums;
-    }
+    .dm-progress-label { font-size: 0.92rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
     .dm-progress-pct {
       font-size: 1.45rem; font-weight: 600;
       letter-spacing: -0.02em;
@@ -600,22 +594,103 @@ import Layout from '../../../layouts/Layout.astro';
       margin-top: 0.85rem;
       font-size: 0.85rem; color: var(--ink-3);
     }
-    :global(.dm-progress-meta-item) {
-      display: inline-flex; align-items: baseline; gap: 0.35rem;
-    }
+    :global(.dm-progress-meta-item) { display: inline-flex; align-items: baseline; gap: 0.35rem; }
     :global(.dm-progress-meta-num) {
       color: var(--ink); font-weight: 600;
       font-variant-numeric: tabular-nums;
     }
 
-    /* ---- panels ---- */
-    .dm-grid {
-      display: grid; gap: 1rem; grid-template-columns: 1fr;
+    /* ---- PHASES ---- */
+    :global(.dm-phases) {
+      margin-top: 1rem;
+      display: flex; flex-wrap: wrap; gap: 0.4rem;
     }
+    :global(.dm-phases[hidden]) { display: none !important; }
+    :global(.dm-phase) {
+      flex: 1 1 140px;
+      padding: 0.6rem 0.85rem;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      cursor: pointer;
+      text-align: left; font: inherit; color: inherit;
+      transition: all 160ms;
+      position: relative;
+    }
+    :global(.dm-phase:hover) { border-color: var(--line-2); }
+    :global(.dm-phase-active) {
+      border-color: var(--ink); background: var(--surface-2);
+      box-shadow: 0 0 0 1px var(--ink), var(--shadow-1);
+    }
+    :global(.dm-phase-name) {
+      font-size: 0.9rem; font-weight: 600; color: var(--ink);
+      margin: 0 0 0.15rem;
+    }
+    :global(.dm-phase-range) {
+      font-size: 0.75rem; color: var(--ink-3);
+      font-variant-numeric: tabular-nums;
+    }
+    :global(.dm-phase-bar) {
+      position: absolute; left: 0; right: 0; bottom: 0;
+      height: 2px; background: var(--bg-2);
+      border-radius: 0 0 10px 10px; overflow: hidden;
+    }
+    :global(.dm-phase-bar-fill) {
+      height: 100%; background: var(--accent);
+      transition: width 320ms ease;
+    }
+
+    /* ---- TODAY strip ---- */
+    :global(.dm-today) {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+      padding: 1rem 1.2rem;
+      background: linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      margin-bottom: 1.25rem;
+      box-shadow: var(--shadow-1);
+    }
+    :global(.dm-today[hidden]) { display: none !important; }
+    @media (min-width: 720px) {
+      :global(.dm-today) { grid-template-columns: 1fr auto; align-items: center; }
+    }
+    :global(.dm-today-left) {
+      display: flex; align-items: center; gap: 1rem;
+    }
+    :global(.dm-today-date) {
+      display: flex; flex-direction: column; align-items: center;
+      width: 56px; height: 56px;
+      background: var(--ink); color: #fafaf7;
+      border-radius: 10px;
+      font-variant-numeric: tabular-nums;
+      flex-shrink: 0;
+    }
+    :global(.dm-today-day) {
+      font-size: 0.6rem; font-weight: 600; letter-spacing: 0.08em;
+      text-transform: uppercase; padding-top: 0.45rem;
+      color: rgba(250,250,247,0.7);
+    }
+    :global(.dm-today-num) {
+      font-size: 1.5rem; font-weight: 700; line-height: 1; margin-top: -2px;
+    }
+    :global(.dm-today-info-line1) {
+      font-size: 0.92rem; color: var(--ink-2);
+      margin: 0 0 0.15rem;
+    }
+    :global(.dm-today-info-line2) {
+      font-size: 1.05rem; font-weight: 600; color: var(--ink);
+      letter-spacing: -0.01em; margin: 0;
+    }
+    :global(.dm-today-cta) {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+    }
+
+    /* ---- panels / grid ---- */
+    .dm-grid { display: grid; gap: 1rem; grid-template-columns: 1fr; }
     @media (min-width: 980px) {
-      .dm-grid {
-        grid-template-columns: minmax(0, 2.1fr) minmax(320px, 1fr);
-      }
+      .dm-grid { grid-template-columns: minmax(0, 2.1fr) minmax(320px, 1fr); }
     }
 
     .dm-panel {
@@ -628,75 +703,57 @@ import Layout from '../../../layouts/Layout.astro';
     }
     .dm-panel-head {
       display: flex; align-items: flex-start; justify-content: space-between;
-      gap: 0.6rem; flex-wrap: wrap;
-      margin-bottom: 1rem;
+      gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1rem;
     }
-    .dm-panel-sub {
-      margin: 0.3rem 0 0;
-      font-size: 0.92rem; color: var(--ink-2);
-      max-width: 36rem;
-    }
+    .dm-panel-sub { margin: 0.3rem 0 0; font-size: 0.92rem; color: var(--ink-2); max-width: 36rem; }
+
+    .dm-panel-metrics { margin-top: 1rem; }
 
     /* week nav */
-    .dm-week-nav {
-      display: inline-flex; align-items: center; gap: 0.25rem;
-      flex-shrink: 0;
-    }
+    .dm-week-nav { display: inline-flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
     .dm-icon-btn {
       display: inline-flex; align-items: center; justify-content: center;
       width: 30px; height: 30px;
       background: var(--surface);
       border: 1px solid var(--line);
       border-radius: 7px;
-      color: var(--ink-2);
-      cursor: pointer;
+      color: var(--ink-2); cursor: pointer;
       transition: all 160ms;
     }
     .dm-icon-btn:hover { color: var(--ink); border-color: var(--line-2); }
     .dm-icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
     .dm-icon-btn svg { width: 14px; height: 14px; }
-    :global(.dm-week-pages) {
-      display: inline-flex; gap: 0.2rem; padding: 0 0.25rem;
+    .dm-week-select {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 0.32rem 0.55rem;
+      font-family: inherit; font-size: 0.85rem;
+      color: var(--ink); cursor: pointer;
+      transition: border-color 160ms;
+      max-width: 14rem;
     }
-    :global(.dm-week-page) {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--line-2);
-      transition: all 160ms;
-    }
-    :global(.dm-week-page.dm-active) {
-      width: 18px; border-radius: 3px; background: var(--ink);
-    }
-    :global(.dm-week-page.dm-progress-some) {
-      background: var(--accent);
-    }
-    :global(.dm-week-page.dm-progress-full) {
-      background: var(--green);
-    }
+    .dm-week-select:hover { border-color: var(--line-2); }
+    .dm-week-select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(249,115,22,0.18); }
 
-    /* ---- calendar ---- */
+    /* calendar */
     :global(.dm-calendar) {
       display: grid;
       grid-template-columns: repeat(7, minmax(0, 1fr));
       gap: 0.4rem;
     }
-    @media (max-width: 720px) {
-      :global(.dm-calendar) { grid-template-columns: repeat(2, 1fr); }
-    }
-    @media (max-width: 420px) {
-      :global(.dm-calendar) { grid-template-columns: 1fr; }
-    }
+    @media (max-width: 720px) { :global(.dm-calendar) { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 420px) { :global(.dm-calendar) { grid-template-columns: 1fr; } }
 
     :global(.dm-cell) {
       position: relative;
       display: flex; flex-direction: column;
-      min-height: 96px;
+      min-height: 100px;
       padding: 0.55rem 0.6rem 0.6rem;
       background: var(--surface);
       border: 1px solid var(--line);
       border-radius: 10px;
-      text-align: left;
-      font: inherit; color: inherit;
+      text-align: left; font: inherit; color: inherit;
       cursor: pointer;
       transition: border-color 160ms, transform 160ms, box-shadow 160ms;
       overflow: hidden;
@@ -716,6 +773,16 @@ import Layout from '../../../layouts/Layout.astro';
       border-color: var(--ink);
       box-shadow: 0 0 0 1px var(--ink), var(--shadow-1);
     }
+    :global(.dm-cell.dm-cell-today) {
+      border-color: var(--accent);
+    }
+    :global(.dm-cell.dm-cell-today::after) {
+      content: 'TODAY';
+      position: absolute; top: 0.45rem; right: 0.5rem;
+      font-size: 0.55rem; font-weight: 700; letter-spacing: 0.08em;
+      color: #ffffff; background: var(--accent);
+      padding: 0.12rem 0.35rem; border-radius: 3px;
+    }
     :global(.dm-cell-rest) { background: var(--bg-2); cursor: default; }
     :global(.dm-cell-rest:hover) { transform: none; box-shadow: none; }
     :global(.dm-cell-rest::before) { background: transparent; }
@@ -723,25 +790,20 @@ import Layout from '../../../layouts/Layout.astro';
     :global(.dm-cell-day) {
       font-size: 0.72rem; font-weight: 500;
       letter-spacing: 0.06em; text-transform: uppercase;
-      color: var(--ink-3);
-      margin-bottom: 0.3rem;
+      color: var(--ink-3); margin-bottom: 0.3rem;
     }
     :global(.dm-cell-title) {
       font-size: 0.85rem; font-weight: 500;
       color: var(--ink); line-height: 1.3;
       margin: 0 0 auto;
       display: -webkit-box;
-      -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-      overflow: hidden;
+      -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
     }
     :global(.dm-cell-foot) {
       display: flex; align-items: center; justify-content: space-between;
       gap: 0.3rem; margin-top: 0.4rem;
     }
-    :global(.dm-cell-dur) {
-      font-size: 0.72rem; color: var(--ink-3);
-      font-variant-numeric: tabular-nums;
-    }
+    :global(.dm-cell-dur) { font-size: 0.72rem; color: var(--ink-3); font-variant-numeric: tabular-nums; }
     :global(.dm-cell-status) {
       display: inline-flex; align-items: center; justify-content: center;
       width: 16px; height: 16px;
@@ -753,7 +815,6 @@ import Layout from '../../../layouts/Layout.astro';
     :global(.dm-status-modified) { background: var(--blue); color: #fff; }
     :global(.dm-status-skipped) { background: var(--amber); color: #fff; }
 
-    /* type accents on left bar */
     :global(.dm-cell-strength::before) { background: #b45309; }
     :global(.dm-cell-cardio::before) { background: #c2410c; }
     :global(.dm-cell-mobility::before) { background: #0369a1; }
@@ -766,26 +827,22 @@ import Layout from '../../../layouts/Layout.astro';
       color: var(--ink-3);
     }
 
-    /* states */
     :global(.dm-cell.dm-state-done) {
-      background: var(--green-soft);
-      border-color: rgba(22,163,74,0.25);
+      background: var(--green-soft); border-color: rgba(22,163,74,0.25);
     }
     :global(.dm-cell.dm-state-done .dm-cell-title) { color: var(--ink-2); }
     :global(.dm-cell.dm-state-modified) {
-      background: var(--blue-soft);
-      border-color: rgba(2,132,199,0.25);
+      background: var(--blue-soft); border-color: rgba(2,132,199,0.25);
     }
     :global(.dm-cell.dm-state-skipped) {
-      background: var(--bg-2);
-      border-color: rgba(202,138,4,0.25);
+      background: var(--bg-2); border-color: rgba(202,138,4,0.25);
     }
     :global(.dm-cell.dm-state-skipped .dm-cell-title) {
       color: var(--ink-3); text-decoration: line-through;
       text-decoration-color: rgba(0,0,0,0.25);
     }
 
-    /* ---- detail panel (under calendar) ---- */
+    /* detail panel */
     :global(.dm-detail) {
       margin-top: 1.1rem;
       padding: 1.1rem 1.2rem;
@@ -831,28 +888,21 @@ import Layout from '../../../layouts/Layout.astro';
       display: inline-flex; align-items: center; justify-content: center;
       transition: all 160ms;
     }
-    :global(.dm-detail-close:hover) {
-      background: var(--bg-2); color: var(--ink);
-    }
+    :global(.dm-detail-close:hover) { background: var(--bg-2); color: var(--ink); }
     :global(.dm-detail-close svg) { width: 14px; height: 14px; }
 
-    :global(.dm-detail-text) {
-      color: var(--ink-2); font-size: 0.95rem;
-      margin: 0 0 1rem;
-    }
+    :global(.dm-detail-text) { color: var(--ink-2); font-size: 0.95rem; margin: 0 0 1rem; }
 
     :global(.dm-status-row) {
       display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem;
       margin-bottom: 0.95rem;
     }
     :global(.dm-status-btn) {
-      background: var(--surface);
-      border: 1px solid var(--line);
+      background: var(--surface); border: 1px solid var(--line);
       color: var(--ink-2);
       font-family: inherit; font-size: 0.85rem; font-weight: 500;
       padding: 0.55rem 0.7rem; border-radius: 8px;
-      cursor: pointer;
-      transition: all 160ms;
+      cursor: pointer; transition: all 160ms;
     }
     :global(.dm-status-btn:hover) { border-color: var(--line-2); color: var(--ink); }
     :global(.dm-status-btn[data-status="done"][aria-pressed="true"]) {
@@ -870,16 +920,13 @@ import Layout from '../../../layouts/Layout.astro';
       margin-bottom: 0.85rem;
     }
     @media (min-width: 600px) { :global(.dm-slider-trio) { grid-template-columns: 1fr 1fr 1fr; } }
-    :global(.dm-mini-slider) {
-      display: flex; flex-direction: column; gap: 0.3rem;
-    }
+    :global(.dm-mini-slider) { display: flex; flex-direction: column; gap: 0.3rem; }
     :global(.dm-mini-slider-head) {
       display: flex; justify-content: space-between; align-items: baseline;
       font-size: 0.78rem; color: var(--ink-3);
     }
     :global(.dm-mini-slider-val) {
-      color: var(--ink); font-weight: 600;
-      font-variant-numeric: tabular-nums;
+      color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums;
     }
 
     :global(.dm-log-notes) {
@@ -895,11 +942,9 @@ import Layout from '../../../layouts/Layout.astro';
       outline: none; border-color: var(--accent);
       box-shadow: 0 0 0 3px rgba(249,115,22,0.18), var(--shadow-1);
     }
-    :global(.dm-log-actions) {
-      display: flex; justify-content: flex-end; gap: 0.5rem;
-    }
+    :global(.dm-log-actions) { display: flex; justify-content: flex-end; gap: 0.5rem; }
 
-    /* ---- COACH ---- */
+    /* coach */
     .dm-coach-status {
       font-size: 0.78rem; color: var(--ink-3);
       display: inline-flex; align-items: center; gap: 0.4rem;
@@ -924,27 +969,20 @@ import Layout from '../../../layouts/Layout.astro';
       animation: dmFadeIn 220ms ease-out;
     }
     :global(.dm-msg-coach) {
-      background: var(--surface-2);
-      color: var(--ink);
-      align-self: flex-start;
-      border-bottom-left-radius: 4px;
+      background: var(--surface-2); color: var(--ink);
+      align-self: flex-start; border-bottom-left-radius: 4px;
     }
     :global(.dm-msg-user) {
-      background: var(--ink);
-      color: #fafaf7;
-      align-self: flex-end;
-      border-bottom-right-radius: 4px;
+      background: var(--ink); color: #fafaf7;
+      align-self: flex-end; border-bottom-right-radius: 4px;
     }
     :global(.dm-msg-regen) {
-      background: var(--green-soft);
-      color: var(--ink);
+      background: var(--green-soft); color: var(--ink);
       border: 1px solid rgba(22,163,74,0.25);
-      align-self: flex-start;
-      border-bottom-left-radius: 4px;
+      align-self: flex-start; border-bottom-left-radius: 4px;
     }
     :global(.dm-msg-meta) {
-      display: block;
-      font-size: 0.7rem; color: var(--ink-3);
+      display: block; font-size: 0.7rem; color: var(--ink-3);
       margin-bottom: 0.25rem;
     }
     :global(.dm-msg-user .dm-msg-meta) { color: rgba(250,250,247,0.6); }
@@ -954,21 +992,107 @@ import Layout from '../../../layouts/Layout.astro';
       padding-top: 0.95rem;
       display: grid; gap: 0.55rem;
     }
-    .dm-chat-input {
-      min-height: 2.6rem; font-size: 0.92rem;
-    }
+    .dm-chat-input { min-height: 2.6rem; font-size: 0.92rem; }
     .dm-chat-row {
       display: flex; align-items: center; justify-content: space-between;
       gap: 0.5rem;
     }
-    .dm-chat-hint {
-      font-size: 0.72rem; color: var(--ink-3);
-    }
+    .dm-chat-hint { font-size: 0.72rem; color: var(--ink-3); }
     .dm-btn-send { padding: 0.5rem 1.05rem; font-size: 0.85rem; }
     .dm-chat[data-thinking="true"] .dm-btn-send { opacity: 0.55; pointer-events: none; }
     .dm-chat[data-thinking="true"] .dm-chat-hint::after { content: ' · coach is typing…'; }
 
-    /* ---- TIPS row ---- */
+    /* ---- METRICS ---- */
+    :global(.dm-metrics-form) {
+      display: grid; gap: 0.85rem;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      align-items: end;
+    }
+    :global(.dm-metric-field) { display: flex; flex-direction: column; gap: 0.35rem; }
+    :global(.dm-metric-label) {
+      font-size: 0.78rem; color: var(--ink-2); font-weight: 500;
+    }
+    :global(.dm-metric-input) {
+      width: 100%; box-sizing: border-box;
+      background: var(--surface); border: 1px solid var(--line);
+      border-radius: 8px; padding: 0.55rem 0.7rem;
+      font-family: inherit; font-size: 0.92rem; color: var(--ink);
+      transition: border-color 160ms;
+      box-shadow: var(--shadow-1);
+    }
+    :global(.dm-metric-input:focus) {
+      outline: none; border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(249,115,22,0.18), var(--shadow-1);
+    }
+    :global(.dm-segments) {
+      display: inline-flex; align-items: center;
+      background: var(--surface); border: 1px solid var(--line);
+      border-radius: 8px; padding: 2px;
+      gap: 2px;
+      box-shadow: var(--shadow-1);
+    }
+    :global(.dm-seg) {
+      flex: 1;
+      padding: 0.4rem 0.5rem;
+      background: transparent; border: none; color: var(--ink-2);
+      font: inherit; font-size: 0.85rem; font-weight: 500;
+      border-radius: 6px; cursor: pointer;
+      transition: all 140ms;
+      min-width: 30px;
+    }
+    :global(.dm-seg:hover) { color: var(--ink); }
+    :global(.dm-seg[aria-pressed="true"]) {
+      background: var(--ink); color: #fafaf7;
+    }
+    :global(.dm-seg-yn) { width: 100%; }
+    :global(.dm-metric-actions) {
+      grid-column: 1 / -1;
+      display: flex; justify-content: flex-end; gap: 0.5rem;
+      align-items: center;
+    }
+    :global(.dm-metric-saved) {
+      font-size: 0.78rem; color: var(--green);
+      margin-right: auto;
+    }
+    .dm-metrics-streak {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      font-size: 0.82rem; color: var(--ink-2);
+      padding: 0.32rem 0.7rem;
+      background: var(--accent-soft);
+      border: 1px solid #fed7aa;
+      border-radius: 999px;
+    }
+    :global(.dm-metrics-recent) {
+      margin-top: 1.1rem;
+      border-top: 1px dashed var(--line);
+      padding-top: 0.9rem;
+    }
+    :global(.dm-metrics-recent-head) {
+      font-size: 0.78rem; color: var(--ink-3);
+      text-transform: uppercase; letter-spacing: 0.06em;
+      margin-bottom: 0.45rem;
+    }
+    :global(.dm-recent-list) {
+      list-style: none; padding: 0; margin: 0;
+      display: grid; gap: 0.3rem;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 720px) { :global(.dm-recent-list) { grid-template-columns: 1fr 1fr; } }
+    :global(.dm-recent-item) {
+      display: flex; gap: 0.7rem; align-items: center;
+      padding: 0.4rem 0.6rem;
+      background: var(--surface-2);
+      border-radius: 8px;
+      font-size: 0.82rem; color: var(--ink-2);
+      font-variant-numeric: tabular-nums;
+    }
+    :global(.dm-recent-date) {
+      font-weight: 600; color: var(--ink);
+      min-width: 4.5rem;
+    }
+    :global(.dm-recent-vals) { color: var(--ink-3); }
+
+    /* tips */
     .dm-tips-grid {
       display: grid; gap: 1rem; grid-template-columns: 1fr;
       margin-top: 1rem;
@@ -982,8 +1106,7 @@ import Layout from '../../../layouts/Layout.astro';
     }
     :global(.dm-tip) {
       counter-increment: tip;
-      position: relative;
-      padding: 0 0 0 2rem;
+      position: relative; padding: 0 0 0 2rem;
     }
     :global(.dm-tip::before) {
       content: counter(tip, decimal-leading-zero);
@@ -1016,12 +1139,28 @@ import Layout from '../../../layouts/Layout.astro';
       font-size: 0.82rem; color: var(--ink-3);
       font-variant-numeric: tabular-nums;
     }
+    :global(.dm-source-theme) {
+      margin-top: 1.2rem;
+    }
+    :global(.dm-source-theme:first-child) { margin-top: 0; }
+    :global(.dm-source-theme-head) {
+      display: flex; flex-direction: column;
+      margin-bottom: 0.5rem;
+    }
+    :global(.dm-source-theme-name) {
+      font-size: 0.95rem; font-weight: 600;
+      color: var(--ink); margin: 0;
+    }
+    :global(.dm-source-theme-desc) {
+      font-size: 0.8rem; color: var(--ink-3);
+      margin: 0.15rem 0 0;
+    }
     :global(.dm-cites) {
       list-style: none; margin: 0; padding: 0;
-      display: grid; gap: 0.4rem;
+      display: grid; gap: 0;
       grid-template-columns: 1fr;
     }
-    @media (min-width: 720px) { :global(.dm-cites) { grid-template-columns: 1fr 1fr; } }
+    @media (min-width: 720px) { :global(.dm-cites) { grid-template-columns: 1fr 1fr; gap: 0 1.5rem; } }
     @media (min-width: 1080px) { :global(.dm-cites) { grid-template-columns: 1fr 1fr 1fr; } }
     :global(.dm-cite) {
       display: flex; flex-direction: column;
@@ -1059,6 +1198,7 @@ import Layout from '../../../layouts/Layout.astro';
       goalTags: string[]; goalNarrative: string;
       experience: 'beginner' | 'intermediate' | 'advanced';
       daysPerWeek: number; minutesPerSession: number;
+      timelineWeeks: number;
       restrictions: string; healthFlags: string[];
       age: number | null; weightKg: number | null;
       heightCm: number | null; restingHr: number | null;
@@ -1066,22 +1206,30 @@ import Layout from '../../../layouts/Layout.astro';
     };
     type Session = { day: string; type: string; title: string; duration: number; intensity: string; details: string };
     type Week = { weekNum: number; focus: string; sessions: Session[] };
+    type Phase = { name: string; description: string; startWeek: number; endWeek: number };
     type Tip = { tip: string; rationale: string };
     type Citation = { title: string; url: string; domain: string };
-    type Plan = { title: string; summary: string; weeks: Week[]; diet_tips: Tip[]; lifestyle_tips: Tip[]; citations: Citation[] };
+    type SourceTheme = { name: string; description: string; citationIndices: number[] };
+    type Plan = { title: string; summary: string; durationWeeks: number; startDate: string; phases: Phase[]; weeks: Week[]; diet_tips: Tip[]; lifestyle_tips: Tip[]; citations: Citation[]; source_themes: SourceTheme[] };
     type CoachMsg = { ts: number; kind: string; body: string };
     type SessionLog = { weekNum: number; day: string; ts: number; status: 'done' | 'skipped' | 'modified'; rpe: number | null; energy: number | null; soreness: number | null; notes: string };
-    type State = { userId: string; createdAt: number; updatedAt: number; intake: Intake; plan: Plan | null; coachLog: CoachMsg[]; history: any[]; sessionLogs: SessionLog[] };
+    type MetricEntry = { ts: number; date: string; sleepHours: number | null; weightKg: number | null; energy: number | null; mood: number | null; proteinHit: boolean | null; waterLiters: number | null; notes: string };
+    type State = { userId: string; createdAt: number; updatedAt: number; intake: Intake; plan: Plan | null; coachLog: CoachMsg[]; history: any[]; sessionLogs: SessionLog[]; metricsLog: MetricEntry[] };
 
     type View = 'loading' | 'intake' | 'generating' | 'dashboard' | 'error';
 
     const DAY_ORDER = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+    const TIMELINE_LABELS: Record<number, string> = { 6: '6 weeks', 12: '3 months', 16: '4 months', 26: '6 months', 36: '9 months', 52: '1 year' };
 
     const initDomsday = () => {
       const root = document.querySelector<HTMLElement>('.dm-root');
       if (!root) return;
       const ac = new AbortController();
       const sig = ac.signal;
+
+      const todayDate = new Date();
+      const todayIso = todayDate.toISOString().slice(0, 10);
+      const todayDayName = DAY_ORDER[(todayDate.getDay() + 6) % 7]; // mon=0
 
       const app: {
         view: View;
@@ -1092,12 +1240,13 @@ import Layout from '../../../layouts/Layout.astro';
         selectedWeek: number;
         selectedDay: string | null;
         logDraft: { status: SessionLog['status']; rpe: number | null; energy: number | null; soreness: number | null; notes: string };
+        metricDraft: MetricEntry;
       } = {
         view: 'loading', userId: '', state: null,
         intakeStep: 1,
         intake: {
           goalTags: [], goalNarrative: '', experience: 'beginner',
-          daysPerWeek: 3, minutesPerSession: 45,
+          daysPerWeek: 3, minutesPerSession: 45, timelineWeeks: 26,
           restrictions: '', healthFlags: [],
           age: null, weightKg: null, heightCm: null, restingHr: null, sleepHours: null,
           currentActivity: '',
@@ -1105,6 +1254,11 @@ import Layout from '../../../layouts/Layout.astro';
         selectedWeek: 0,
         selectedDay: null,
         logDraft: { status: 'done', rpe: 7, energy: 3, soreness: 2, notes: '' },
+        metricDraft: {
+          ts: 0, date: todayIso,
+          sleepHours: null, weightKg: null, energy: null, mood: null,
+          proteinHit: null, waterLiters: null, notes: '',
+        },
       };
 
       const $ = <T extends Element = HTMLElement>(sel: string): T | null => root.querySelector<T>(sel);
@@ -1204,6 +1358,16 @@ import Layout from '../../../layouts/Layout.astro';
         const initExp = $('[data-bind="experience"] .dm-chip[data-tag="beginner"]');
         if (initExp) initExp.setAttribute('aria-pressed', 'true');
 
+        $$('[data-bind="timeline"] .dm-chip').forEach((chip) => {
+          chip.addEventListener('click', () => {
+            const v = Number(chip.getAttribute('data-tag')) || 26;
+            app.intake.timelineWeeks = v;
+            $$('[data-bind="timeline"] .dm-chip').forEach((c) => c.setAttribute('aria-pressed', c === chip ? 'true' : 'false'));
+          }, { signal: sig });
+        });
+        const initTl = $('[data-bind="timeline"] .dm-chip[data-tag="26"]');
+        if (initTl) initTl.setAttribute('aria-pressed', 'true');
+
         const textFields: Array<keyof Intake> = ['goalNarrative', 'restrictions', 'currentActivity'];
         textFields.forEach((name) => {
           const el = $(`[data-bind="${name}"]`) as HTMLTextAreaElement | null;
@@ -1279,6 +1443,7 @@ import Layout from '../../../layouts/Layout.astro';
         const lines = [
           'Cross-referencing the literature…',
           'Mapping intensity to your time…',
+          'Planning phases across the arc…',
           'Sanity-checking volume against recovery…',
           'Pulling sources from peer review…',
           'Composing Coach\'s opening…',
@@ -1310,7 +1475,8 @@ import Layout from '../../../layouts/Layout.astro';
           const data = await r.json();
           if (!data?.state?.plan) { showError('Coach returned an empty plan. Try again.'); return; }
           app.state = data.state as State;
-          app.selectedWeek = 0;
+          // Default selected week = current week (or 0)
+          app.selectedWeek = currentWeekIndex(app.state.plan!) ?? 0;
           app.selectedDay = null;
           setView('dashboard');
         } catch {
@@ -1318,18 +1484,34 @@ import Layout from '../../../layouts/Layout.astro';
         }
       };
 
-      // ---- dashboard render ----
+      // ---- helpers ----
       const findLog = (weekNum: number, day: string): SessionLog | undefined =>
         (app.state?.sessionLogs || []).find(l => l.weekNum === weekNum && l.day === day);
 
       const trainingTotalForWeek = (w: Week) => w.sessions.filter(s => s.type !== 'rest').length;
-
       const doneCountForWeek = (w: Week) =>
         (app.state?.sessionLogs || []).filter(l =>
           l.weekNum === w.weekNum && l.status === 'done' &&
           w.sessions.some(s => s.day === l.day && s.type !== 'rest')
         ).length;
 
+      const currentWeekIndex = (plan: Plan): number | null => {
+        if (!plan.startDate) return null;
+        const start = new Date(plan.startDate + 'T00:00:00');
+        if (isNaN(start.getTime())) return null;
+        const diffMs = todayDate.getTime() - start.getTime();
+        const days = Math.floor(diffMs / 86400000);
+        const weekIdx = Math.floor(days / 7);
+        if (weekIdx < 0) return 0;
+        if (weekIdx >= plan.weeks.length) return null;
+        return weekIdx;
+      };
+
+      const phaseForWeek = (plan: Plan, weekNum: number): Phase | null => {
+        return plan.phases.find(p => weekNum >= p.startWeek && weekNum <= p.endWeek) || null;
+      };
+
+      // ---- dashboard ----
       const renderDashboard = () => {
         if (!app.state || !app.state.plan) { setView('intake'); return; }
         const plan = app.state.plan;
@@ -1341,11 +1523,15 @@ import Layout from '../../../layouts/Layout.astro';
         const sumEl = $('[data-bind="plan-summary"]');
         if (sumEl) sumEl.textContent = plan.summary || '';
 
+        const eyebrow = $('[data-bind="hero-eyebrow"]');
+        if (eyebrow) eyebrow.textContent = `Your protocol · ${plan.durationWeeks} weeks · started ${plan.startDate}`;
+
         const totalSessions = plan.weeks.reduce((n, w) => n + trainingTotalForWeek(w), 0);
         const done = logs.filter(l => l.status === 'done').length;
         const skipped = logs.filter(l => l.status === 'skipped').length;
         const modified = logs.filter(l => l.status === 'modified').length;
         const pct = totalSessions > 0 ? Math.round(((done + modified) / totalSessions) * 100) : 0;
+        const curWk = currentWeekIndex(plan);
 
         const lab = $('[data-bind="progress-label"]');
         if (lab) lab.textContent = `${done + modified} of ${totalSessions} sessions complete`;
@@ -1356,13 +1542,14 @@ import Layout from '../../../layouts/Layout.astro';
 
         const metaEl = $('[data-bind="progress-meta"]');
         if (metaEl) {
-          const items: Array<[string, number | string, string]> = [
-            ['weeks', plan.weeks.length, ''],
-            ['done', done, ''],
-            ...(modified ? [['modified', modified, ''] as [string, number, string]] : []),
-            ...(skipped ? [['skipped', skipped, ''] as [string, number, string]] : []),
-            ['sources', plan.citations.length, ''],
+          const items: Array<[string, number | string]> = [
+            ['weeks', plan.durationWeeks],
+            ['done', done],
+            ...(modified ? [['modified', modified] as [string, number]] : []),
+            ...(skipped ? [['skipped', skipped] as [string, number]] : []),
+            ['sources', plan.citations.length],
           ];
+          if (curWk !== null) items.unshift([`current week`, curWk + 1]);
           metaEl.innerHTML = '';
           items.forEach(([label, val]) => {
             const span = document.createElement('span');
@@ -1372,33 +1559,79 @@ import Layout from '../../../layouts/Layout.astro';
           });
         }
 
+        // jump to today button
+        const jumpBtn = $('[data-action="jump-today"]') as HTMLButtonElement | null;
+        if (jumpBtn) jumpBtn.toggleAttribute('hidden', curWk === null);
+
+        // phases
+        const phaseEl = $('[data-bind="phases"]') as HTMLElement | null;
+        if (phaseEl) {
+          if (!plan.phases || plan.phases.length < 2) {
+            phaseEl.hidden = true;
+            phaseEl.innerHTML = '';
+          } else {
+            phaseEl.hidden = false;
+            phaseEl.innerHTML = '';
+            const currentWeekNum = (curWk !== null ? curWk : app.selectedWeek) + 1;
+            const selectedWeekNum = app.selectedWeek + 1;
+            plan.phases.forEach((ph) => {
+              const isActive = selectedWeekNum >= ph.startWeek && selectedWeekNum <= ph.endWeek;
+              const span = ph.endWeek - ph.startWeek + 1;
+              // progress within the phase = % of training sessions done in those weeks
+              let total = 0, did = 0;
+              for (const w of plan.weeks) {
+                if (w.weekNum < ph.startWeek || w.weekNum > ph.endWeek) continue;
+                total += trainingTotalForWeek(w);
+                did += doneCountForWeek(w);
+              }
+              const phasePct = total > 0 ? Math.round((did / total) * 100) : 0;
+              const btn = document.createElement('button');
+              btn.type = 'button';
+              btn.className = 'dm-phase' + (isActive ? ' dm-phase-active' : '');
+              btn.innerHTML = `
+                <p class="dm-phase-name">${escape(ph.name)}</p>
+                <p class="dm-phase-range">Week ${ph.startWeek}${span > 1 ? `–${ph.endWeek}` : ''} · ${phasePct}%</p>
+                <span class="dm-phase-bar"><span class="dm-phase-bar-fill" style="width:${phasePct}%"></span></span>
+              `;
+              btn.title = ph.description;
+              btn.addEventListener('click', () => {
+                app.selectedWeek = Math.max(0, ph.startWeek - 1);
+                app.selectedDay = null;
+                renderDashboard();
+              }, { signal: sig });
+              phaseEl.appendChild(btn);
+            });
+          }
+        }
+
+        // today strip
+        renderTodayStrip(plan, curWk);
+
         // week label
         const wk = plan.weeks[app.selectedWeek] || plan.weeks[0];
         const wkLabel = $('[data-bind="week-label"]');
-        if (wkLabel) wkLabel.textContent = `Week ${wk.weekNum} of ${plan.weeks.length}`;
+        const phase = wk ? phaseForWeek(plan, wk.weekNum) : null;
+        if (wkLabel) wkLabel.textContent = `Week ${wk.weekNum} of ${plan.durationWeeks}${phase ? ` · ${phase.name}` : ''}`;
         const wkFocus = $('[data-bind="week-focus"]');
-        if (wkFocus) wkFocus.textContent = wk.focus || '';
+        if (wkFocus) wkFocus.textContent = wk?.focus || '';
 
-        // week pages (dot indicator)
-        const pagesEl = $('[data-bind="week-pages"]');
-        if (pagesEl) {
-          pagesEl.innerHTML = '';
+        // week select
+        const sel = $('[data-bind="week-select"]') as HTMLSelectElement | null;
+        if (sel) {
+          sel.innerHTML = '';
           plan.weeks.forEach((w, i) => {
+            const opt = document.createElement('option');
+            opt.value = String(i);
+            const ph = phaseForWeek(plan, w.weekNum);
             const total = trainingTotalForWeek(w);
             const doneN = doneCountForWeek(w);
-            const cls = doneN === 0 ? '' : doneN >= total ? ' dm-progress-full' : ' dm-progress-some';
-            const dot = document.createElement('button');
-            dot.type = 'button';
-            dot.className = 'dm-week-page' + (i === app.selectedWeek ? ' dm-active' : '') + cls;
-            dot.title = `Week ${w.weekNum}${total ? ` · ${doneN}/${total} done` : ''}`;
-            dot.addEventListener('click', () => {
-              app.selectedWeek = i;
-              app.selectedDay = null;
-              renderDashboard();
-            }, { signal: sig });
-            pagesEl.appendChild(dot);
+            const tag = total ? ` (${doneN}/${total})` : '';
+            opt.textContent = `Week ${w.weekNum}${ph ? ` · ${ph.name}` : ''}${tag}`;
+            if (i === app.selectedWeek) opt.selected = true;
+            sel.appendChild(opt);
           });
         }
+
         const prevBtn = $('[data-action="prev-week"]') as HTMLButtonElement | null;
         const nextBtn = $('[data-action="next-week"]') as HTMLButtonElement | null;
         if (prevBtn) prevBtn.disabled = app.selectedWeek === 0;
@@ -1408,17 +1641,20 @@ import Layout from '../../../layouts/Layout.astro';
         const calEl = $('[data-bind="calendar"]');
         if (calEl) {
           calEl.innerHTML = '';
+          const isCurWeek = curWk !== null && curWk === app.selectedWeek;
           DAY_ORDER.forEach((day) => {
-            const s = wk.sessions.find(x => x.day === day);
-            const log = findLog(wk.weekNum, day);
+            const s = wk?.sessions.find(x => x.day === day);
+            const log = findLog(wk!.weekNum, day);
             const isRest = !s || s.type === 'rest';
             const status = log?.status || 'pending';
+            const isToday = isCurWeek && day === todayDayName;
             const cell = document.createElement('button');
             cell.type = 'button';
             cell.className = 'dm-cell'
               + (isRest ? ' dm-cell-rest' : ` dm-cell-${escape(s!.type)}`)
               + (status !== 'pending' ? ` dm-state-${status}` : '')
-              + (app.selectedDay === day ? ' dm-cell-active' : '');
+              + (app.selectedDay === day ? ' dm-cell-active' : '')
+              + (isToday ? ' dm-cell-today' : '');
             cell.dataset.day = day;
             const statusIcon = status === 'done' ? '✓'
               : status === 'modified' ? '~'
@@ -1444,7 +1680,7 @@ import Layout from '../../../layouts/Layout.astro';
               cell.addEventListener('click', () => {
                 app.selectedDay = (app.selectedDay === day) ? null : day;
                 if (app.selectedDay === day) {
-                  const existing = findLog(wk.weekNum, day);
+                  const existing = findLog(wk!.weekNum, day);
                   app.logDraft = existing
                     ? { status: existing.status, rpe: existing.rpe, energy: existing.energy, soreness: existing.soreness, notes: existing.notes }
                     : { status: 'done', rpe: 7, energy: 3, soreness: 2, notes: '' };
@@ -1463,21 +1699,24 @@ import Layout from '../../../layouts/Layout.astro';
             detailEl.hidden = true;
             detailEl.innerHTML = '';
           } else {
-            const s = wk.sessions.find(x => x.day === app.selectedDay);
+            const s = wk?.sessions.find(x => x.day === app.selectedDay);
             if (!s) { detailEl.hidden = true; }
             else {
               detailEl.hidden = false;
-              detailEl.innerHTML = renderDetail(wk.weekNum, s);
-              bindDetail(detailEl, wk.weekNum, s.day);
+              detailEl.innerHTML = renderDetail(wk!.weekNum, s);
+              bindDetail(detailEl, wk!.weekNum, s.day);
             }
           }
         }
+
+        // metrics
+        renderMetrics();
 
         // coach log
         const logEl = $('[data-bind="coach-log"]');
         if (logEl) {
           logEl.innerHTML = '';
-          const messages = [...(app.state.coachLog || [])].reverse(); // chronological for chat-style
+          const messages = [...(app.state.coachLog || [])].reverse();
           if (!messages.length) {
             const div = document.createElement('div');
             div.className = 'dm-msg dm-msg-coach';
@@ -1493,7 +1732,6 @@ import Layout from '../../../layouts/Layout.astro';
               div.innerHTML = `<span class="dm-msg-meta">${m.kind === 'user' ? 'you' : 'coach'} · ${formatTime(m.ts)}</span>${escape(m.body)}`;
               logEl.appendChild(div);
             });
-            // scroll to bottom (newest)
             logEl.scrollTop = logEl.scrollHeight;
           }
         }
@@ -1504,27 +1742,79 @@ import Layout from '../../../layouts/Layout.astro';
         if (dietEl) renderTips(dietEl, plan.diet_tips || []);
         if (lifeEl) renderTips(lifeEl, plan.lifestyle_tips || []);
 
-        // citations
-        const citEl = $('[data-bind="citations"]');
-        const citCount = $('[data-bind="cite-count"]');
-        const cites = plan.citations || [];
-        if (citCount) citCount.textContent = `${cites.length} ${cites.length === 1 ? 'source' : 'sources'}`;
-        if (citEl) {
-          citEl.innerHTML = '';
-          if (!cites.length) {
-            citEl.innerHTML = '<li class="dm-cite-empty">No sources captured yet (stub mode or grounding empty).</li>';
+        // citations + themes
+        renderSources(plan);
+      };
+
+      const renderTodayStrip = (plan: Plan, curWk: number | null) => {
+        const todayEl = $('[data-bind="today"]') as HTMLElement | null;
+        if (!todayEl) return;
+        if (curWk === null) {
+          // plan hasn't started, or has finished
+          const start = new Date(plan.startDate + 'T00:00:00');
+          if (todayDate < start) {
+            todayEl.hidden = false;
+            todayEl.innerHTML = `<div class="dm-today-left">
+              <div class="dm-today-date"><span class="dm-today-day">${escape(todayDayName)}</span><span class="dm-today-num">${todayDate.getDate()}</span></div>
+              <div>
+                <p class="dm-today-info-line1">Plan starts ${escape(plan.startDate)}</p>
+                <p class="dm-today-info-line2">Coming up — get bookmarked, log a metric to warm up.</p>
+              </div>
+            </div>`;
           } else {
-            cites.forEach((c) => {
-              const a = document.createElement('a');
-              a.className = 'dm-cite';
-              a.href = c.url;
-              a.target = '_blank';
-              a.rel = 'noopener noreferrer';
-              a.innerHTML = `<span class="dm-cite-title">${escape(c.title)}</span><span class="dm-cite-domain">${escape(c.domain || c.url)}</span>`;
-              (citEl as HTMLElement).appendChild(a);
-            });
+            todayEl.hidden = false;
+            todayEl.innerHTML = `<div class="dm-today-left">
+              <div class="dm-today-date"><span class="dm-today-day">${escape(todayDayName)}</span><span class="dm-today-num">${todayDate.getDate()}</span></div>
+              <div>
+                <p class="dm-today-info-line1">Plan complete (${plan.durationWeeks} weeks logged)</p>
+                <p class="dm-today-info-line2">Talk to Coach about what's next.</p>
+              </div>
+            </div>`;
           }
+          return;
         }
+        const wk = plan.weeks[curWk];
+        if (!wk) { todayEl.hidden = true; return; }
+        const todaySession = wk.sessions.find(s => s.day === todayDayName);
+        const phase = phaseForWeek(plan, wk.weekNum);
+        todayEl.hidden = false;
+        const sessionLine = !todaySession || todaySession.type === 'rest'
+          ? `Rest day — sleep, walk, eat.`
+          : `${todaySession.title} · ${todaySession.duration}min`;
+        const statusInfo = (() => {
+          if (!todaySession || todaySession.type === 'rest') return '';
+          const log = findLog(wk.weekNum, todayDayName);
+          if (!log) return '';
+          if (log.status === 'done') return ' · ✓ logged';
+          if (log.status === 'modified') return ' · ~ modified';
+          if (log.status === 'skipped') return ' · × skipped';
+          return '';
+        })();
+        const dayShort = todayDayName.toUpperCase();
+        const dateNum = todayDate.getDate();
+        todayEl.innerHTML = `
+          <div class="dm-today-left">
+            <div class="dm-today-date"><span class="dm-today-day">${escape(dayShort)}</span><span class="dm-today-num">${dateNum}</span></div>
+            <div>
+              <p class="dm-today-info-line1">Week ${wk.weekNum}${phase ? ` · ${escape(phase.name)}` : ''}</p>
+              <p class="dm-today-info-line2">${escape(sessionLine)}${escape(statusInfo)}</p>
+            </div>
+          </div>
+          <div class="dm-today-cta">
+            ${todaySession && todaySession.type !== 'rest' ? `<button class="dm-btn dm-btn-primary dm-btn-sm" type="button" data-action="open-today">Open today's session</button>` : ''}
+          </div>
+        `;
+        // bind today CTA
+        todayEl.querySelector('[data-action="open-today"]')?.addEventListener('click', () => {
+          app.selectedWeek = curWk;
+          app.selectedDay = todayDayName;
+          const existing = findLog(wk.weekNum, todayDayName);
+          app.logDraft = existing
+            ? { status: existing.status, rpe: existing.rpe, energy: existing.energy, soreness: existing.soreness, notes: existing.notes }
+            : { status: 'done', rpe: 7, energy: 3, soreness: 2, notes: '' };
+          renderDashboard();
+          $('[data-bind="session-detail"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, { signal: sig });
       };
 
       const renderDetail = (weekNum: number, s: Session): string => {
@@ -1595,20 +1885,16 @@ import Layout from '../../../layouts/Layout.astro';
         });
 
         const notes = wrap.querySelector('[data-bind="log-notes"]') as HTMLTextAreaElement | null;
-        if (notes) {
-          notes.addEventListener('input', () => { app.logDraft.notes = notes.value; }, { signal: sig });
-        }
+        if (notes) notes.addEventListener('input', () => { app.logDraft.notes = notes.value; }, { signal: sig });
 
         wrap.querySelector('[data-action="cancel-log"]')?.addEventListener('click', () => {
           app.selectedDay = null;
           renderDashboard();
         }, { signal: sig });
-
         wrap.querySelector('[data-action="close-detail"]')?.addEventListener('click', () => {
           app.selectedDay = null;
           renderDashboard();
         }, { signal: sig });
-
         wrap.querySelector('[data-action="save-log"]')?.addEventListener('click', () => {
           saveLog(weekNum, day);
         }, { signal: sig });
@@ -1618,8 +1904,7 @@ import Layout from '../../../layouts/Layout.astro';
         const payload = {
           userId: app.userId,
           log: {
-            weekNum, day,
-            status: app.logDraft.status,
+            weekNum, day, status: app.logDraft.status,
             rpe: app.logDraft.status === 'skipped' ? null : app.logDraft.rpe,
             energy: app.logDraft.status === 'skipped' ? null : app.logDraft.energy,
             soreness: app.logDraft.status === 'skipped' ? null : app.logDraft.soreness,
@@ -1640,13 +1925,218 @@ import Layout from '../../../layouts/Layout.astro';
         } catch { alert('log failed (network)'); }
       };
 
+      // ---- METRICS ----
+      const renderMetrics = () => {
+        const formEl = $('[data-bind="metrics-form"]') as HTMLElement | null;
+        const recentEl = $('[data-bind="metrics-recent"]') as HTMLElement | null;
+        const titleEl = $('[data-bind="metrics-title"]');
+        const streakEl = $('[data-bind="metrics-streak"]');
+        if (!formEl || !recentEl) return;
+
+        // Pre-fill draft from today's saved entry if any
+        const todayEntry = (app.state?.metricsLog || []).find(m => m.date === todayIso);
+        if (todayEntry && app.metricDraft.ts === 0) {
+          // first render with existing entry — populate
+          app.metricDraft = { ...todayEntry };
+        }
+        const m = app.metricDraft;
+
+        if (titleEl) {
+          const dStr = todayDate.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+          titleEl.textContent = `Daily metrics — ${dStr}`;
+        }
+
+        // streak: how many of the past N days have an entry?
+        const recentDates = new Set((app.state?.metricsLog || []).map(x => x.date));
+        let streak = 0;
+        for (let i = 0; i < 30; i++) {
+          const d = new Date(todayDate); d.setDate(d.getDate() - i);
+          const iso = d.toISOString().slice(0, 10);
+          if (recentDates.has(iso)) streak++; else break;
+        }
+        if (streakEl) streakEl.textContent = streak > 0 ? `${streak}-day streak` : 'no streak yet — log today';
+
+        formEl.innerHTML = `
+          <div class="dm-metric-field">
+            <label class="dm-metric-label" for="dm-mt-sleep">Sleep last night (hrs)</label>
+            <input id="dm-mt-sleep" class="dm-metric-input" type="number" min="0" max="16" step="0.5" placeholder="e.g. 7.5" value="${m.sleepHours ?? ''}" data-mt="sleepHours" />
+          </div>
+          <div class="dm-metric-field">
+            <label class="dm-metric-label" for="dm-mt-weight">Weight (kg)</label>
+            <input id="dm-mt-weight" class="dm-metric-input" type="number" min="25" max="350" step="0.1" placeholder="optional" value="${m.weightKg ?? ''}" data-mt="weightKg" />
+          </div>
+          <div class="dm-metric-field">
+            <label class="dm-metric-label">Energy</label>
+            <div class="dm-segments" data-mt-seg="energy">
+              ${[1,2,3,4,5].map(n => `<button type="button" class="dm-seg" data-val="${n}" aria-pressed="${m.energy === n}">${n}</button>`).join('')}
+            </div>
+          </div>
+          <div class="dm-metric-field">
+            <label class="dm-metric-label">Mood</label>
+            <div class="dm-segments" data-mt-seg="mood">
+              ${[1,2,3,4,5].map(n => `<button type="button" class="dm-seg" data-val="${n}" aria-pressed="${m.mood === n}">${n}</button>`).join('')}
+            </div>
+          </div>
+          <div class="dm-metric-field">
+            <label class="dm-metric-label">Hit protein target?</label>
+            <div class="dm-segments" data-mt-seg="proteinHit">
+              <button type="button" class="dm-seg dm-seg-yn" data-val="true" aria-pressed="${m.proteinHit === true}">Yes</button>
+              <button type="button" class="dm-seg dm-seg-yn" data-val="false" aria-pressed="${m.proteinHit === false}">No</button>
+            </div>
+          </div>
+          <div class="dm-metric-field">
+            <label class="dm-metric-label" for="dm-mt-water">Water (litres)</label>
+            <input id="dm-mt-water" class="dm-metric-input" type="number" min="0" max="12" step="0.25" placeholder="optional" value="${m.waterLiters ?? ''}" data-mt="waterLiters" />
+          </div>
+          <div class="dm-metric-field" style="grid-column: 1 / -1;">
+            <label class="dm-metric-label" for="dm-mt-notes">Notes</label>
+            <input id="dm-mt-notes" class="dm-metric-input" type="text" placeholder="anything off — illness, travel, stress, food choices…" value="${escape(m.notes)}" data-mt="notes" maxlength="400" />
+          </div>
+          <div class="dm-metric-actions">
+            <span class="dm-metric-saved" data-bind="metric-saved" hidden>Saved.</span>
+            <button type="button" class="dm-btn dm-btn-ghost dm-btn-sm" data-action="metric-clear">Clear</button>
+            <button type="button" class="dm-btn dm-btn-primary dm-btn-sm" data-action="metric-save">${todayEntry ? 'Update day' : 'Log day'}</button>
+          </div>
+        `;
+
+        // bind inputs
+        formEl.querySelectorAll('[data-mt]').forEach((el) => {
+          const input = el as HTMLInputElement;
+          const key = input.getAttribute('data-mt') as keyof MetricEntry;
+          input.addEventListener('input', () => {
+            const v = input.value.trim();
+            if (key === 'notes') (app.metricDraft as any)[key] = v;
+            else (app.metricDraft as any)[key] = v === '' ? null : Number(v);
+          }, { signal: sig });
+        });
+
+        formEl.querySelectorAll('[data-mt-seg]').forEach((seg) => {
+          const wrap = seg as HTMLElement;
+          const key = wrap.getAttribute('data-mt-seg') as keyof MetricEntry;
+          wrap.querySelectorAll('.dm-seg').forEach((b) => {
+            b.addEventListener('click', () => {
+              const raw = (b as HTMLElement).getAttribute('data-val') || '';
+              const val: any = raw === 'true' ? true : raw === 'false' ? false : Number(raw);
+              (app.metricDraft as any)[key] = val;
+              wrap.querySelectorAll('.dm-seg').forEach((s) => {
+                s.setAttribute('aria-pressed', s === b ? 'true' : 'false');
+              });
+            }, { signal: sig });
+          });
+        });
+
+        formEl.querySelector('[data-action="metric-save"]')?.addEventListener('click', () => saveMetric(), { signal: sig });
+        formEl.querySelector('[data-action="metric-clear"]')?.addEventListener('click', () => {
+          app.metricDraft = {
+            ts: 0, date: todayIso,
+            sleepHours: null, weightKg: null, energy: null, mood: null,
+            proteinHit: null, waterLiters: null, notes: '',
+          };
+          renderMetrics();
+        }, { signal: sig });
+
+        // recent
+        const recent = [...(app.state?.metricsLog || [])]
+          .sort((a, b) => b.date.localeCompare(a.date))
+          .slice(0, 14);
+        if (recent.length === 0) {
+          recentEl.innerHTML = `<p class="dm-metrics-recent-head">Recent</p><p class="dm-helper">No metrics logged yet.</p>`;
+        } else {
+          const items = recent.map(m => {
+            const parts: string[] = [];
+            if (m.sleepHours != null) parts.push(`${m.sleepHours}h sleep`);
+            if (m.weightKg != null) parts.push(`${m.weightKg}kg`);
+            if (m.energy != null) parts.push(`E${m.energy}`);
+            if (m.mood != null) parts.push(`M${m.mood}`);
+            if (m.proteinHit === true) parts.push(`P✓`);
+            if (m.proteinHit === false) parts.push(`P✗`);
+            if (m.waterLiters != null) parts.push(`${m.waterLiters}L H₂O`);
+            return `<li class="dm-recent-item"><span class="dm-recent-date">${escape(m.date)}</span><span class="dm-recent-vals">${escape(parts.join(' · ') || '—')}</span></li>`;
+          }).join('');
+          recentEl.innerHTML = `<p class="dm-metrics-recent-head">Recent (${recent.length})</p><ul class="dm-recent-list">${items}</ul>`;
+        }
+      };
+
+      const saveMetric = async () => {
+        const m = app.metricDraft;
+        // require at least ONE field
+        const hasData = m.sleepHours !== null || m.weightKg !== null || m.energy !== null || m.mood !== null || m.proteinHit !== null || m.waterLiters !== null || m.notes.trim() !== '';
+        if (!hasData) { alert('Log at least one metric.'); return; }
+        try {
+          const r = await fetch('/api/domsday?action=metric', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: app.userId, metric: m }),
+          });
+          if (!r.ok) { alert('save failed'); return; }
+          const data = await r.json();
+          if (data?.state) app.state = data.state as State;
+          // briefly show "Saved"
+          const saved = $('[data-bind="metric-saved"]') as HTMLElement | null;
+          if (saved) { saved.hidden = false; setTimeout(() => { if (saved) saved.hidden = true; }, 2000); }
+          renderDashboard();
+        } catch { alert('save failed (network)'); }
+      };
+
+      // ---- SOURCES ----
+      const renderSources = (plan: Plan) => {
+        const bodyEl = $('[data-bind="sources-body"]') as HTMLElement | null;
+        const countEl = $('[data-bind="cite-count"]');
+        const cites = plan.citations || [];
+        const themes = plan.source_themes || [];
+        if (countEl) countEl.textContent = `${cites.length} ${cites.length === 1 ? 'source' : 'sources'}`;
+
+        if (!bodyEl) return;
+        bodyEl.innerHTML = '';
+        if (!cites.length) {
+          bodyEl.innerHTML = '<div class="dm-cite-empty">No sources captured yet (stub mode or grounding empty).</div>';
+          return;
+        }
+        if (!themes.length) {
+          // flat fallback
+          const ul = document.createElement('ul');
+          ul.className = 'dm-cites';
+          cites.forEach(c => ul.appendChild(buildCite(c)));
+          bodyEl.appendChild(ul);
+          return;
+        }
+        themes.forEach(t => {
+          if (!t.citationIndices.length) return;
+          const sec = document.createElement('section');
+          sec.className = 'dm-source-theme';
+          const head = document.createElement('div');
+          head.className = 'dm-source-theme-head';
+          head.innerHTML = `<h3 class="dm-source-theme-name">${escape(t.name)}</h3>${t.description ? `<p class="dm-source-theme-desc">${escape(t.description)}</p>` : ''}`;
+          sec.appendChild(head);
+          const ul = document.createElement('ul');
+          ul.className = 'dm-cites';
+          t.citationIndices.forEach(idx => {
+            const c = cites[idx];
+            if (c) ul.appendChild(buildCite(c));
+          });
+          sec.appendChild(ul);
+          bodyEl.appendChild(sec);
+        });
+      };
+
+      const buildCite = (c: Citation): HTMLLIElement => {
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.className = 'dm-cite';
+        a.href = c.url;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.innerHTML = `<span class="dm-cite-title">${escape(c.title)}</span><span class="dm-cite-domain">${escape(c.domain || c.url)}</span>`;
+        li.appendChild(a);
+        return li;
+      };
+
       // ---- chat ----
       const bindChatOnce = () => {
         const form = $('[data-bind="chat-form"]') as HTMLFormElement | null;
         const ta = $('[data-bind="chat-input"]') as HTMLTextAreaElement | null;
         if (!form || !ta) return;
 
-        // submit on Enter, newline on Shift+Enter
         ta.addEventListener('keydown', (e) => {
           if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -1743,7 +2233,6 @@ import Layout from '../../../layouts/Layout.astro';
             renderDashboard();
           }
         }, { signal: sig });
-
         $('[data-action="next-week"]')?.addEventListener('click', () => {
           if (app.state?.plan && app.selectedWeek < app.state.plan.weeks.length - 1) {
             app.selectedWeek++;
@@ -1751,6 +2240,28 @@ import Layout from '../../../layouts/Layout.astro';
             renderDashboard();
           }
         }, { signal: sig });
+
+        $('[data-action="jump-today"]')?.addEventListener('click', () => {
+          if (!app.state?.plan) return;
+          const cw = currentWeekIndex(app.state.plan);
+          if (cw === null) return;
+          app.selectedWeek = cw;
+          app.selectedDay = null;
+          renderDashboard();
+          $('.dm-panel-roadmap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, { signal: sig });
+
+        const sel = $('[data-bind="week-select"]') as HTMLSelectElement | null;
+        if (sel) {
+          sel.addEventListener('change', () => {
+            const idx = Number(sel.value);
+            if (Number.isFinite(idx)) {
+              app.selectedWeek = idx;
+              app.selectedDay = null;
+              renderDashboard();
+            }
+          }, { signal: sig });
+        }
       };
 
       // ---- boot ----
@@ -1772,6 +2283,7 @@ import Layout from '../../../layouts/Layout.astro';
             const data = await r.json();
             if (data?.state?.plan) {
               app.state = data.state as State;
+              app.selectedWeek = currentWeekIndex(app.state.plan!) ?? 0;
               setView('dashboard');
               return;
             }
