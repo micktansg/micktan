@@ -34,15 +34,16 @@ import Layout from '../../../layouts/Layout.astro';
       <div class="dm-intake-shell">
         <div class="dm-intake-head">
           <p class="dm-eyebrow">Step <span data-bind="step-current">1</span> of 3</p>
-          <h1 class="dm-h1">Coach needs a read on you.</h1>
-          <p class="dm-lede">Three short steps. Your answers stay tied to this URL — bookmark it. Skip what you don't have.</p>
+          <h1 class="dm-h1">Let's get you started.</h1>
+          <p class="dm-lede">Three short steps and Coach has what they need. Skip anything you don't know — you can fill it in later.</p>
+          <button type="button" class="dm-recover-link" data-action="open-recover">Already have a plan ID? Recover →</button>
         </div>
         <div class="dm-progress" aria-hidden="true">
           <div class="dm-progress-bar" data-bind="progress-bar"></div>
         </div>
         <form class="dm-intake" data-bind="intake-form" novalidate>
           <fieldset class="dm-step" data-step="1">
-            <legend class="dm-step-title">What are you actually after?</legend>
+            <legend class="dm-step-title">What are you working towards?</legend>
 
             <div class="dm-field">
               <label class="dm-label">Pick what fits — multi-select</label>
@@ -88,7 +89,7 @@ import Layout from '../../../layouts/Layout.astro';
           </fieldset>
 
           <fieldset class="dm-step" data-step="2" hidden>
-            <legend class="dm-step-title">Time, body, conditions.</legend>
+            <legend class="dm-step-title">Your time, your body, anything to watch.</legend>
 
             <div class="dm-grid-2">
               <div class="dm-field">
@@ -135,7 +136,7 @@ import Layout from '../../../layouts/Layout.astro';
           </fieldset>
 
           <fieldset class="dm-step" data-step="3" hidden>
-            <legend class="dm-step-title">Metrics — all optional, skip what you don't know.</legend>
+            <legend class="dm-step-title">A few numbers to calibrate by — all optional.</legend>
 
             <div class="dm-grid-2">
               <div class="dm-field">
@@ -187,12 +188,30 @@ import Layout from '../../../layouts/Layout.astro';
     <!-- DASHBOARD -->
     <section class="dm-view dm-view-dashboard" data-view-target="dashboard" hidden>
 
+      <!-- One-time bookmark callout -->
+      <div class="dm-bookmark-callout" data-bind="bookmark-callout" hidden>
+        <div class="dm-bookmark-callout-body">
+          <h3 class="dm-bookmark-callout-title">Save this URL — it's your only way back.</h3>
+          <p class="dm-bookmark-callout-text">Domsday machine doesn't have logins. Your protocol, logs, and metrics live on this exact URL. If you lose it, your data goes with it. Bookmark it now, and copy your plan ID below as a backup.</p>
+          <div class="dm-bookmark-id-block">
+            <span class="dm-bookmark-id-label">Plan ID</span>
+            <code class="dm-bookmark-id-value" data-bind="bookmark-callout-id">—</code>
+          </div>
+        </div>
+        <div class="dm-bookmark-callout-actions">
+          <button type="button" class="dm-btn dm-btn-ghost dm-btn-sm" data-action="copy-id">Copy ID</button>
+          <button type="button" class="dm-btn dm-btn-primary dm-btn-sm" data-action="copy-url">Copy URL</button>
+          <button type="button" class="dm-btn dm-btn-ghost dm-btn-sm" data-action="dismiss-bookmark">Got it</button>
+        </div>
+      </div>
+
       <!-- HERO -->
       <div class="dm-hero">
         <div class="dm-hero-top">
           <p class="dm-eyebrow" data-bind="hero-eyebrow">Your protocol</p>
           <div class="dm-hero-actions">
             <button class="dm-btn dm-btn-ghost dm-btn-sm" type="button" data-action="jump-today" hidden>Today</button>
+            <button class="dm-btn dm-btn-ghost dm-btn-sm" type="button" data-action="edit-intake">Edit intake</button>
             <button class="dm-btn dm-btn-ghost dm-btn-sm" type="button" data-action="regen">Regenerate</button>
             <button class="dm-btn dm-btn-ghost dm-btn-sm" type="button" data-action="reset">Start over</button>
           </div>
@@ -278,6 +297,18 @@ import Layout from '../../../layouts/Layout.astro';
         <div class="dm-metrics-recent" data-bind="metrics-recent"></div>
       </section>
 
+      <!-- HISTORY -->
+      <section class="dm-panel dm-panel-history" data-bind="history-panel" hidden>
+        <header class="dm-panel-head">
+          <div>
+            <h2 class="dm-h3">Recent activity</h2>
+            <p class="dm-panel-sub">Sessions you've logged. Tap any to jump back and edit.</p>
+          </div>
+          <span class="dm-history-count" data-bind="history-count">0</span>
+        </header>
+        <ol class="dm-history-list" data-bind="history-list"></ol>
+      </section>
+
       <!-- TIPS row -->
       <div class="dm-tips-grid">
         <section class="dm-panel">
@@ -302,6 +333,21 @@ import Layout from '../../../layouts/Layout.astro';
       </section>
 
     </section>
+
+    <!-- Recover modal -->
+    <div class="dm-modal" data-bind="recover-modal" hidden role="dialog" aria-labelledby="dm-recover-title">
+      <div class="dm-modal-backdrop" data-action="close-recover"></div>
+      <div class="dm-modal-card">
+        <h3 id="dm-recover-title" class="dm-h3">Recover a plan</h3>
+        <p class="dm-helper">Paste your full plan ID (UUID) or the URL you bookmarked. We'll take you to that plan.</p>
+        <input type="text" class="dm-input dm-recover-input" data-bind="recover-input" placeholder="e.g. 58f7c066-b978-4d58-80cc-a9d7a05d27a8 or full URL" autocomplete="off" />
+        <p class="dm-helper" data-bind="recover-error" style="color: #dc2626; display: none;"></p>
+        <div class="dm-modal-actions">
+          <button type="button" class="dm-btn dm-btn-ghost dm-btn-sm" data-action="close-recover">Cancel</button>
+          <button type="button" class="dm-btn dm-btn-primary dm-btn-sm" data-action="do-recover">Open plan</button>
+        </div>
+      </div>
+    </div>
 
     <!-- ERROR -->
     <section class="dm-view" data-view-target="error" hidden>
@@ -1191,6 +1237,152 @@ import Layout from '../../../layouts/Layout.astro';
       font-size: 0.78rem; color: var(--ink-3);
       max-width: 56rem; line-height: 1.55;
     }
+
+    /* ---- recover link on intake ---- */
+    .dm-recover-link {
+      background: transparent; border: none;
+      color: var(--accent-strong);
+      font-family: inherit; font-size: 0.88rem; font-weight: 500;
+      padding: 0.4rem 0; margin-top: 0.85rem;
+      cursor: pointer;
+    }
+    .dm-recover-link:hover { text-decoration: underline; }
+
+    /* ---- modal ---- */
+    .dm-modal {
+      position: fixed; inset: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: center;
+      padding: 1rem;
+      animation: dmFadeIn 180ms ease-out;
+    }
+    .dm-modal[hidden] { display: none !important; }
+    .dm-modal-backdrop {
+      position: absolute; inset: 0;
+      background: rgba(20,15,10,0.45);
+      backdrop-filter: blur(2px);
+      cursor: pointer;
+    }
+    .dm-modal-card {
+      position: relative;
+      width: min(440px, 100%);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 1.4rem 1.5rem 1.3rem;
+      box-shadow: var(--shadow-2);
+    }
+    .dm-modal-card .dm-h3 { margin-bottom: 0.45rem; }
+    .dm-recover-input {
+      width: 100%; box-sizing: border-box;
+      margin-top: 0.85rem; margin-bottom: 0.4rem;
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      font-size: 0.85rem;
+    }
+    .dm-modal-actions {
+      display: flex; justify-content: flex-end; gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    /* ---- bookmark callout ---- */
+    .dm-bookmark-callout {
+      display: grid; gap: 1rem;
+      grid-template-columns: 1fr;
+      padding: 1.25rem 1.4rem;
+      margin-bottom: 1.4rem;
+      background: linear-gradient(135deg, #fff4eb 0%, #ffeed4 100%);
+      border: 1px solid #fed7aa;
+      border-radius: 14px;
+      box-shadow: var(--shadow-1);
+    }
+    .dm-bookmark-callout[hidden] { display: none !important; }
+    @media (min-width: 720px) {
+      .dm-bookmark-callout { grid-template-columns: 1fr auto; align-items: end; }
+    }
+    .dm-bookmark-callout-title {
+      font-size: 1.1rem; font-weight: 600; letter-spacing: -0.01em;
+      color: var(--accent-strong); margin: 0 0 0.4rem;
+    }
+    .dm-bookmark-callout-text {
+      font-size: 0.92rem; color: #5a3d05;
+      margin: 0 0 0.85rem; line-height: 1.55;
+      max-width: 50rem;
+    }
+    .dm-bookmark-id-block {
+      display: inline-flex; flex-direction: column; gap: 0.25rem;
+      padding: 0.55rem 0.8rem;
+      background: rgba(255,255,255,0.7);
+      border: 1px solid #fed7aa;
+      border-radius: 8px;
+      max-width: 100%;
+    }
+    .dm-bookmark-id-label {
+      font-size: 0.7rem; color: var(--accent-strong);
+      font-weight: 500; letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .dm-bookmark-id-value {
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      font-size: 0.85rem; color: var(--ink);
+      word-break: break-all; overflow-wrap: anywhere;
+    }
+    .dm-bookmark-callout-actions {
+      display: flex; gap: 0.4rem; flex-wrap: wrap;
+      align-items: center;
+    }
+
+    /* ---- history panel ---- */
+    .dm-panel-history { margin-top: 1rem; }
+    .dm-panel-history[hidden] { display: none !important; }
+    .dm-history-count {
+      font-size: 0.82rem; color: var(--ink-3);
+      font-variant-numeric: tabular-nums;
+    }
+    :global(.dm-history-list) {
+      list-style: none; margin: 0; padding: 0;
+      display: flex; flex-direction: column;
+      max-height: 380px; overflow-y: auto;
+    }
+    :global(.dm-history-row) {
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      gap: 0.75rem; align-items: center;
+      padding: 0.65rem 0.4rem;
+      border-bottom: 1px solid var(--line);
+      cursor: pointer;
+      transition: background 140ms;
+      text-align: left; font: inherit; color: inherit;
+      width: 100%;
+      background: transparent; border-left: none; border-right: none; border-top: none;
+    }
+    :global(.dm-history-row:hover) { background: var(--surface-2); }
+    :global(.dm-history-row:last-child) { border-bottom: none; }
+    :global(.dm-history-when) {
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      font-size: 0.78rem; color: var(--ink-3);
+      min-width: 5.5rem;
+    }
+    :global(.dm-history-body) { min-width: 0; }
+    :global(.dm-history-title) {
+      font-size: 0.92rem; font-weight: 500; color: var(--ink);
+      margin: 0; line-height: 1.3;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    :global(.dm-history-sub) {
+      font-size: 0.78rem; color: var(--ink-3);
+      margin: 0.1rem 0 0;
+      font-variant-numeric: tabular-nums;
+    }
+    :global(.dm-history-pill) {
+      font-size: 0.7rem; font-weight: 500;
+      padding: 0.2rem 0.55rem; border-radius: 5px;
+      letter-spacing: 0.04em;
+    }
+    :global(.dm-history-pill-done) { background: var(--green-soft); color: var(--green); }
+    :global(.dm-history-pill-modified) { background: var(--blue-soft); color: var(--blue); }
+    :global(.dm-history-pill-skipped) { background: var(--amber-soft); color: var(--amber); }
+    :global(.dm-history-arrow) {
+      color: var(--ink-3); font-size: 1.1rem; line-height: 1;
+    }
   </style>
 
   <script>
@@ -1335,6 +1527,44 @@ import Layout from '../../../layouts/Layout.astro';
         ($('[data-action="back"]') as HTMLElement | null)?.toggleAttribute('hidden', app.intakeStep === 1);
         ($('[data-action="next"]') as HTMLElement | null)?.toggleAttribute('hidden', app.intakeStep === 3);
         ($('[data-action="submit"]') as HTMLElement | null)?.toggleAttribute('hidden', app.intakeStep !== 3);
+      };
+
+      const syncIntakeUi = () => {
+        // Sync visual state from app.intake — used when editing existing intake.
+        $$('[data-bind="goal-tags"] .dm-chip').forEach((c) => {
+          const tag = c.getAttribute('data-tag') || '';
+          c.setAttribute('aria-pressed', (app.intake.goalTags || []).includes(tag) ? 'true' : 'false');
+        });
+        $$('[data-bind="experience"] .dm-chip').forEach((c) => {
+          c.setAttribute('aria-pressed', (c.getAttribute('data-tag') || '') === app.intake.experience ? 'true' : 'false');
+        });
+        $$('[data-bind="timeline"] .dm-chip').forEach((c) => {
+          c.setAttribute('aria-pressed', Number(c.getAttribute('data-tag') || '0') === app.intake.timelineWeeks ? 'true' : 'false');
+        });
+        const setVal = (sel: string, v: any) => {
+          const el = $(sel) as HTMLInputElement | HTMLTextAreaElement | null;
+          if (el) el.value = v == null ? '' : String(v);
+        };
+        setVal('[data-bind="goalNarrative"]', app.intake.goalNarrative);
+        setVal('[data-bind="restrictions"]', app.intake.restrictions);
+        setVal('[data-bind="currentActivity"]', app.intake.currentActivity);
+        setVal('[data-bind="age"]', app.intake.age);
+        setVal('[data-bind="weightKg"]', app.intake.weightKg);
+        setVal('[data-bind="heightCm"]', app.intake.heightCm);
+        setVal('[data-bind="restingHr"]', app.intake.restingHr);
+        setVal('[data-bind="sleepHours"]', app.intake.sleepHours);
+        const days = $('[data-bind="daysPerWeek"]') as HTMLInputElement | null;
+        const daysOut = $('[data-bind-out="daysPerWeek"]');
+        if (days) { days.value = String(app.intake.daysPerWeek); if (daysOut) daysOut.textContent = String(app.intake.daysPerWeek); }
+        const mins = $('[data-bind="minutesPerSession"]') as HTMLInputElement | null;
+        const minsOut = $('[data-bind-out="minutesPerSession"]');
+        if (mins) { mins.value = String(app.intake.minutesPerSession); if (minsOut) minsOut.textContent = String(app.intake.minutesPerSession); }
+        $$('[data-bind="healthFlags"] input[type="checkbox"]').forEach((cb) => {
+          const inp = cb as HTMLInputElement;
+          inp.checked = (app.intake.healthFlags || []).includes(inp.getAttribute('data-flag') || '');
+        });
+        const helper = $('[data-bind="flag-helper"]');
+        if (helper) helper.toggleAttribute('hidden', (app.intake.healthFlags || []).length === 0);
       };
 
       const bindIntakeOnce = () => {
@@ -1744,6 +1974,142 @@ import Layout from '../../../layouts/Layout.astro';
 
         // citations + themes
         renderSources(plan);
+
+        // history of session logs
+        renderHistory();
+
+        // bookmark callout (one-time after first plan)
+        renderBookmarkCallout();
+      };
+
+      // ---- HISTORY ----
+      const renderHistory = () => {
+        const panel = $('[data-bind="history-panel"]') as HTMLElement | null;
+        const listEl = $('[data-bind="history-list"]') as HTMLElement | null;
+        const countEl = $('[data-bind="history-count"]');
+        const logs = app.state?.sessionLogs || [];
+        if (!panel || !listEl) return;
+        if (!logs.length) { panel.hidden = true; return; }
+        panel.hidden = false;
+        const sorted = [...logs].sort((a, b) => b.ts - a.ts).slice(0, 30);
+        if (countEl) countEl.textContent = `${logs.length} ${logs.length === 1 ? 'session' : 'sessions'} logged`;
+        listEl.innerHTML = '';
+        const planRef = app.state?.plan;
+        sorted.forEach((l) => {
+          const wk = planRef?.weeks.find(w => w.weekNum === l.weekNum);
+          const sess = wk?.sessions.find(s => s.day === l.day);
+          const ts = new Date(l.ts);
+          const when = ts.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+          const stats: string[] = [];
+          if (l.rpe != null) stats.push(`RPE ${l.rpe}`);
+          if (l.energy != null) stats.push(`E${l.energy}`);
+          if (l.soreness != null) stats.push(`S${l.soreness}`);
+          if (l.notes) stats.push(`"${l.notes.slice(0, 40)}"`);
+          const subParts: string[] = [`Week ${l.weekNum} · ${l.day}`];
+          if (stats.length) subParts.push(stats.join(' · '));
+          const row = document.createElement('button');
+          row.type = 'button';
+          row.className = 'dm-history-row';
+          row.innerHTML = `
+            <span class="dm-history-when">${escape(when)}</span>
+            <div class="dm-history-body">
+              <p class="dm-history-title">${escape(sess?.title || 'Session')}</p>
+              <p class="dm-history-sub">${escape(subParts.join(' · '))}</p>
+            </div>
+            <span class="dm-history-pill dm-history-pill-${l.status}">${escape(l.status)}</span>
+            <span class="dm-history-arrow">→</span>
+          `;
+          row.addEventListener('click', () => {
+            const idx = planRef?.weeks.findIndex(w => w.weekNum === l.weekNum) ?? -1;
+            if (idx < 0) return;
+            app.selectedWeek = idx;
+            app.selectedDay = l.day;
+            app.logDraft = { status: l.status, rpe: l.rpe, energy: l.energy, soreness: l.soreness, notes: l.notes };
+            renderDashboard();
+            $('.dm-panel-roadmap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, { signal: sig });
+          listEl.appendChild(row);
+        });
+      };
+
+      // ---- BOOKMARK CALLOUT ----
+      const renderBookmarkCallout = () => {
+        const el = $('[data-bind="bookmark-callout"]') as HTMLElement | null;
+        if (!el) return;
+        let acked = false;
+        try { acked = !!localStorage.getItem('domsday:bookmark-acked'); } catch {}
+        if (acked) { el.hidden = true; return; }
+        el.hidden = false;
+        const idEl = $('[data-bind="bookmark-callout-id"]');
+        if (idEl) idEl.textContent = app.userId;
+      };
+
+      const bindBookmarkCalloutOnce = () => {
+        $('[data-action="dismiss-bookmark"]')?.addEventListener('click', () => {
+          try { localStorage.setItem('domsday:bookmark-acked', '1'); } catch {}
+          const el = $('[data-bind="bookmark-callout"]') as HTMLElement | null;
+          if (el) el.hidden = true;
+        }, { signal: sig });
+        $('[data-action="copy-id"]')?.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(app.userId);
+            const btn = $('[data-action="copy-id"]') as HTMLButtonElement | null;
+            if (btn) { const t = btn.textContent; btn.textContent = 'Copied'; setTimeout(() => { if (btn) btn.textContent = t || 'Copy ID'; }, 1500); }
+          } catch { window.prompt('Copy your plan ID:', app.userId); }
+        }, { signal: sig });
+        $('[data-action="copy-url"]')?.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(window.location.href);
+            const btn = $('[data-action="copy-url"]') as HTMLButtonElement | null;
+            if (btn) { const t = btn.textContent; btn.textContent = 'Copied'; setTimeout(() => { if (btn) btn.textContent = t || 'Copy URL'; }, 1500); }
+          } catch { window.prompt('Copy this URL:', window.location.href); }
+        }, { signal: sig });
+      };
+
+      // ---- RECOVER MODAL ----
+      const openRecover = () => {
+        const m = $('[data-bind="recover-modal"]') as HTMLElement | null;
+        if (!m) return;
+        m.hidden = false;
+        const inp = $('[data-bind="recover-input"]') as HTMLInputElement | null;
+        const err = $('[data-bind="recover-error"]') as HTMLElement | null;
+        if (inp) { inp.value = ''; setTimeout(() => inp.focus(), 30); }
+        if (err) err.style.display = 'none';
+      };
+      const closeRecover = () => {
+        const m = $('[data-bind="recover-modal"]') as HTMLElement | null;
+        if (m) m.hidden = true;
+      };
+      const doRecover = () => {
+        const inp = $('[data-bind="recover-input"]') as HTMLInputElement | null;
+        const err = $('[data-bind="recover-error"]') as HTMLElement | null;
+        if (!inp) return;
+        const raw = inp.value.trim();
+        let id = raw;
+        // accept full URL
+        try { const u = new URL(raw); id = u.searchParams.get('id') || ''; } catch { /* not a url */ }
+        if (!/^[a-z0-9-]{8,40}$/i.test(id)) {
+          if (err) { err.textContent = 'That doesn\'t look like a valid plan ID.'; err.style.display = 'block'; }
+          return;
+        }
+        try { localStorage.setItem('domsday:userId', id); } catch {}
+        const u = new URL(window.location.href);
+        u.searchParams.set('id', id);
+        window.location.href = u.toString();
+      };
+
+      const bindRecoverOnce = () => {
+        $('[data-action="open-recover"]')?.addEventListener('click', openRecover, { signal: sig });
+        $$('[data-action="close-recover"]').forEach(el =>
+          el.addEventListener('click', closeRecover, { signal: sig }));
+        $('[data-action="do-recover"]')?.addEventListener('click', doRecover, { signal: sig });
+        const inp = $('[data-bind="recover-input"]') as HTMLInputElement | null;
+        if (inp) {
+          inp.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); doRecover(); }
+            if (e.key === 'Escape') closeRecover();
+          }, { signal: sig });
+        }
       };
 
       const renderTodayStrip = (plan: Plan, curWk: number | null) => {
@@ -2218,12 +2584,33 @@ import Layout from '../../../layouts/Layout.astro';
           if (!confirm('Regenerate from your existing intake? Your current plan moves to history. Logs reset.')) return;
           submitIntake();
         }, { signal: sig });
-        $('[data-action="reset"]')?.addEventListener('click', () => {
-          if (!confirm('Wipe local id and start over? Your old plan stays in storage but you\'ll need the bookmark URL to find it again.')) return;
-          try { localStorage.removeItem('domsday:userId'); } catch {}
+        $('[data-action="reset"]')?.addEventListener('click', async () => {
+          if (!confirm('Start over from scratch? This permanently deletes your plan, logs, and metrics. There is no undo.')) return;
+          try {
+            await fetch('/api/domsday?action=delete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId: app.userId }),
+            });
+          } catch { /* ignore */ }
+          try {
+            localStorage.removeItem('domsday:userId');
+            localStorage.removeItem('domsday:bookmark-acked');
+          } catch {}
           const url = new URL(window.location.href);
           url.searchParams.delete('id');
           window.location.href = url.toString();
+        }, { signal: sig });
+
+        $('[data-action="edit-intake"]')?.addEventListener('click', () => {
+          if (!app.state?.intake) return;
+          if (!confirm('Edit your intake? When you submit, Coach generates a fresh plan from the new answers and your current plan moves to history. Logs reset.')) return;
+          // load current intake into draft
+          app.intake = { ...app.state.intake };
+          app.intakeStep = 1;
+          setView('intake');
+          syncIntakeUi();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         }, { signal: sig });
 
         $('[data-action="prev-week"]')?.addEventListener('click', () => {
@@ -2272,6 +2659,8 @@ import Layout from '../../../layouts/Layout.astro';
         bindIntakeOnce();
         bindDashboardActionsOnce();
         bindChatOnce();
+        bindBookmarkCalloutOnce();
+        bindRecoverOnce();
 
         try {
           const r = await fetch('/api/domsday?action=load', {
