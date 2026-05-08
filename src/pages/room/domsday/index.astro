@@ -1,7 +1,7 @@
 ---
 // /room/domsday/ — DOMSDAY MACHINE
-// Light, energizing performance training coach. UUID-bookmark auth.
-// Phase 1+2: intake → cited plan → Coach voice + tracking + chat refine.
+// Light, modern training-coach dashboard. UUID-bookmark auth.
+// Phase 2.1: design refresh — calendar grid, progress hero, chat-style coach.
 import Layout from '../../../layouts/Layout.astro';
 ---
 
@@ -11,28 +11,21 @@ import Layout from '../../../layouts/Layout.astro';
     <!-- Top nav -->
     <header class="dm-nav">
       <a class="dm-back" href="/room/" data-astro-prefetch>&larr; the room</a>
-      <div class="dm-brand">
-        <span class="dm-orb dm-orb-sm" aria-hidden="true"><span class="dm-orb-ball"></span></span>
-        <span class="dm-brand-name">DOMSDAY MACHINE</span>
-        <span class="dm-brand-sub">v0.2 · experimental</span>
-      </div>
+      <div class="dm-brand">domsday</div>
       <button class="dm-bookmark" type="button" data-action="bookmark">
-        <span class="dm-bookmark-label">bookmark this</span>
+        <svg class="dm-icon-bookmark" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <path d="M3.5 2.5h9v11l-4.5-3-4.5 3v-11z"/>
+        </svg>
+        <span class="dm-bookmark-label">bookmark</span>
         <span class="dm-bookmark-id" data-bind="user-id-short"></span>
       </button>
     </header>
 
-    <!-- Disclaimer -->
-    <aside class="dm-disclaim" role="note">
-      <span class="dm-disclaim-tag">heads up</span>
-      <span>not medical advice. experimental. your data lives at this URL — bookmark it. flagged conditions get conservative defaults; clear with a clinician before training.</span>
-    </aside>
-
     <!-- LOADING -->
     <section class="dm-view" data-view-target="loading">
       <div class="dm-center">
-        <div class="dm-orb dm-orb-lg" aria-hidden="true"><span class="dm-orb-ball"></span></div>
-        <p class="dm-helper">booting…</p>
+        <div class="dm-spinner" aria-hidden="true"></div>
+        <p class="dm-helper">loading your protocol…</p>
       </div>
     </section>
 
@@ -40,62 +33,60 @@ import Layout from '../../../layouts/Layout.astro';
     <section class="dm-view dm-view-intake" data-view-target="intake" hidden>
       <div class="dm-intake-shell">
         <div class="dm-intake-head">
-          <p class="dm-eyebrow">intake — step <span data-bind="step-current">1</span> / 3</p>
+          <p class="dm-eyebrow">Step <span data-bind="step-current">1</span> of 3</p>
           <h1 class="dm-h1">Coach needs a read on you.</h1>
-          <p class="dm-lede">Three short steps. Your answers stay on this URL. Skip what you don't have.</p>
+          <p class="dm-lede">Three short steps. Your answers stay tied to this URL — bookmark it. Skip what you don't have.</p>
         </div>
         <div class="dm-progress" aria-hidden="true">
           <div class="dm-progress-bar" data-bind="progress-bar"></div>
         </div>
         <form class="dm-intake" data-bind="intake-form" novalidate>
-          <!-- STEP 1 -->
           <fieldset class="dm-step" data-step="1">
-            <legend class="dm-step-title">what are you actually after?</legend>
+            <legend class="dm-step-title">What are you actually after?</legend>
 
             <div class="dm-field">
-              <label class="dm-label">pick what fits — multi-select</label>
+              <label class="dm-label">Pick what fits — multi-select</label>
               <div class="dm-chips" data-bind="goal-tags">
-                <button type="button" class="dm-chip" data-tag="strength">strength</button>
-                <button type="button" class="dm-chip" data-tag="hypertrophy">muscle / hypertrophy</button>
-                <button type="button" class="dm-chip" data-tag="endurance">endurance</button>
-                <button type="button" class="dm-chip" data-tag="fat-loss">fat loss</button>
-                <button type="button" class="dm-chip" data-tag="mobility">mobility</button>
-                <button type="button" class="dm-chip" data-tag="longevity">longevity / general health</button>
-                <button type="button" class="dm-chip" data-tag="sport">sport-specific</button>
+                <button type="button" class="dm-chip" data-tag="strength">Strength</button>
+                <button type="button" class="dm-chip" data-tag="hypertrophy">Muscle / hypertrophy</button>
+                <button type="button" class="dm-chip" data-tag="endurance">Endurance</button>
+                <button type="button" class="dm-chip" data-tag="fat-loss">Fat loss</button>
+                <button type="button" class="dm-chip" data-tag="mobility">Mobility</button>
+                <button type="button" class="dm-chip" data-tag="longevity">Longevity / general health</button>
+                <button type="button" class="dm-chip" data-tag="sport">Sport-specific</button>
               </div>
             </div>
 
             <div class="dm-field">
-              <label class="dm-label" for="dm-narrative">in your own words — what's the goal?</label>
+              <label class="dm-label" for="dm-narrative">In your own words — what's the goal?</label>
               <textarea id="dm-narrative" class="dm-input dm-textarea" rows="3"
                 placeholder="e.g. drop 5kg by July, run a half-marathon under 2hr, deadlift 1.5x bodyweight…"
                 data-bind="goalNarrative" maxlength="600"></textarea>
             </div>
 
             <div class="dm-field">
-              <label class="dm-label">experience</label>
+              <label class="dm-label">Experience</label>
               <div class="dm-chips" data-bind="experience" data-single>
-                <button type="button" class="dm-chip" data-tag="beginner">beginner</button>
-                <button type="button" class="dm-chip" data-tag="intermediate">intermediate</button>
-                <button type="button" class="dm-chip" data-tag="advanced">advanced</button>
+                <button type="button" class="dm-chip" data-tag="beginner">Beginner</button>
+                <button type="button" class="dm-chip" data-tag="intermediate">Intermediate</button>
+                <button type="button" class="dm-chip" data-tag="advanced">Advanced</button>
               </div>
             </div>
           </fieldset>
 
-          <!-- STEP 2 -->
           <fieldset class="dm-step" data-step="2" hidden>
-            <legend class="dm-step-title">time, body, conditions.</legend>
+            <legend class="dm-step-title">Time, body, conditions.</legend>
 
             <div class="dm-grid-2">
               <div class="dm-field">
-                <label class="dm-label" for="dm-days">days / week</label>
+                <label class="dm-label" for="dm-days">Days / week</label>
                 <div class="dm-slider-row">
                   <input id="dm-days" type="range" class="dm-slider" min="1" max="7" step="1" value="3" data-bind="daysPerWeek" />
                   <output class="dm-slider-out" data-bind-out="daysPerWeek">3</output>
                 </div>
               </div>
               <div class="dm-field">
-                <label class="dm-label" for="dm-minutes">minutes / session</label>
+                <label class="dm-label" for="dm-minutes">Minutes / session</label>
                 <div class="dm-slider-row">
                   <input id="dm-minutes" type="range" class="dm-slider" min="15" max="120" step="5" value="45" data-bind="minutesPerSession" />
                   <output class="dm-slider-out" data-bind-out="minutesPerSession">45</output>
@@ -104,68 +95,67 @@ import Layout from '../../../layouts/Layout.astro';
             </div>
 
             <div class="dm-field">
-              <label class="dm-label" for="dm-restrict">restrictions / injuries</label>
+              <label class="dm-label" for="dm-restrict">Restrictions / injuries</label>
               <textarea id="dm-restrict" class="dm-input dm-textarea" rows="2"
                 placeholder="e.g. left knee tweaky on deep squats, shoulder mobility limited, lower back sensitive…"
                 data-bind="restrictions" maxlength="800"></textarea>
             </div>
 
             <div class="dm-field">
-              <label class="dm-label">health flags — check anything that applies</label>
+              <label class="dm-label">Health flags — check anything that applies</label>
               <div class="dm-flags" data-bind="healthFlags">
-                <label class="dm-flag"><input type="checkbox" data-flag="cardiovascular" /><span>cardiovascular condition</span></label>
-                <label class="dm-flag"><input type="checkbox" data-flag="pregnancy" /><span>pregnant / postpartum</span></label>
-                <label class="dm-flag"><input type="checkbox" data-flag="post-surgical" /><span>post-surgical / rehab</span></label>
-                <label class="dm-flag"><input type="checkbox" data-flag="medication" /><span>on meds affecting exercise</span></label>
-                <label class="dm-flag"><input type="checkbox" data-flag="eating-history" /><span>eating disorder history</span></label>
+                <label class="dm-flag"><input type="checkbox" data-flag="cardiovascular" /><span>Cardiovascular condition</span></label>
+                <label class="dm-flag"><input type="checkbox" data-flag="pregnancy" /><span>Pregnant / postpartum</span></label>
+                <label class="dm-flag"><input type="checkbox" data-flag="post-surgical" /><span>Post-surgical / rehab</span></label>
+                <label class="dm-flag"><input type="checkbox" data-flag="medication" /><span>On meds affecting exercise</span></label>
+                <label class="dm-flag"><input type="checkbox" data-flag="eating-history" /><span>Eating disorder history</span></label>
               </div>
               <p class="dm-helper" data-bind="flag-helper" hidden>Coach will lean conservative on intensity and recommend clinician sign-off.</p>
             </div>
 
             <div class="dm-field">
-              <label class="dm-label" for="dm-current">what does a typical week of activity look like right now?</label>
+              <label class="dm-label" for="dm-current">What does a typical week of activity look like right now?</label>
               <textarea id="dm-current" class="dm-input dm-textarea" rows="2"
                 placeholder="e.g. 2x gym (push/pull), 1x easy run, daily walk to work…"
                 data-bind="currentActivity" maxlength="600"></textarea>
             </div>
           </fieldset>
 
-          <!-- STEP 3 -->
           <fieldset class="dm-step" data-step="3" hidden>
-            <legend class="dm-step-title">metrics — all optional, skip what you don't know.</legend>
+            <legend class="dm-step-title">Metrics — all optional, skip what you don't know.</legend>
 
             <div class="dm-grid-2">
               <div class="dm-field">
-                <label class="dm-label" for="dm-age">age</label>
+                <label class="dm-label" for="dm-age">Age</label>
                 <input id="dm-age" type="number" class="dm-input" min="12" max="110" placeholder="e.g. 32" data-bind="age" />
               </div>
               <div class="dm-field">
-                <label class="dm-label" for="dm-weight">weight (kg)</label>
+                <label class="dm-label" for="dm-weight">Weight (kg)</label>
                 <input id="dm-weight" type="number" class="dm-input" min="25" max="350" step="0.1" placeholder="e.g. 72.5" data-bind="weightKg" />
               </div>
               <div class="dm-field">
-                <label class="dm-label" for="dm-height">height (cm)</label>
+                <label class="dm-label" for="dm-height">Height (cm)</label>
                 <input id="dm-height" type="number" class="dm-input" min="100" max="250" placeholder="e.g. 178" data-bind="heightCm" />
               </div>
               <div class="dm-field">
-                <label class="dm-label" for="dm-rhr">resting HR (bpm)</label>
+                <label class="dm-label" for="dm-rhr">Resting HR (bpm)</label>
                 <input id="dm-rhr" type="number" class="dm-input" min="30" max="200" placeholder="if you know it" data-bind="restingHr" />
               </div>
               <div class="dm-field dm-grid-2-span">
-                <label class="dm-label" for="dm-sleep">avg sleep (hours)</label>
+                <label class="dm-label" for="dm-sleep">Avg sleep (hours)</label>
                 <input id="dm-sleep" type="number" class="dm-input" min="0" max="16" step="0.5" placeholder="e.g. 7.5" data-bind="sleepHours" />
               </div>
             </div>
 
-            <div class="dm-final-disclaim">
-              <strong>before you submit:</strong> Coach is an LLM-generated voice. recommendations are grounded in web search results — not a doctor. don't follow anything that conflicts with medical advice.
+            <div class="dm-callout">
+              <strong>Before you submit:</strong> Coach is an LLM-generated voice. Recommendations are grounded in web search results — not a doctor. Don't follow anything that conflicts with medical advice.
             </div>
           </fieldset>
 
           <div class="dm-actions">
-            <button type="button" class="dm-btn dm-btn-ghost" data-action="back" hidden>back</button>
-            <button type="button" class="dm-btn dm-btn-primary" data-action="next">next →</button>
-            <button type="button" class="dm-btn dm-btn-primary dm-btn-submit" data-action="submit" hidden>generate protocol →</button>
+            <button type="button" class="dm-btn dm-btn-ghost" data-action="back" hidden>← Back</button>
+            <button type="button" class="dm-btn dm-btn-primary dm-actions-right" data-action="next">Next</button>
+            <button type="button" class="dm-btn dm-btn-primary dm-btn-submit dm-actions-right" data-action="submit" hidden>Generate protocol</button>
           </div>
         </form>
       </div>
@@ -174,26 +164,37 @@ import Layout from '../../../layouts/Layout.astro';
     <!-- GENERATING -->
     <section class="dm-view" data-view-target="generating" hidden>
       <div class="dm-center">
-        <div class="dm-orb dm-orb-lg" aria-hidden="true"><span class="dm-orb-ball"></span></div>
+        <div class="dm-spinner" aria-hidden="true"></div>
         <p class="dm-eyebrow">Coach is reading your file</p>
-        <h2 class="dm-h2" data-bind="generating-status">cross-referencing the literature…</h2>
-        <p class="dm-helper">first generation can take 20–40s with grounded search. don't refresh.</p>
+        <h2 class="dm-h2" data-bind="generating-status">Cross-referencing the literature…</h2>
+        <p class="dm-helper">First generation can take 20–40s with grounded search. Don't refresh.</p>
       </div>
     </section>
 
     <!-- DASHBOARD -->
     <section class="dm-view dm-view-dashboard" data-view-target="dashboard" hidden>
 
+      <!-- HERO -->
       <div class="dm-hero">
-        <div class="dm-hero-meta">
-          <p class="dm-eyebrow">your protocol</p>
-          <h1 class="dm-h1" data-bind="plan-title">—</h1>
-          <p class="dm-summary" data-bind="plan-summary">—</p>
-          <div class="dm-hero-stats" data-bind="hero-stats"></div>
+        <div class="dm-hero-top">
+          <p class="dm-eyebrow">Your protocol</p>
+          <div class="dm-hero-actions">
+            <button class="dm-btn dm-btn-ghost dm-btn-sm" type="button" data-action="regen">Regenerate</button>
+            <button class="dm-btn dm-btn-ghost dm-btn-sm" type="button" data-action="reset">Start over</button>
+          </div>
         </div>
-        <div class="dm-hero-actions">
-          <button class="dm-btn dm-btn-ghost dm-btn-sm" type="button" data-action="regen">regenerate</button>
-          <button class="dm-btn dm-btn-ghost dm-btn-sm" type="button" data-action="reset">start over</button>
+        <h1 class="dm-h1" data-bind="plan-title">—</h1>
+        <p class="dm-summary" data-bind="plan-summary">—</p>
+
+        <div class="dm-progress-card">
+          <div class="dm-progress-row">
+            <span class="dm-progress-label" data-bind="progress-label">0 of 0 sessions</span>
+            <span class="dm-progress-pct" data-bind="progress-pct">0%</span>
+          </div>
+          <div class="dm-progress-track">
+            <div class="dm-progress-fill" data-bind="progress-fill" style="width:0%"></div>
+          </div>
+          <div class="dm-progress-meta" data-bind="progress-meta"></div>
         </div>
       </div>
 
@@ -202,740 +203,854 @@ import Layout from '../../../layouts/Layout.astro';
         <!-- ROADMAP -->
         <section class="dm-panel dm-panel-roadmap">
           <header class="dm-panel-head">
-            <h3 class="dm-panel-title">roadmap</h3>
-            <div class="dm-week-tabs" data-bind="week-tabs"></div>
+            <div>
+              <h2 class="dm-h3" data-bind="week-label">Week 1</h2>
+              <p class="dm-panel-sub" data-bind="week-focus">—</p>
+            </div>
+            <div class="dm-week-nav">
+              <button class="dm-icon-btn" type="button" data-action="prev-week" aria-label="Previous week">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 12 6 8l4-4"/></svg>
+              </button>
+              <div class="dm-week-pages" data-bind="week-pages"></div>
+              <button class="dm-icon-btn" type="button" data-action="next-week" aria-label="Next week">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m6 4 4 4-4 4"/></svg>
+              </button>
+            </div>
           </header>
-          <div class="dm-week-focus" data-bind="week-focus"></div>
-          <div class="dm-sessions" data-bind="sessions"></div>
+
+          <div class="dm-calendar" data-bind="calendar"></div>
+
+          <div class="dm-detail" data-bind="session-detail" hidden></div>
         </section>
 
         <!-- COACH -->
         <aside class="dm-panel dm-panel-coach">
           <header class="dm-panel-head">
-            <div class="dm-coach-id">
-              <div class="dm-orb dm-orb-md" aria-hidden="true"><span class="dm-orb-ball"></span></div>
-              <div>
-                <div class="dm-coach-name">Coach</div>
-                <div class="dm-coach-sub">listening</div>
-              </div>
-            </div>
+            <h2 class="dm-h3">Coach</h2>
+            <span class="dm-coach-status" data-bind="coach-status">listening</span>
           </header>
           <div class="dm-coach-log" data-bind="coach-log"></div>
           <form class="dm-chat" data-bind="chat-form">
             <textarea class="dm-input dm-chat-input" rows="2"
-              placeholder="tell Coach what to change, ask a question, or talk through it…"
+              placeholder="Ask Coach a question, or tell them what to change…"
               data-bind="chat-input" maxlength="1000"></textarea>
-            <button type="submit" class="dm-btn dm-btn-primary dm-btn-send" data-action="send">send →</button>
+            <div class="dm-chat-row">
+              <span class="dm-chat-hint">⏎ to send · shift+⏎ for newline</span>
+              <button type="submit" class="dm-btn dm-btn-primary dm-btn-send" data-action="send">Send</button>
+            </div>
           </form>
         </aside>
 
-        <!-- TIPS -->
-        <section class="dm-panel dm-panel-tips">
-          <header class="dm-panel-head"><h3 class="dm-panel-title">diet</h3></header>
-          <ul class="dm-tips" data-bind="diet-tips"></ul>
-        </section>
-
-        <section class="dm-panel dm-panel-tips">
-          <header class="dm-panel-head"><h3 class="dm-panel-title">lifestyle</h3></header>
-          <ul class="dm-tips" data-bind="lifestyle-tips"></ul>
-        </section>
-
-        <!-- CITATIONS -->
-        <section class="dm-panel dm-panel-cites">
-          <header class="dm-panel-head">
-            <h3 class="dm-panel-title">sources</h3>
-            <span class="dm-cite-count" data-bind="cite-count">0</span>
-          </header>
-          <ul class="dm-cites" data-bind="citations"></ul>
-        </section>
-
       </div>
+
+      <!-- TIPS row -->
+      <div class="dm-tips-grid">
+        <section class="dm-panel">
+          <header class="dm-panel-head"><h2 class="dm-h3">Diet</h2></header>
+          <ol class="dm-tips" data-bind="diet-tips"></ol>
+        </section>
+
+        <section class="dm-panel">
+          <header class="dm-panel-head"><h2 class="dm-h3">Lifestyle</h2></header>
+          <ol class="dm-tips" data-bind="lifestyle-tips"></ol>
+        </section>
+      </div>
+
+      <!-- SOURCES -->
+      <section class="dm-sources">
+        <header class="dm-sources-head">
+          <h2 class="dm-h3">Sources</h2>
+          <span class="dm-sources-count" data-bind="cite-count">0</span>
+        </header>
+        <ul class="dm-cites" data-bind="citations"></ul>
+        <p class="dm-disclaim-foot">Not medical advice. Experimental. Your data lives at this URL — bookmark it. Flagged conditions get conservative defaults; clear with a clinician before training.</p>
+      </section>
+
     </section>
 
     <!-- ERROR -->
     <section class="dm-view" data-view-target="error" hidden>
       <div class="dm-center">
-        <p class="dm-eyebrow">protocol failure</p>
-        <h2 class="dm-h2" data-bind="error-message">something went sideways.</h2>
-        <button class="dm-btn dm-btn-primary" type="button" data-action="reset">start over</button>
+        <p class="dm-eyebrow">Protocol failure</p>
+        <h2 class="dm-h2" data-bind="error-message">Something went sideways.</h2>
+        <button class="dm-btn dm-btn-primary" type="button" data-action="reset">Start over</button>
       </div>
     </section>
 
   </main>
 
   <style>
-    /* ---- root + reset ---- */
-    :global(html), :global(body) { background: #fefdf8; }
+    /* ---- root ---- */
+    :global(html), :global(body) { background: #fafaf7; }
 
     .dm-root {
-      --dm-bg: #fefdf8;
-      --dm-bg-2: #fbf9f1;
-      --dm-surface: #ffffff;
-      --dm-surface-2: #faf8f1;
-      --dm-border: #ece7d6;
-      --dm-border-strong: #d8d2bc;
-      --dm-text: #1a1814;
-      --dm-text-2: #4d4a40;
-      --dm-text-3: #8a8576;
-      --dm-orange: #f97316;
-      --dm-orange-soft: #ffedd5;
-      --dm-orange-strong: #ea580c;
-      --dm-green: #16a34a;
-      --dm-green-soft: #dcfce7;
-      --dm-blue: #0284c7;
-      --dm-blue-soft: #e0f2fe;
-      --dm-amber: #d97706;
-      --dm-amber-soft: #fef3c7;
-      --dm-red: #dc2626;
+      --bg: #fafaf7;
+      --bg-2: #f4f3ee;
+      --surface: #ffffff;
+      --surface-2: #f7f6f1;
+      --line: #ececea;
+      --line-2: #d8d6d2;
+      --ink: #0e0e0c;
+      --ink-2: #43423d;
+      --ink-3: #8a877e;
+      --accent: #f97316;
+      --accent-soft: #fff4eb;
+      --accent-strong: #c2410c;
+      --green: #16a34a;
+      --green-soft: #f0fdf4;
+      --blue: #0284c7;
+      --blue-soft: #f0f9ff;
+      --amber: #ca8a04;
+      --amber-soft: #fef9e6;
+      --rest: #b8b6b1;
+      --shadow-1: 0 1px 2px rgba(20,15,10,0.04), 0 4px 12px rgba(20,15,10,0.04);
+      --shadow-2: 0 2px 6px rgba(20,15,10,0.06), 0 10px 30px rgba(20,15,10,0.06);
 
       min-height: 100vh;
-      background:
-        radial-gradient(900px 500px at 90% -10%, rgba(249,115,22,0.10), transparent 65%),
-        radial-gradient(700px 400px at -10% 10%, rgba(2,132,199,0.06), transparent 60%),
-        var(--dm-bg);
-      color: var(--dm-text);
-      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Inter", Roboto, sans-serif;
+      font-feature-settings: "ss01", "cv11", "tnum";
       -webkit-font-smoothing: antialiased;
-      padding: 1.5rem clamp(1rem, 4vw, 2rem) 6rem;
-      line-height: 1.5;
-      position: relative;
-    }
-
-    /* ---- glowing orb ---- */
-    .dm-orb {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 28px; height: 28px;
-    }
-    :global(.dm-orb-ball) {
-      width: 14px; height: 14px;
-      border-radius: 50%;
-      background: radial-gradient(circle at 35% 28%, #ffedd5 0%, #fdba74 38%, #fb923c 70%, #ea580c 100%);
-      box-shadow:
-        0 0 12px rgba(251, 146, 60, 0.55),
-        0 0 26px rgba(251, 146, 60, 0.28);
-      animation: dmOrb 4.2s ease-in-out infinite;
-      will-change: transform, box-shadow;
-    }
-    @keyframes dmOrb {
-      0%, 100% {
-        transform: scale(1);
-        box-shadow: 0 0 12px rgba(251,146,60,0.50), 0 0 26px rgba(251,146,60,0.22);
-        filter: brightness(1);
-      }
-      50% {
-        transform: scale(1.10);
-        box-shadow: 0 0 20px rgba(251,146,60,0.72), 0 0 40px rgba(251,146,60,0.42);
-        filter: brightness(1.08);
-      }
-    }
-    .dm-orb-sm { width: 18px; height: 18px; }
-    :global(.dm-orb-sm > .dm-orb-ball) { width: 9px; height: 9px; }
-    .dm-orb-md { width: 44px; height: 44px; }
-    :global(.dm-orb-md > .dm-orb-ball) { width: 22px; height: 22px; }
-    .dm-orb-lg { width: 88px; height: 88px; }
-    :global(.dm-orb-lg > .dm-orb-ball) {
-      width: 44px; height: 44px;
-      box-shadow: 0 0 24px rgba(251,146,60,0.55), 0 0 60px rgba(251,146,60,0.35);
+      padding: 1.25rem clamp(1rem, 4vw, 2rem) 6rem;
+      line-height: 1.55;
+      letter-spacing: -0.005em;
     }
 
     /* ---- nav ---- */
     .dm-nav {
+      max-width: 84rem; margin: 0 auto;
       display: flex; align-items: center; justify-content: space-between;
-      gap: 1rem; padding: 0.6rem 0.2rem 1rem; flex-wrap: wrap;
+      gap: 1rem; padding: 0.4rem 0 2rem; flex-wrap: wrap;
     }
     .dm-back {
-      color: var(--dm-text-3);
-      text-decoration: none;
-      font-size: 0.85rem;
+      color: var(--ink-3); text-decoration: none;
+      font-size: 0.875rem;
       transition: color 180ms;
-      font-family: ui-monospace, "SF Mono", Menlo, monospace;
     }
-    .dm-back:hover { color: var(--dm-text); }
+    .dm-back:hover { color: var(--ink); }
     .dm-brand {
-      display: inline-flex; align-items: center; gap: 0.55rem;
-      font-family: ui-monospace, "SF Mono", Menlo, monospace;
-    }
-    .dm-brand-name {
-      font-size: 0.95rem; font-weight: 600;
-      letter-spacing: 0.06em;
-      color: var(--dm-text);
-    }
-    .dm-brand-sub {
-      font-size: 0.7rem; color: var(--dm-text-3);
-      letter-spacing: 0.04em;
+      font-size: 0.84rem; font-weight: 500;
+      letter-spacing: 0.02em; color: var(--ink);
     }
     .dm-bookmark {
-      display: inline-flex; align-items: center; gap: 0.5rem;
-      background: var(--dm-surface);
-      border: 1px solid var(--dm-border);
-      color: var(--dm-text-2);
-      font-family: ui-monospace, "SF Mono", Menlo, monospace;
-      font-size: 0.72rem;
-      padding: 0.45rem 0.7rem;
-      border-radius: 8px;
-      cursor: pointer;
+      display: inline-flex; align-items: center; gap: 0.45rem;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      color: var(--ink-2);
+      font-family: inherit; font-size: 0.8rem;
+      padding: 0.4rem 0.7rem;
+      border-radius: 8px; cursor: pointer;
       transition: all 180ms;
+      box-shadow: var(--shadow-1);
     }
-    .dm-bookmark:hover {
-      border-color: var(--dm-orange);
-      color: var(--dm-orange-strong);
-      box-shadow: 0 4px 12px -4px rgba(249,115,22,0.25);
+    .dm-bookmark:hover { color: var(--ink); border-color: var(--line-2); }
+    .dm-bookmark.dm-copied { color: var(--green); border-color: var(--green); }
+    .dm-icon-bookmark { width: 13px; height: 13px; }
+    .dm-bookmark-id {
+      color: var(--ink-3); font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      font-size: 0.72rem;
     }
-    .dm-bookmark.dm-copied { border-color: var(--dm-green); color: var(--dm-green); }
-    .dm-bookmark-id { color: var(--dm-orange-strong); }
-
-    /* ---- disclaimer ---- */
-    .dm-disclaim {
-      display: flex; gap: 0.7rem; align-items: flex-start;
-      padding: 0.7rem 1rem;
-      background: var(--dm-amber-soft);
-      border: 1px solid #f3e1a8;
-      border-radius: 10px;
-      font-size: 0.82rem;
-      color: #5a3d05;
-      margin-bottom: 1.5rem;
-    }
-    .dm-disclaim-tag {
-      font-family: ui-monospace, "SF Mono", Menlo, monospace;
-      font-size: 0.7rem; color: var(--dm-amber);
-      letter-spacing: 0.08em; text-transform: uppercase;
-      padding-top: 0.05rem; flex-shrink: 0;
-    }
+    .dm-bookmark.dm-copied .dm-bookmark-id { color: var(--green); }
 
     /* ---- views ---- */
-    .dm-view { max-width: 78rem; margin: 0 auto; }
+    .dm-view { max-width: 84rem; margin: 0 auto; }
     .dm-view[hidden] { display: none !important; }
 
     /* ---- typography ---- */
     .dm-eyebrow {
-      font-family: ui-monospace, "SF Mono", Menlo, monospace;
-      font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
-      color: var(--dm-orange-strong); margin: 0 0 0.6rem;
+      font-size: 0.78rem; font-weight: 500;
+      color: var(--accent-strong);
+      margin: 0 0 0.7rem;
+      letter-spacing: 0.01em;
     }
     .dm-h1 {
-      font-size: clamp(1.7rem, 3.8vw, 2.6rem);
-      font-weight: 600; letter-spacing: -0.015em;
-      line-height: 1.1; margin: 0;
-      color: var(--dm-text);
+      font-size: clamp(2rem, 4.5vw, 3rem);
+      font-weight: 600; letter-spacing: -0.025em;
+      line-height: 1.05; margin: 0;
+      color: var(--ink);
     }
-    .dm-h2 { font-size: clamp(1.2rem, 2.6vw, 1.6rem); font-weight: 600; margin: 0 0 0.4rem; }
-    .dm-lede { margin-top: 0.8rem; color: var(--dm-text-2); font-size: 1rem; }
-    .dm-summary { margin-top: 0.6rem; color: var(--dm-text-2); font-size: 0.95rem; }
-    .dm-helper { font-size: 0.78rem; color: var(--dm-text-3); margin: 0.5rem 0 0; }
+    .dm-h2 {
+      font-size: clamp(1.25rem, 2.6vw, 1.6rem);
+      font-weight: 600; letter-spacing: -0.015em;
+      margin: 0 0 0.4rem;
+    }
+    .dm-h3 {
+      font-size: 1.05rem; font-weight: 600;
+      letter-spacing: -0.01em;
+      margin: 0; color: var(--ink);
+    }
+    .dm-lede {
+      margin-top: 0.85rem;
+      color: var(--ink-2); font-size: 1.02rem;
+      max-width: 36rem;
+    }
+    .dm-summary {
+      margin: 0.65rem 0 0;
+      color: var(--ink-2); font-size: 1.02rem;
+      max-width: 50rem;
+    }
+    .dm-helper { font-size: 0.85rem; color: var(--ink-3); margin: 0.4rem 0 0; }
 
     .dm-center {
       display: flex; flex-direction: column; align-items: center;
-      gap: 1rem; padding: 5rem 1rem; text-align: center; color: var(--dm-text-2);
+      gap: 1rem; padding: 6rem 1rem; text-align: center; color: var(--ink-2);
     }
 
+    .dm-spinner {
+      width: 28px; height: 28px;
+      border: 2px solid var(--line);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: dmSpin 0.9s linear infinite;
+    }
+    @keyframes dmSpin { to { transform: rotate(360deg); } }
+
     /* ---- intake ---- */
-    .dm-intake-shell { max-width: 42rem; margin: 1rem auto 0; }
+    .dm-intake-shell { max-width: 36rem; margin: 1rem auto 0; }
     .dm-progress {
-      height: 3px; background: var(--dm-border); border-radius: 2px;
+      height: 3px; background: var(--line); border-radius: 2px;
       overflow: hidden; margin: 1.6rem 0 1.8rem;
     }
     .dm-progress-bar {
       height: 100%;
-      background: linear-gradient(90deg, var(--dm-orange) 0%, #fbbf24 100%);
+      background: linear-gradient(90deg, var(--accent) 0%, #fbbf24 100%);
       width: 33%; transition: width 380ms cubic-bezier(.2,.8,.2,1);
     }
     .dm-step { border: none; padding: 0; margin: 0; }
     .dm-step[hidden] { display: none; }
     .dm-step-title {
-      font-size: 1.2rem; font-weight: 600; color: var(--dm-text);
-      padding: 0; margin: 0 0 1.4rem;
+      font-size: 1.25rem; font-weight: 600;
+      letter-spacing: -0.015em;
+      color: var(--ink); padding: 0; margin: 0 0 1.5rem;
     }
-    .dm-field { margin-bottom: 1.4rem; }
+    .dm-field { margin-bottom: 1.5rem; }
     .dm-label {
       display: block;
-      font-family: ui-monospace, "SF Mono", Menlo, monospace;
-      font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase;
-      color: var(--dm-text-3); margin-bottom: 0.5rem;
+      font-size: 0.82rem; font-weight: 500;
+      color: var(--ink-2); margin-bottom: 0.5rem;
     }
 
     .dm-input {
       width: 100%; box-sizing: border-box;
-      background: var(--dm-surface);
-      border: 1px solid var(--dm-border);
-      border-radius: 8px; color: var(--dm-text);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px; color: var(--ink);
       font-family: inherit; font-size: 0.95rem;
       padding: 0.72rem 0.9rem;
       transition: border-color 160ms, box-shadow 160ms;
+      box-shadow: var(--shadow-1);
     }
     .dm-input:focus {
-      outline: none;
-      border-color: var(--dm-orange);
-      box-shadow: 0 0 0 3px rgba(249,115,22,0.18);
+      outline: none; border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(249,115,22,0.18), var(--shadow-1);
     }
     .dm-textarea { resize: vertical; min-height: 3rem; line-height: 1.5; }
 
-    /* chips */
-    .dm-chips { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+    .dm-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
     .dm-chip {
-      background: var(--dm-surface);
-      border: 1px solid var(--dm-border);
-      color: var(--dm-text-2);
-      font-family: inherit; font-size: 0.85rem;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      color: var(--ink-2);
+      font-family: inherit; font-size: 0.88rem; font-weight: 500;
       padding: 0.45rem 0.95rem;
-      border-radius: 999px;
+      border-radius: 8px;
       cursor: pointer;
       transition: all 160ms;
     }
-    .dm-chip:hover {
-      border-color: var(--dm-orange);
-      color: var(--dm-orange-strong);
-    }
+    .dm-chip:hover { border-color: var(--line-2); color: var(--ink); }
     .dm-chip[aria-pressed="true"] {
-      border-color: var(--dm-orange);
-      background: var(--dm-orange-soft);
-      color: var(--dm-orange-strong);
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent-strong);
     }
 
-    /* sliders (global so JS-injected mini-sliders inherit) */
-    .dm-slider-row { display: flex; align-items: center; gap: 0.9rem; }
+    .dm-slider-row { display: flex; align-items: center; gap: 0.95rem; }
     :global(.dm-slider) {
       flex: 1; -webkit-appearance: none; appearance: none;
-      height: 4px; background: #ece7d6; border-radius: 2px; outline: none;
+      height: 4px; background: #ececea; border-radius: 2px; outline: none;
     }
     :global(.dm-slider::-webkit-slider-thumb) {
       -webkit-appearance: none;
       width: 18px; height: 18px;
       border-radius: 50%; background: #f97316;
       cursor: pointer;
-      box-shadow: 0 0 0 4px rgba(249,115,22,0.18);
+      box-shadow: 0 0 0 3px rgba(249,115,22,0.18);
       transition: box-shadow 160ms;
     }
     :global(.dm-slider::-webkit-slider-thumb:hover) {
-      box-shadow: 0 0 0 6px rgba(249,115,22,0.28);
+      box-shadow: 0 0 0 5px rgba(249,115,22,0.28);
     }
     :global(.dm-slider::-moz-range-thumb) {
       width: 18px; height: 18px; border: none; border-radius: 50%;
       background: #f97316; cursor: pointer;
     }
     .dm-slider-out {
-      font-family: ui-monospace, "SF Mono", Menlo, monospace;
-      font-size: 0.95rem; color: var(--dm-orange-strong);
+      font-variant-numeric: tabular-nums;
+      font-size: 1rem; font-weight: 600;
+      color: var(--accent-strong);
       min-width: 2.4rem; text-align: right;
     }
 
-    /* flags */
-    .dm-flags { display: grid; grid-template-columns: 1fr; gap: 0.5rem; }
+    .dm-flags { display: grid; grid-template-columns: 1fr; gap: 0.4rem; }
     @media (min-width: 600px) { .dm-flags { grid-template-columns: 1fr 1fr; } }
     .dm-flag {
       display: flex; align-items: center; gap: 0.6rem;
       padding: 0.6rem 0.85rem;
-      background: var(--dm-surface);
-      border: 1px solid var(--dm-border);
+      background: var(--surface);
+      border: 1px solid var(--line);
       border-radius: 8px; cursor: pointer;
-      font-size: 0.88rem; color: var(--dm-text-2);
-      transition: border-color 160ms, background 160ms;
+      font-size: 0.88rem; color: var(--ink-2);
+      transition: all 160ms;
     }
-    .dm-flag:hover { border-color: var(--dm-amber); background: var(--dm-amber-soft); }
-    .dm-flag input { accent-color: var(--dm-amber); }
-    .dm-flag input:checked + span { color: var(--dm-amber); font-weight: 500; }
+    .dm-flag:hover { border-color: var(--amber); background: var(--amber-soft); }
+    .dm-flag input { accent-color: var(--amber); }
+    .dm-flag input:checked + span { color: var(--amber); font-weight: 500; }
 
     .dm-grid-2 { display: grid; gap: 1rem; grid-template-columns: 1fr; }
     @media (min-width: 600px) { .dm-grid-2 { grid-template-columns: 1fr 1fr; } }
     .dm-grid-2-span { grid-column: 1 / -1; }
 
-    .dm-final-disclaim {
+    .dm-callout {
       margin-top: 1.4rem; padding: 0.9rem 1rem;
-      background: var(--dm-amber-soft);
+      background: var(--amber-soft);
       border: 1px solid #f3e1a8;
       border-radius: 10px;
-      font-size: 0.85rem; color: #5a3d05;
+      font-size: 0.88rem; color: #5a3d05;
     }
 
-    /* buttons (global so JS-injected buttons inherit) */
-    .dm-actions { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; margin-top: 1.6rem; }
+    /* buttons */
+    .dm-actions {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 0.6rem; margin-top: 1.8rem;
+    }
+    .dm-actions-right { margin-left: auto; }
     :global(.dm-btn) {
       font-family: inherit; font-size: 0.9rem; font-weight: 500;
-      padding: 0.7rem 1.4rem; border-radius: 8px;
+      padding: 0.65rem 1.3rem; border-radius: 8px;
       border: 1px solid transparent;
-      cursor: pointer; transition: all 180ms;
+      cursor: pointer;
+      transition: all 160ms;
+      letter-spacing: -0.005em;
     }
     :global(.dm-btn-primary) {
-      background: #f97316; color: #ffffff;
-      border-color: #f97316;
-      box-shadow: 0 4px 14px -4px rgba(249,115,22,0.45);
+      background: #0e0e0c; color: #ffffff; border-color: #0e0e0c;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.06), 0 4px 14px rgba(20,15,10,0.10);
     }
     :global(.dm-btn-primary:hover) {
-      background: #ea580c;
-      border-color: #ea580c;
-      box-shadow: 0 8px 22px -6px rgba(249,115,22,0.55);
+      background: #2a2a26; border-color: #2a2a26;
       transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08), 0 8px 22px rgba(20,15,10,0.14);
     }
+    :global(.dm-btn-primary:active) { transform: translateY(0); }
     :global(.dm-btn-ghost) {
-      background: #ffffff;
-      color: #4d4a40;
-      border-color: #ece7d6;
+      background: #ffffff; color: #43423d;
+      border-color: #ececea;
+      box-shadow: 0 1px 2px rgba(20,15,10,0.04);
     }
     :global(.dm-btn-ghost:hover) {
-      color: #1a1814;
-      border-color: #d8d2bc;
+      color: #0e0e0c; border-color: #d8d6d2;
     }
-    :global(.dm-btn-sm) { padding: 0.5rem 0.95rem; font-size: 0.82rem; }
+    :global(.dm-btn-sm) { padding: 0.45rem 0.9rem; font-size: 0.85rem; }
     :global(.dm-btn[hidden]) { display: none !important; }
     :global(.dm-btn:disabled) { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 
-    /* ---- dashboard ---- */
-    .dm-hero {
-      display: flex; justify-content: space-between; align-items: flex-end;
-      gap: 1rem; flex-wrap: wrap; margin-bottom: 1.6rem;
+    /* ---- DASHBOARD: hero ---- */
+    .dm-hero { margin-bottom: 1.75rem; }
+    .dm-hero-top {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 1rem; margin-bottom: 0.4rem;
     }
-    .dm-hero-actions { display: flex; gap: 0.5rem; }
-    :global(.dm-hero-stats) {
-      display: flex; flex-wrap: wrap; gap: 0.8rem; margin-top: 0.9rem;
-    }
-    :global(.dm-stat) {
-      display: inline-flex; align-items: center; gap: 0.4rem;
-      padding: 0.32rem 0.7rem;
-      background: var(--dm-surface);
-      border: 1px solid var(--dm-border);
-      border-radius: 999px;
-      font-family: ui-monospace, "SF Mono", Menlo, monospace;
-      font-size: 0.72rem; color: var(--dm-text-2);
-    }
-    :global(.dm-stat-num) { color: var(--dm-orange-strong); font-weight: 600; }
+    .dm-hero-actions { display: flex; gap: 0.4rem; flex-shrink: 0; }
 
+    .dm-progress-card {
+      margin-top: 1.4rem;
+      padding: 1.1rem 1.25rem;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: var(--shadow-1);
+    }
+    .dm-progress-row {
+      display: flex; justify-content: space-between; align-items: baseline;
+      margin-bottom: 0.6rem;
+    }
+    .dm-progress-label {
+      font-size: 0.92rem; color: var(--ink-2);
+      font-variant-numeric: tabular-nums;
+    }
+    .dm-progress-pct {
+      font-size: 1.45rem; font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--ink); font-variant-numeric: tabular-nums;
+    }
+    .dm-progress-track {
+      height: 6px; background: var(--bg-2);
+      border-radius: 999px; overflow: hidden;
+      position: relative;
+    }
+    .dm-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent) 0%, #fbbf24 100%);
+      border-radius: inherit;
+      transition: width 480ms cubic-bezier(.2,.8,.2,1);
+    }
+    :global(.dm-progress-meta) {
+      display: flex; gap: 1.25rem; flex-wrap: wrap;
+      margin-top: 0.85rem;
+      font-size: 0.85rem; color: var(--ink-3);
+    }
+    :global(.dm-progress-meta-item) {
+      display: inline-flex; align-items: baseline; gap: 0.35rem;
+    }
+    :global(.dm-progress-meta-num) {
+      color: var(--ink); font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ---- panels ---- */
     .dm-grid {
       display: grid; gap: 1rem; grid-template-columns: 1fr;
     }
     @media (min-width: 980px) {
       .dm-grid {
-        grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
-        grid-template-areas:
-          "roadmap coach"
-          "diet coach"
-          "lifestyle coach"
-          "cites cites";
+        grid-template-columns: minmax(0, 2.1fr) minmax(320px, 1fr);
       }
-      .dm-panel-roadmap { grid-area: roadmap; }
-      .dm-panel-coach { grid-area: coach; }
-      .dm-panel-tips:nth-of-type(3) { grid-area: diet; }
-      .dm-panel-tips:nth-of-type(4) { grid-area: lifestyle; }
-      .dm-panel-cites { grid-area: cites; }
     }
 
     .dm-panel {
-      background: var(--dm-surface);
-      border: 1px solid var(--dm-border);
+      background: var(--surface);
+      border: 1px solid var(--line);
       border-radius: 14px;
-      padding: 1.1rem 1.1rem 1.2rem;
-      transition: box-shadow 220ms, border-color 220ms;
-    }
-    .dm-panel:hover {
-      border-color: var(--dm-border-strong);
-      box-shadow: 0 8px 30px -16px rgba(120, 100, 60, 0.15);
-    }
-    .dm-panel-coach {
-      background: linear-gradient(165deg, #ffffff 0%, #fff8ef 100%);
+      padding: 1.25rem 1.25rem 1.4rem;
+      box-shadow: var(--shadow-1);
+      transition: box-shadow 220ms;
     }
     .dm-panel-head {
-      display: flex; align-items: center; justify-content: space-between;
-      gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.9rem;
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 0.6rem; flex-wrap: wrap;
+      margin-bottom: 1rem;
     }
-    .dm-panel-title {
-      font-family: ui-monospace, "SF Mono", Menlo, monospace;
-      font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase;
-      color: var(--dm-text-3); margin: 0; font-weight: 500;
+    .dm-panel-sub {
+      margin: 0.3rem 0 0;
+      font-size: 0.92rem; color: var(--ink-2);
+      max-width: 36rem;
     }
 
-    /* weeks */
-    .dm-week-tabs { display: flex; flex-wrap: wrap; gap: 0.3rem; }
-    :global(.dm-week-tab) {
-      background: var(--dm-surface);
-      border: 1px solid var(--dm-border);
-      color: var(--dm-text-2);
-      font-family: ui-monospace, "SF Mono", Menlo, monospace;
-      font-size: 0.72rem;
-      padding: 0.32rem 0.6rem;
-      border-radius: 6px; cursor: pointer;
+    /* week nav */
+    .dm-week-nav {
+      display: inline-flex; align-items: center; gap: 0.25rem;
+      flex-shrink: 0;
+    }
+    .dm-icon-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 30px; height: 30px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      color: var(--ink-2);
+      cursor: pointer;
       transition: all 160ms;
     }
-    :global(.dm-week-tab:hover) { color: var(--dm-text); border-color: var(--dm-border-strong); }
-    :global(.dm-week-tab.dm-active) {
-      background: var(--dm-orange-soft);
-      border-color: var(--dm-orange);
-      color: var(--dm-orange-strong);
+    .dm-icon-btn:hover { color: var(--ink); border-color: var(--line-2); }
+    .dm-icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .dm-icon-btn svg { width: 14px; height: 14px; }
+    :global(.dm-week-pages) {
+      display: inline-flex; gap: 0.2rem; padding: 0 0.25rem;
     }
-    :global(.dm-week-focus) {
-      font-size: 0.92rem; color: var(--dm-text-2);
-      padding: 0.7rem 0.95rem;
-      background: var(--dm-bg-2);
-      border: 1px solid var(--dm-border);
-      border-radius: 10px;
-      margin-bottom: 0.9rem;
+    :global(.dm-week-page) {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--line-2);
+      transition: all 160ms;
+    }
+    :global(.dm-week-page.dm-active) {
+      width: 18px; border-radius: 3px; background: var(--ink);
+    }
+    :global(.dm-week-page.dm-progress-some) {
+      background: var(--accent);
+    }
+    :global(.dm-week-page.dm-progress-full) {
+      background: var(--green);
     }
 
-    /* sessions */
-    :global(.dm-sessions) {
-      display: grid; gap: 0.55rem; grid-template-columns: 1fr;
+    /* ---- calendar ---- */
+    :global(.dm-calendar) {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 0.4rem;
     }
-    @media (min-width: 720px) { :global(.dm-sessions) { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 720px) {
+      :global(.dm-calendar) { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 420px) {
+      :global(.dm-calendar) { grid-template-columns: 1fr; }
+    }
 
-    :global(.dm-session) {
-      background: var(--dm-surface);
-      border: 1px solid var(--dm-border);
+    :global(.dm-cell) {
+      position: relative;
+      display: flex; flex-direction: column;
+      min-height: 96px;
+      padding: 0.55rem 0.6rem 0.6rem;
+      background: var(--surface);
+      border: 1px solid var(--line);
       border-radius: 10px;
-      transition: border-color 160ms, box-shadow 160ms, transform 160ms;
+      text-align: left;
+      font: inherit; color: inherit;
+      cursor: pointer;
+      transition: border-color 160ms, transform 160ms, box-shadow 160ms;
       overflow: hidden;
     }
-    :global(.dm-session:hover) {
-      border-color: var(--dm-border-strong);
-      box-shadow: 0 4px 14px -8px rgba(120,100,60,0.18);
+    :global(.dm-cell::before) {
+      content: ''; position: absolute;
+      top: 0; left: 0; bottom: 0; width: 3px;
+      background: var(--rest);
+      border-radius: 10px 0 0 10px;
     }
-    :global(.dm-session.dm-status-done) {
-      border-left: 3px solid var(--dm-green);
-      background: linear-gradient(90deg, #f6fdf8 0%, #ffffff 60%);
+    :global(.dm-cell:hover) {
+      border-color: var(--line-2);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-1);
     }
-    :global(.dm-session.dm-status-modified) {
-      border-left: 3px solid var(--dm-blue);
-      background: linear-gradient(90deg, #f1faff 0%, #ffffff 60%);
+    :global(.dm-cell.dm-cell-active) {
+      border-color: var(--ink);
+      box-shadow: 0 0 0 1px var(--ink), var(--shadow-1);
     }
-    :global(.dm-session.dm-status-skipped) {
-      border-left: 3px solid var(--dm-amber);
-      background: var(--dm-bg-2);
+    :global(.dm-cell-rest) { background: var(--bg-2); cursor: default; }
+    :global(.dm-cell-rest:hover) { transform: none; box-shadow: none; }
+    :global(.dm-cell-rest::before) { background: transparent; }
+
+    :global(.dm-cell-day) {
+      font-size: 0.72rem; font-weight: 500;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--ink-3);
+      margin-bottom: 0.3rem;
     }
-    :global(.dm-session.dm-status-skipped .dm-session-title),
-    :global(.dm-session.dm-status-skipped .dm-session-details) {
-      color: var(--dm-text-3);
-      text-decoration: line-through;
+    :global(.dm-cell-title) {
+      font-size: 0.85rem; font-weight: 500;
+      color: var(--ink); line-height: 1.3;
+      margin: 0 0 auto;
+      display: -webkit-box;
+      -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    :global(.dm-cell-foot) {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 0.3rem; margin-top: 0.4rem;
+    }
+    :global(.dm-cell-dur) {
+      font-size: 0.72rem; color: var(--ink-3);
+      font-variant-numeric: tabular-nums;
+    }
+    :global(.dm-cell-status) {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      font-size: 9px; font-weight: 700;
+    }
+    :global(.dm-status-pending) { display: none; }
+    :global(.dm-status-done) { background: var(--green); color: #fff; }
+    :global(.dm-status-modified) { background: var(--blue); color: #fff; }
+    :global(.dm-status-skipped) { background: var(--amber); color: #fff; }
+
+    /* type accents on left bar */
+    :global(.dm-cell-strength::before) { background: #b45309; }
+    :global(.dm-cell-cardio::before) { background: #c2410c; }
+    :global(.dm-cell-mobility::before) { background: #0369a1; }
+    :global(.dm-cell-skill::before) { background: #7e22ce; }
+    :global(.dm-cell-recovery::before) { background: #0d9488; }
+
+    :global(.dm-cell-type) {
+      font-size: 0.66rem; font-weight: 500;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--ink-3);
+    }
+
+    /* states */
+    :global(.dm-cell.dm-state-done) {
+      background: var(--green-soft);
+      border-color: rgba(22,163,74,0.25);
+    }
+    :global(.dm-cell.dm-state-done .dm-cell-title) { color: var(--ink-2); }
+    :global(.dm-cell.dm-state-modified) {
+      background: var(--blue-soft);
+      border-color: rgba(2,132,199,0.25);
+    }
+    :global(.dm-cell.dm-state-skipped) {
+      background: var(--bg-2);
+      border-color: rgba(202,138,4,0.25);
+    }
+    :global(.dm-cell.dm-state-skipped .dm-cell-title) {
+      color: var(--ink-3); text-decoration: line-through;
       text-decoration-color: rgba(0,0,0,0.25);
     }
 
-    :global(.dm-session-tap) {
-      display: grid;
-      grid-template-columns: 44px 1fr auto;
-      gap: 0.7rem; align-items: center;
-      width: 100%; text-align: left;
-      padding: 0.75rem 0.9rem;
-      background: transparent; border: none;
-      cursor: pointer; font: inherit; color: inherit;
+    /* ---- detail panel (under calendar) ---- */
+    :global(.dm-detail) {
+      margin-top: 1.1rem;
+      padding: 1.1rem 1.2rem;
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      animation: dmFadeIn 200ms ease-out;
     }
-    :global(.dm-session-tap:hover) { background: rgba(249,115,22,0.03); }
-    :global(.dm-session-day) {
-      font-family: ui-monospace, "SF Mono", Menlo, monospace;
-      font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase;
-      color: var(--dm-text-3);
+    @keyframes dmFadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
     }
-    :global(.dm-session-body) { min-width: 0; }
-    :global(.dm-session-title) {
-      font-size: 0.92rem; font-weight: 500;
-      color: var(--dm-text); margin: 0 0 0.2rem;
-      line-height: 1.3;
+    :global(.dm-detail-head) {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 1rem; margin-bottom: 0.85rem;
     }
-    :global(.dm-session-details) {
-      font-size: 0.8rem; color: var(--dm-text-2);
-      margin: 0; line-height: 1.4;
+    :global(.dm-detail-head-left .dm-cell-day) { margin-bottom: 0.25rem; }
+    :global(.dm-detail-title) {
+      font-size: 1.1rem; font-weight: 600;
+      letter-spacing: -0.01em; color: var(--ink);
+      margin: 0 0 0.3rem;
     }
-    :global(.dm-session-meta) {
-      display: flex; flex-direction: column; align-items: flex-end; gap: 0.25rem;
+    :global(.dm-detail-meta) {
+      display: flex; gap: 0.55rem; align-items: center;
+      font-size: 0.82rem; color: var(--ink-3);
+      margin-top: 0.1rem;
     }
-    :global(.dm-session-pill) {
-      font-family: ui-monospace, "SF Mono", Menlo, monospace;
-      font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;
-      padding: 0.2rem 0.5rem; border-radius: 5px;
-      border: 1px solid var(--dm-border);
-      color: var(--dm-text-3);
+    :global(.dm-detail-tag) {
+      font-size: 0.72rem; font-weight: 500;
+      padding: 0.18rem 0.55rem;
+      border-radius: 4px;
+      text-transform: uppercase; letter-spacing: 0.05em;
     }
-    :global(.dm-pill-strength) { color: #b45309; border-color: #fde6b3; background: #fffaeb; }
-    :global(.dm-pill-cardio) { color: #c2410c; border-color: #fed7aa; background: #fff5ec; }
-    :global(.dm-pill-mobility) { color: #0369a1; border-color: #bae6fd; background: #f0f9ff; }
-    :global(.dm-pill-rest), :global(.dm-pill-recovery) { color: var(--dm-text-3); }
-    :global(.dm-pill-skill) { color: #7e22ce; border-color: #e9d5ff; background: #faf5ff; }
+    :global(.dm-detail-tag-strength) { background: #fff5e1; color: #a35f06; }
+    :global(.dm-detail-tag-cardio) { background: #fff0e6; color: #b34514; }
+    :global(.dm-detail-tag-mobility) { background: #e6f3fb; color: #0369a1; }
+    :global(.dm-detail-tag-skill) { background: #f5e9fb; color: #7e22ce; }
+    :global(.dm-detail-tag-recovery) { background: #d4fbf3; color: #0d9488; }
+    :global(.dm-detail-close) {
+      background: transparent; border: none; cursor: pointer;
+      width: 28px; height: 28px; border-radius: 6px;
+      color: var(--ink-3);
+      display: inline-flex; align-items: center; justify-content: center;
+      transition: all 160ms;
+    }
+    :global(.dm-detail-close:hover) {
+      background: var(--bg-2); color: var(--ink);
+    }
+    :global(.dm-detail-close svg) { width: 14px; height: 14px; }
 
-    :global(.dm-session-dur) {
-      font-family: ui-monospace, "SF Mono", Menlo, monospace;
-      font-size: 0.7rem; color: var(--dm-text-3);
+    :global(.dm-detail-text) {
+      color: var(--ink-2); font-size: 0.95rem;
+      margin: 0 0 1rem;
     }
-    :global(.dm-session-status) {
-      font-family: ui-monospace, "SF Mono", Menlo, monospace;
-      font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;
-      padding: 0.2rem 0.5rem; border-radius: 5px;
-    }
-    :global(.dm-session-status.dm-st-done) { background: var(--dm-green-soft); color: var(--dm-green); }
-    :global(.dm-session-status.dm-st-modified) { background: var(--dm-blue-soft); color: var(--dm-blue); }
-    :global(.dm-session-status.dm-st-skipped) { background: var(--dm-amber-soft); color: var(--dm-amber); }
-    :global(.dm-session-status.dm-st-pending) { color: var(--dm-orange-strong); }
 
-    /* expansion */
-    :global(.dm-session-expand) {
-      padding: 0.85rem 0.9rem 1rem;
-      border-top: 1px dashed var(--dm-border);
-      background: var(--dm-bg-2);
-    }
-    :global(.dm-session-expand[hidden]) { display: none; }
     :global(.dm-status-row) {
-      display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.85rem;
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem;
+      margin-bottom: 0.95rem;
     }
     :global(.dm-status-btn) {
-      flex: 1; min-width: 90px;
-      background: var(--dm-surface);
-      border: 1px solid var(--dm-border);
-      color: var(--dm-text-2);
-      font-family: inherit; font-size: 0.82rem;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      color: var(--ink-2);
+      font-family: inherit; font-size: 0.85rem; font-weight: 500;
       padding: 0.55rem 0.7rem; border-radius: 8px;
       cursor: pointer;
       transition: all 160ms;
     }
-    :global(.dm-status-btn:hover) { border-color: var(--dm-border-strong); }
+    :global(.dm-status-btn:hover) { border-color: var(--line-2); color: var(--ink); }
     :global(.dm-status-btn[data-status="done"][aria-pressed="true"]) {
-      background: var(--dm-green-soft); border-color: var(--dm-green); color: var(--dm-green);
+      background: var(--green-soft); border-color: var(--green); color: var(--green);
     }
     :global(.dm-status-btn[data-status="modified"][aria-pressed="true"]) {
-      background: var(--dm-blue-soft); border-color: var(--dm-blue); color: var(--dm-blue);
+      background: var(--blue-soft); border-color: var(--blue); color: var(--blue);
     }
     :global(.dm-status-btn[data-status="skipped"][aria-pressed="true"]) {
-      background: var(--dm-amber-soft); border-color: var(--dm-amber); color: var(--dm-amber);
+      background: var(--amber-soft); border-color: var(--amber); color: var(--amber);
     }
 
     :global(.dm-slider-trio) {
-      display: grid; grid-template-columns: 1fr; gap: 0.6rem; margin-bottom: 0.7rem;
+      display: grid; grid-template-columns: 1fr; gap: 0.7rem;
+      margin-bottom: 0.85rem;
     }
     @media (min-width: 600px) { :global(.dm-slider-trio) { grid-template-columns: 1fr 1fr 1fr; } }
     :global(.dm-mini-slider) {
-      display: flex; flex-direction: column; gap: 0.25rem;
+      display: flex; flex-direction: column; gap: 0.3rem;
     }
     :global(.dm-mini-slider-head) {
       display: flex; justify-content: space-between; align-items: baseline;
-      font-family: ui-monospace, "SF Mono", Menlo, monospace;
-      font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase;
-      color: var(--dm-text-3);
+      font-size: 0.78rem; color: var(--ink-3);
     }
-    :global(.dm-mini-slider-val) { color: var(--dm-orange-strong); font-weight: 600; }
+    :global(.dm-mini-slider-val) {
+      color: var(--ink); font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
 
     :global(.dm-log-notes) {
       width: 100%; box-sizing: border-box;
-      background: var(--dm-surface); border: 1px solid var(--dm-border);
+      background: var(--surface); border: 1px solid var(--line);
       border-radius: 8px; padding: 0.6rem 0.75rem;
-      font-family: inherit; font-size: 0.85rem; color: var(--dm-text);
+      font-family: inherit; font-size: 0.88rem; color: var(--ink);
       resize: vertical; min-height: 2.5rem;
-      margin-bottom: 0.6rem;
+      margin-bottom: 0.7rem;
+      box-shadow: var(--shadow-1);
     }
     :global(.dm-log-notes:focus) {
-      outline: none; border-color: var(--dm-orange);
-      box-shadow: 0 0 0 3px rgba(249,115,22,0.15);
+      outline: none; border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(249,115,22,0.18), var(--shadow-1);
     }
     :global(.dm-log-actions) {
       display: flex; justify-content: flex-end; gap: 0.5rem;
     }
 
-    /* ---- coach ---- */
-    .dm-coach-id { display: flex; align-items: center; gap: 0.7rem; }
-    .dm-coach-name { font-size: 0.95rem; font-weight: 600; color: var(--dm-text); }
-    .dm-coach-sub {
-      font-family: ui-monospace, "SF Mono", Menlo, monospace;
-      font-size: 0.7rem; color: var(--dm-orange-strong);
-      letter-spacing: 0.06em;
+    /* ---- COACH ---- */
+    .dm-coach-status {
+      font-size: 0.78rem; color: var(--ink-3);
+      display: inline-flex; align-items: center; gap: 0.4rem;
+    }
+    .dm-coach-status::before {
+      content: ''; width: 6px; height: 6px;
+      background: var(--green); border-radius: 50%;
+      box-shadow: 0 0 6px rgba(22,163,74,0.6);
     }
     :global(.dm-coach-log) {
       display: flex; flex-direction: column; gap: 0.55rem;
-      max-height: 540px; overflow-y: auto; padding-right: 0.2rem;
-      margin-bottom: 0.7rem;
+      max-height: 540px; overflow-y: auto;
+      padding: 0.2rem 0.1rem 0.4rem;
+      margin-bottom: 0.85rem;
     }
-    :global(.dm-coach-msg) {
-      padding: 0.85rem 0.95rem;
-      background: var(--dm-surface);
-      border: 1px solid var(--dm-border);
-      border-left: 2px solid var(--dm-orange);
-      border-radius: 10px;
-      font-size: 0.9rem; color: var(--dm-text);
-      line-height: 1.55; white-space: pre-wrap;
+    :global(.dm-msg) {
+      font-size: 0.92rem; line-height: 1.55;
+      padding: 0.65rem 0.85rem;
+      border-radius: 12px;
+      white-space: pre-wrap;
+      max-width: 92%;
+      animation: dmFadeIn 220ms ease-out;
     }
-    :global(.dm-coach-msg.dm-msg-user) {
-      border-left-color: var(--dm-blue);
-      background: var(--dm-bg-2);
+    :global(.dm-msg-coach) {
+      background: var(--surface-2);
+      color: var(--ink);
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
     }
-    :global(.dm-coach-msg.dm-msg-regen) {
-      border-left-color: var(--dm-green);
-      background: linear-gradient(90deg, #f6fdf8 0%, #ffffff 70%);
+    :global(.dm-msg-user) {
+      background: var(--ink);
+      color: #fafaf7;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
     }
-    :global(.dm-coach-msg-meta) {
+    :global(.dm-msg-regen) {
+      background: var(--green-soft);
+      color: var(--ink);
+      border: 1px solid rgba(22,163,74,0.25);
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+    :global(.dm-msg-meta) {
       display: block;
-      font-family: ui-monospace, "SF Mono", Menlo, monospace;
-      font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase;
-      color: var(--dm-text-3); margin-bottom: 0.4rem;
+      font-size: 0.7rem; color: var(--ink-3);
+      margin-bottom: 0.25rem;
     }
+    :global(.dm-msg-user .dm-msg-meta) { color: rgba(250,250,247,0.6); }
 
     .dm-chat {
-      border-top: 1px solid var(--dm-border);
-      padding-top: 0.9rem;
-      display: grid; gap: 0.5rem;
+      border-top: 1px solid var(--line);
+      padding-top: 0.95rem;
+      display: grid; gap: 0.55rem;
     }
     .dm-chat-input {
-      min-height: 2.5rem;
-      font-size: 0.88rem;
+      min-height: 2.6rem; font-size: 0.92rem;
     }
-    .dm-btn-send { justify-self: end; padding: 0.55rem 1.1rem; }
-    .dm-chat[data-thinking="true"] .dm-btn-send { opacity: 0.6; pointer-events: none; }
+    .dm-chat-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 0.5rem;
+    }
+    .dm-chat-hint {
+      font-size: 0.72rem; color: var(--ink-3);
+    }
+    .dm-btn-send { padding: 0.5rem 1.05rem; font-size: 0.85rem; }
+    .dm-chat[data-thinking="true"] .dm-btn-send { opacity: 0.55; pointer-events: none; }
+    .dm-chat[data-thinking="true"] .dm-chat-hint::after { content: ' · coach is typing…'; }
 
-    /* tips */
+    /* ---- TIPS row ---- */
+    .dm-tips-grid {
+      display: grid; gap: 1rem; grid-template-columns: 1fr;
+      margin-top: 1rem;
+    }
+    @media (min-width: 720px) { .dm-tips-grid { grid-template-columns: 1fr 1fr; } }
+
     :global(.dm-tips) {
-      list-style: none; margin: 0; padding: 0;
-      display: flex; flex-direction: column; gap: 0.55rem;
+      list-style: none; counter-reset: tip;
+      margin: 0; padding: 0;
+      display: flex; flex-direction: column; gap: 0.85rem;
     }
     :global(.dm-tip) {
-      padding: 0.75rem 0.9rem;
-      background: var(--dm-bg-2);
-      border: 1px solid var(--dm-border);
-      border-radius: 10px;
-      transition: border-color 160ms;
+      counter-increment: tip;
+      position: relative;
+      padding: 0 0 0 2rem;
     }
-    :global(.dm-tip:hover) { border-color: var(--dm-border-strong); }
+    :global(.dm-tip::before) {
+      content: counter(tip, decimal-leading-zero);
+      position: absolute; left: 0; top: 0.05rem;
+      font-size: 0.78rem; font-weight: 500;
+      color: var(--ink-3);
+      font-variant-numeric: tabular-nums;
+    }
     :global(.dm-tip-line) {
-      font-size: 0.9rem; color: var(--dm-text);
-      margin: 0 0 0.3rem; font-weight: 500;
+      font-size: 0.95rem; color: var(--ink);
+      margin: 0 0 0.25rem;
+      font-weight: 500; line-height: 1.4;
     }
     :global(.dm-tip-why) {
-      font-size: 0.8rem; color: var(--dm-text-2);
-      margin: 0; line-height: 1.45;
+      font-size: 0.85rem; color: var(--ink-2);
+      margin: 0; line-height: 1.5;
     }
 
-    /* citations */
-    .dm-cite-count {
-      font-family: ui-monospace, "SF Mono", Menlo, monospace;
-      font-size: 0.7rem; color: var(--dm-orange-strong);
-      padding: 0.2rem 0.55rem;
-      border: 1px solid #fed7aa;
-      background: var(--dm-orange-soft);
-      border-radius: 5px;
+    /* ---- SOURCES ---- */
+    .dm-sources {
+      max-width: 84rem; margin: 2rem auto 0;
+      padding-top: 1.6rem;
+      border-top: 1px solid var(--line);
+    }
+    .dm-sources-head {
+      display: flex; align-items: center; gap: 0.6rem;
+      margin-bottom: 0.85rem;
+    }
+    .dm-sources-count {
+      font-size: 0.82rem; color: var(--ink-3);
+      font-variant-numeric: tabular-nums;
     }
     :global(.dm-cites) {
       list-style: none; margin: 0; padding: 0;
-      display: grid; gap: 0.45rem; grid-template-columns: 1fr;
+      display: grid; gap: 0.4rem;
+      grid-template-columns: 1fr;
     }
     @media (min-width: 720px) { :global(.dm-cites) { grid-template-columns: 1fr 1fr; } }
+    @media (min-width: 1080px) { :global(.dm-cites) { grid-template-columns: 1fr 1fr 1fr; } }
     :global(.dm-cite) {
-      display: block;
-      padding: 0.6rem 0.75rem;
-      background: var(--dm-surface);
-      border: 1px solid var(--dm-border);
-      border-radius: 8px;
+      display: flex; flex-direction: column;
+      padding: 0.55rem 0;
+      border-bottom: 1px solid var(--line);
       text-decoration: none;
-      transition: all 160ms;
+      transition: padding 160ms;
     }
-    :global(.dm-cite:hover) {
-      border-color: var(--dm-orange);
-      box-shadow: 0 4px 12px -6px rgba(249,115,22,0.25);
-    }
+    :global(.dm-cite:hover) { padding-left: 0.4rem; }
     :global(.dm-cite-title) {
-      display: -webkit-box;
-      font-size: 0.82rem; color: var(--dm-text);
-      line-height: 1.35; margin-bottom: 0.2rem;
+      font-size: 0.86rem; color: var(--ink);
+      line-height: 1.4; margin-bottom: 0.18rem;
       overflow: hidden; text-overflow: ellipsis;
+      display: -webkit-box;
       -webkit-line-clamp: 2; -webkit-box-orient: vertical;
     }
     :global(.dm-cite-domain) {
-      display: block;
-      font-family: ui-monospace, "SF Mono", Menlo, monospace;
-      font-size: 0.68rem; color: var(--dm-orange-strong);
-      letter-spacing: 0.04em;
+      font-size: 0.74rem;
+      color: var(--accent-strong);
     }
     :global(.dm-cite-empty) {
       grid-column: 1 / -1; padding: 0.8rem;
-      color: var(--dm-text-3); font-size: 0.85rem;
+      color: var(--ink-3); font-size: 0.88rem;
       font-style: italic; text-align: center;
+    }
+    .dm-disclaim-foot {
+      margin-top: 1.4rem;
+      font-size: 0.78rem; color: var(--ink-3);
+      max-width: 56rem; line-height: 1.55;
     }
   </style>
 
@@ -975,7 +1090,7 @@ import Layout from '../../../layouts/Layout.astro';
         intakeStep: 1 | 2 | 3;
         intake: Partial<Intake>;
         selectedWeek: number;
-        expandedSession: string | null;
+        selectedDay: string | null;
         logDraft: { status: SessionLog['status']; rpe: number | null; energy: number | null; soreness: number | null; notes: string };
       } = {
         view: 'loading', userId: '', state: null,
@@ -988,8 +1103,8 @@ import Layout from '../../../layouts/Layout.astro';
           currentActivity: '',
         },
         selectedWeek: 0,
-        expandedSession: null,
-        logDraft: { status: 'done', rpe: null, energy: null, soreness: null, notes: '' },
+        selectedDay: null,
+        logDraft: { status: 'done', rpe: 7, energy: 3, soreness: 2, notes: '' },
       };
 
       const $ = <T extends Element = HTMLElement>(sel: string): T | null => root.querySelector<T>(sel);
@@ -1031,7 +1146,7 @@ import Layout from '../../../layouts/Layout.astro';
 
       const renderUserIdShort = () => {
         const el = $('[data-bind="user-id-short"]');
-        if (el) el.textContent = app.userId.slice(0, 8);
+        if (el) el.textContent = app.userId.slice(0, 6);
       };
 
       const bindBookmark = () => {
@@ -1042,11 +1157,11 @@ import Layout from '../../../layouts/Layout.astro';
           try {
             await navigator.clipboard.writeText(url);
             const lab = btn.querySelector('.dm-bookmark-label');
-            if (lab) lab.textContent = 'copied!';
+            if (lab) lab.textContent = 'copied';
             btn.classList.add('dm-copied');
             setTimeout(() => {
               btn.classList.remove('dm-copied');
-              if (lab) lab.textContent = 'bookmark this';
+              if (lab) lab.textContent = 'bookmark';
             }, 1600);
           } catch {
             window.prompt('Copy this URL — your plan lives at it:', url);
@@ -1158,15 +1273,15 @@ import Layout from '../../../layouts/Layout.astro';
         }, { signal: sig });
       };
 
-      // ---- generate plan ----
+      // ---- generate ----
       let genTimer: any = null;
       const rotateGeneratingStatus = () => {
         const lines = [
-          'cross-referencing the literature…',
-          'mapping intensity to your time…',
-          'sanity-checking volume against recovery…',
-          'pulling sources from peer review…',
-          'composing Coach\'s opening statement…',
+          'Cross-referencing the literature…',
+          'Mapping intensity to your time…',
+          'Sanity-checking volume against recovery…',
+          'Pulling sources from peer review…',
+          'Composing Coach\'s opening…',
         ];
         let i = 0;
         const el = $('[data-bind="generating-status"]');
@@ -1189,154 +1304,197 @@ import Layout from '../../../layouts/Layout.astro';
           });
           if (!r.ok) {
             const err = await r.json().catch(() => ({}));
-            showError((err as any).error || `request failed (${r.status})`);
+            showError((err as any).error || `Request failed (${r.status})`);
             return;
           }
           const data = await r.json();
-          if (!data?.state?.plan) { showError('coach returned an empty plan. try again.'); return; }
+          if (!data?.state?.plan) { showError('Coach returned an empty plan. Try again.'); return; }
           app.state = data.state as State;
           app.selectedWeek = 0;
-          app.expandedSession = null;
+          app.selectedDay = null;
           setView('dashboard');
         } catch {
-          showError('network failure. try again.');
+          showError('Network failure. Try again.');
         }
       };
 
       // ---- dashboard render ----
-      const sessionId = (weekNum: number, day: string) => `w${weekNum}-${day}`;
-
       const findLog = (weekNum: number, day: string): SessionLog | undefined =>
         (app.state?.sessionLogs || []).find(l => l.weekNum === weekNum && l.day === day);
+
+      const trainingTotalForWeek = (w: Week) => w.sessions.filter(s => s.type !== 'rest').length;
+
+      const doneCountForWeek = (w: Week) =>
+        (app.state?.sessionLogs || []).filter(l =>
+          l.weekNum === w.weekNum && l.status === 'done' &&
+          w.sessions.some(s => s.day === l.day && s.type !== 'rest')
+        ).length;
 
       const renderDashboard = () => {
         if (!app.state || !app.state.plan) { setView('intake'); return; }
         const plan = app.state.plan;
         const logs = app.state.sessionLogs || [];
 
+        // hero
         const titleEl = $('[data-bind="plan-title"]');
-        if (titleEl) titleEl.textContent = plan.title || 'your protocol';
+        if (titleEl) titleEl.textContent = plan.title || 'Your protocol';
         const sumEl = $('[data-bind="plan-summary"]');
         if (sumEl) sumEl.textContent = plan.summary || '';
 
-        // hero stats
-        const statsEl = $('[data-bind="hero-stats"]');
-        if (statsEl) {
-          const done = logs.filter(l => l.status === 'done').length;
-          const skipped = logs.filter(l => l.status === 'skipped').length;
-          const totalSessions = plan.weeks.reduce((n, w) => n + w.sessions.filter(s => s.type !== 'rest').length, 0);
-          statsEl.innerHTML = '';
-          const stats = [
-            { num: plan.weeks.length, label: 'weeks' },
-            { num: totalSessions, label: 'sessions' },
-            { num: done, label: 'done' },
-            ...(skipped ? [{ num: skipped, label: 'skipped' }] : []),
-            { num: plan.citations.length, label: 'sources' },
+        const totalSessions = plan.weeks.reduce((n, w) => n + trainingTotalForWeek(w), 0);
+        const done = logs.filter(l => l.status === 'done').length;
+        const skipped = logs.filter(l => l.status === 'skipped').length;
+        const modified = logs.filter(l => l.status === 'modified').length;
+        const pct = totalSessions > 0 ? Math.round(((done + modified) / totalSessions) * 100) : 0;
+
+        const lab = $('[data-bind="progress-label"]');
+        if (lab) lab.textContent = `${done + modified} of ${totalSessions} sessions complete`;
+        const pctEl = $('[data-bind="progress-pct"]');
+        if (pctEl) pctEl.textContent = `${pct}%`;
+        const fillEl = $('[data-bind="progress-fill"]') as HTMLElement | null;
+        if (fillEl) fillEl.style.width = `${pct}%`;
+
+        const metaEl = $('[data-bind="progress-meta"]');
+        if (metaEl) {
+          const items: Array<[string, number | string, string]> = [
+            ['weeks', plan.weeks.length, ''],
+            ['done', done, ''],
+            ...(modified ? [['modified', modified, ''] as [string, number, string]] : []),
+            ...(skipped ? [['skipped', skipped, ''] as [string, number, string]] : []),
+            ['sources', plan.citations.length, ''],
           ];
-          stats.forEach((s) => {
+          metaEl.innerHTML = '';
+          items.forEach(([label, val]) => {
             const span = document.createElement('span');
-            span.className = 'dm-stat';
-            span.innerHTML = `<span class="dm-stat-num">${s.num}</span><span>${escape(s.label)}</span>`;
-            statsEl.appendChild(span);
+            span.className = 'dm-progress-meta-item';
+            span.innerHTML = `<span class="dm-progress-meta-num">${escape(String(val))}</span><span>${escape(label)}</span>`;
+            metaEl.appendChild(span);
           });
         }
 
-        // week tabs
-        const tabs = $('[data-bind="week-tabs"]');
-        if (tabs) {
-          tabs.innerHTML = '';
-          plan.weeks.forEach((w, idx) => {
-            const b = document.createElement('button');
-            b.type = 'button';
-            b.className = 'dm-week-tab' + (idx === app.selectedWeek ? ' dm-active' : '');
-            b.textContent = `week ${w.weekNum}`;
-            b.addEventListener('click', () => {
-              app.selectedWeek = idx;
-              app.expandedSession = null;
+        // week label
+        const wk = plan.weeks[app.selectedWeek] || plan.weeks[0];
+        const wkLabel = $('[data-bind="week-label"]');
+        if (wkLabel) wkLabel.textContent = `Week ${wk.weekNum} of ${plan.weeks.length}`;
+        const wkFocus = $('[data-bind="week-focus"]');
+        if (wkFocus) wkFocus.textContent = wk.focus || '';
+
+        // week pages (dot indicator)
+        const pagesEl = $('[data-bind="week-pages"]');
+        if (pagesEl) {
+          pagesEl.innerHTML = '';
+          plan.weeks.forEach((w, i) => {
+            const total = trainingTotalForWeek(w);
+            const doneN = doneCountForWeek(w);
+            const cls = doneN === 0 ? '' : doneN >= total ? ' dm-progress-full' : ' dm-progress-some';
+            const dot = document.createElement('button');
+            dot.type = 'button';
+            dot.className = 'dm-week-page' + (i === app.selectedWeek ? ' dm-active' : '') + cls;
+            dot.title = `Week ${w.weekNum}${total ? ` · ${doneN}/${total} done` : ''}`;
+            dot.addEventListener('click', () => {
+              app.selectedWeek = i;
+              app.selectedDay = null;
               renderDashboard();
             }, { signal: sig });
-            tabs.appendChild(b);
+            pagesEl.appendChild(dot);
           });
         }
+        const prevBtn = $('[data-action="prev-week"]') as HTMLButtonElement | null;
+        const nextBtn = $('[data-action="next-week"]') as HTMLButtonElement | null;
+        if (prevBtn) prevBtn.disabled = app.selectedWeek === 0;
+        if (nextBtn) nextBtn.disabled = app.selectedWeek >= plan.weeks.length - 1;
 
-        const wk = plan.weeks[app.selectedWeek];
-        const focus = $('[data-bind="week-focus"]');
-        if (focus) focus.textContent = wk?.focus || '';
-
-        // sessions
-        const sessionsEl = $('[data-bind="sessions"]');
-        if (sessionsEl) {
-          sessionsEl.innerHTML = '';
-          const sorted = [...(wk?.sessions || [])].sort((a, b) =>
-            DAY_ORDER.indexOf(a.day) - DAY_ORDER.indexOf(b.day));
-          sorted.forEach((s) => {
-            const id = sessionId(wk.weekNum, s.day);
-            const log = findLog(wk.weekNum, s.day);
+        // calendar
+        const calEl = $('[data-bind="calendar"]');
+        if (calEl) {
+          calEl.innerHTML = '';
+          DAY_ORDER.forEach((day) => {
+            const s = wk.sessions.find(x => x.day === day);
+            const log = findLog(wk.weekNum, day);
+            const isRest = !s || s.type === 'rest';
             const status = log?.status || 'pending';
-            const card = document.createElement('div');
-            card.className = `dm-session dm-status-${status}`;
-            card.dataset.sessionId = id;
-
-            const tap = document.createElement('button');
-            tap.type = 'button';
-            tap.className = 'dm-session-tap';
-            const isRest = s.type === 'rest';
-            const statusLabel = status === 'pending'
-              ? (isRest ? '' : 'log →')
-              : status === 'done' ? '✓ done'
-              : status === 'modified' ? '~ modified'
-              : '× skipped';
-            tap.innerHTML = `
-              <div class="dm-session-day">${escape(s.day)}</div>
-              <div class="dm-session-body">
-                <p class="dm-session-title">${escape(s.title)}</p>
-                <p class="dm-session-details">${escape(s.details)}</p>
-              </div>
-              <div class="dm-session-meta">
-                <span class="dm-session-pill dm-pill-${escape(s.type)}">${escape(s.type)}</span>
-                ${s.duration ? `<span class="dm-session-dur">${s.duration}m</span>` : ''}
-                ${statusLabel ? `<span class="dm-session-status dm-st-${status}">${statusLabel}</span>` : ''}
-              </div>
+            const cell = document.createElement('button');
+            cell.type = 'button';
+            cell.className = 'dm-cell'
+              + (isRest ? ' dm-cell-rest' : ` dm-cell-${escape(s!.type)}`)
+              + (status !== 'pending' ? ` dm-state-${status}` : '')
+              + (app.selectedDay === day ? ' dm-cell-active' : '');
+            cell.dataset.day = day;
+            const statusIcon = status === 'done' ? '✓'
+              : status === 'modified' ? '~'
+              : status === 'skipped' ? '×' : '';
+            cell.innerHTML = isRest ? `
+              <span class="dm-cell-day">${escape(day)}</span>
+              <span class="dm-cell-title">Rest</span>
+              <span class="dm-cell-foot">
+                <span class="dm-cell-type">recovery</span>
+              </span>
+            ` : `
+              <span class="dm-cell-day">${escape(day)}</span>
+              <span class="dm-cell-title">${escape(s!.title)}</span>
+              <span class="dm-cell-foot">
+                <span class="dm-cell-type">${escape(s!.type)}</span>
+                <span class="dm-cell-dur-wrap">
+                  ${s!.duration ? `<span class="dm-cell-dur">${s!.duration}m</span>` : ''}
+                  ${statusIcon ? `<span class="dm-cell-status dm-status-${status}">${statusIcon}</span>` : ''}
+                </span>
+              </span>
             `;
-            tap.addEventListener('click', () => {
-              if (isRest) return; // rest days don't need logging
-              app.expandedSession = (app.expandedSession === id) ? null : id;
-              if (app.expandedSession === id) {
-                const existing = findLog(wk.weekNum, s.day);
-                app.logDraft = existing
-                  ? { status: existing.status, rpe: existing.rpe, energy: existing.energy, soreness: existing.soreness, notes: existing.notes }
-                  : { status: 'done', rpe: 7, energy: 3, soreness: 2, notes: '' };
-              }
-              renderDashboard();
-            }, { signal: sig });
-            card.appendChild(tap);
-
-            // expansion
-            if (app.expandedSession === id && !isRest) {
-              const exp = buildExpansion(wk.weekNum, s.day);
-              card.appendChild(exp);
+            if (!isRest) {
+              cell.addEventListener('click', () => {
+                app.selectedDay = (app.selectedDay === day) ? null : day;
+                if (app.selectedDay === day) {
+                  const existing = findLog(wk.weekNum, day);
+                  app.logDraft = existing
+                    ? { status: existing.status, rpe: existing.rpe, energy: existing.energy, soreness: existing.soreness, notes: existing.notes }
+                    : { status: 'done', rpe: 7, energy: 3, soreness: 2, notes: '' };
+                }
+                renderDashboard();
+              }, { signal: sig });
             }
-
-            sessionsEl.appendChild(card);
+            calEl.appendChild(cell);
           });
+        }
+
+        // session detail
+        const detailEl = $('[data-bind="session-detail"]') as HTMLElement | null;
+        if (detailEl) {
+          if (!app.selectedDay) {
+            detailEl.hidden = true;
+            detailEl.innerHTML = '';
+          } else {
+            const s = wk.sessions.find(x => x.day === app.selectedDay);
+            if (!s) { detailEl.hidden = true; }
+            else {
+              detailEl.hidden = false;
+              detailEl.innerHTML = renderDetail(wk.weekNum, s);
+              bindDetail(detailEl, wk.weekNum, s.day);
+            }
+          }
         }
 
         // coach log
         const logEl = $('[data-bind="coach-log"]');
         if (logEl) {
           logEl.innerHTML = '';
-          const messages = app.state.coachLog || [];
+          const messages = [...(app.state.coachLog || [])].reverse(); // chronological for chat-style
           if (!messages.length) {
-            logEl.innerHTML = '<div class="dm-coach-msg"><span class="dm-coach-msg-meta">silent</span>Coach has nothing to add yet.</div>';
+            const div = document.createElement('div');
+            div.className = 'dm-msg dm-msg-coach';
+            div.textContent = 'Coach has nothing to add yet.';
+            logEl.appendChild(div);
           } else {
             messages.forEach((m) => {
               const div = document.createElement('div');
-              const cls = m.kind === 'user' ? ' dm-msg-user' : m.kind === 'regen' ? ' dm-msg-regen' : '';
-              div.className = 'dm-coach-msg' + cls;
-              const label = m.kind === 'user' ? 'you' : m.kind;
-              div.innerHTML = `<span class="dm-coach-msg-meta">${escape(label)} · ${formatTime(m.ts)}</span>${escape(m.body)}`;
+              const cls = m.kind === 'user' ? 'dm-msg-user'
+                : m.kind === 'regen' ? 'dm-msg-regen'
+                : 'dm-msg-coach';
+              div.className = `dm-msg ${cls}`;
+              div.innerHTML = `<span class="dm-msg-meta">${m.kind === 'user' ? 'you' : 'coach'} · ${formatTime(m.ts)}</span>${escape(m.body)}`;
               logEl.appendChild(div);
             });
+            // scroll to bottom (newest)
+            logEl.scrollTop = logEl.scrollHeight;
           }
         }
 
@@ -1350,11 +1508,11 @@ import Layout from '../../../layouts/Layout.astro';
         const citEl = $('[data-bind="citations"]');
         const citCount = $('[data-bind="cite-count"]');
         const cites = plan.citations || [];
-        if (citCount) citCount.textContent = String(cites.length);
+        if (citCount) citCount.textContent = `${cites.length} ${cites.length === 1 ? 'source' : 'sources'}`;
         if (citEl) {
           citEl.innerHTML = '';
           if (!cites.length) {
-            citEl.innerHTML = '<li class="dm-cite-empty">no sources captured yet (stub mode or grounding empty)</li>';
+            citEl.innerHTML = '<li class="dm-cite-empty">No sources captured yet (stub mode or grounding empty).</li>';
           } else {
             cites.forEach((c) => {
               const a = document.createElement('a');
@@ -1369,39 +1527,55 @@ import Layout from '../../../layouts/Layout.astro';
         }
       };
 
-      const buildExpansion = (weekNum: number, day: string): HTMLElement => {
-        const wrap = document.createElement('div');
-        wrap.className = 'dm-session-expand';
-        wrap.innerHTML = `
-          <div class="dm-status-row">
-            <button type="button" class="dm-status-btn" data-status="done" aria-pressed="${app.logDraft.status === 'done'}">✓ done</button>
-            <button type="button" class="dm-status-btn" data-status="modified" aria-pressed="${app.logDraft.status === 'modified'}">~ modified</button>
-            <button type="button" class="dm-status-btn" data-status="skipped" aria-pressed="${app.logDraft.status === 'skipped'}">× skipped</button>
+      const renderDetail = (weekNum: number, s: Session): string => {
+        const showSliders = app.logDraft.status !== 'skipped';
+        return `
+          <div class="dm-detail-head">
+            <div class="dm-detail-head-left">
+              <span class="dm-cell-day">${escape(s.day)}</span>
+              <h3 class="dm-detail-title">${escape(s.title)}</h3>
+              <div class="dm-detail-meta">
+                <span class="dm-detail-tag dm-detail-tag-${escape(s.type)}">${escape(s.type)}</span>
+                ${s.duration ? `<span>${s.duration} min</span>` : ''}
+                <span>· intensity: ${escape(s.intensity)}</span>
+              </div>
+            </div>
+            <button type="button" class="dm-detail-close" data-action="close-detail" aria-label="Close">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m4 4 8 8M12 4l-8 8"/></svg>
+            </button>
           </div>
-          ${app.logDraft.status !== 'skipped' ? `
+          <p class="dm-detail-text">${escape(s.details)}</p>
+
+          <div class="dm-status-row">
+            <button type="button" class="dm-status-btn" data-status="done" aria-pressed="${app.logDraft.status === 'done'}">Done</button>
+            <button type="button" class="dm-status-btn" data-status="modified" aria-pressed="${app.logDraft.status === 'modified'}">Modified</button>
+            <button type="button" class="dm-status-btn" data-status="skipped" aria-pressed="${app.logDraft.status === 'skipped'}">Skipped</button>
+          </div>
+          ${showSliders ? `
             <div class="dm-slider-trio">
               <div class="dm-mini-slider">
-                <div class="dm-mini-slider-head"><span>RPE</span><span class="dm-mini-slider-val" data-mini-val="rpe">${app.logDraft.rpe ?? '—'}</span></div>
+                <div class="dm-mini-slider-head"><span>RPE</span><span class="dm-mini-slider-val" data-mini-val="rpe">${app.logDraft.rpe ?? 7}</span></div>
                 <input type="range" class="dm-slider" min="1" max="10" step="1" value="${app.logDraft.rpe ?? 7}" data-mini="rpe" />
               </div>
               <div class="dm-mini-slider">
-                <div class="dm-mini-slider-head"><span>energy</span><span class="dm-mini-slider-val" data-mini-val="energy">${app.logDraft.energy ?? '—'}/5</span></div>
+                <div class="dm-mini-slider-head"><span>Energy</span><span class="dm-mini-slider-val" data-mini-val="energy">${app.logDraft.energy ?? 3}/5</span></div>
                 <input type="range" class="dm-slider" min="1" max="5" step="1" value="${app.logDraft.energy ?? 3}" data-mini="energy" />
               </div>
               <div class="dm-mini-slider">
-                <div class="dm-mini-slider-head"><span>soreness</span><span class="dm-mini-slider-val" data-mini-val="soreness">${app.logDraft.soreness ?? '—'}/5</span></div>
+                <div class="dm-mini-slider-head"><span>Soreness</span><span class="dm-mini-slider-val" data-mini-val="soreness">${app.logDraft.soreness ?? 2}/5</span></div>
                 <input type="range" class="dm-slider" min="1" max="5" step="1" value="${app.logDraft.soreness ?? 2}" data-mini="soreness" />
               </div>
             </div>
           ` : ''}
-          <textarea class="dm-log-notes" rows="2" placeholder="${app.logDraft.status === 'skipped' ? 'why? (optional)' : 'notes — anything Coach should know about this session'}" data-bind="log-notes" maxlength="400">${escape(app.logDraft.notes)}</textarea>
+          <textarea class="dm-log-notes" rows="2" placeholder="${app.logDraft.status === 'skipped' ? 'why? (optional)' : 'Notes — anything Coach should know'}" data-bind="log-notes" maxlength="400">${escape(app.logDraft.notes)}</textarea>
           <div class="dm-log-actions">
-            <button type="button" class="dm-btn dm-btn-ghost dm-btn-sm" data-action="cancel-log">cancel</button>
-            <button type="button" class="dm-btn dm-btn-primary dm-btn-sm" data-action="save-log">save log</button>
+            <button type="button" class="dm-btn dm-btn-ghost dm-btn-sm" data-action="cancel-log">Cancel</button>
+            <button type="button" class="dm-btn dm-btn-primary dm-btn-sm" data-action="save-log">Save log</button>
           </div>
         `;
+      };
 
-        // bind status buttons
+      const bindDetail = (wrap: HTMLElement, weekNum: number, day: string) => {
         wrap.querySelectorAll('[data-status]').forEach((b) => {
           b.addEventListener('click', () => {
             app.logDraft.status = (b as HTMLElement).getAttribute('data-status') as SessionLog['status'];
@@ -1409,11 +1583,9 @@ import Layout from '../../../layouts/Layout.astro';
           }, { signal: sig });
         });
 
-        // mini sliders
         wrap.querySelectorAll('[data-mini]').forEach((s) => {
           const slider = s as HTMLInputElement;
           const key = slider.getAttribute('data-mini') as 'rpe' | 'energy' | 'soreness';
-          // initialize draft if null
           if (app.logDraft[key] === null) (app.logDraft as any)[key] = Number(slider.value);
           slider.addEventListener('input', () => {
             (app.logDraft as any)[key] = Number(slider.value);
@@ -1422,23 +1594,24 @@ import Layout from '../../../layouts/Layout.astro';
           }, { signal: sig });
         });
 
-        // notes
         const notes = wrap.querySelector('[data-bind="log-notes"]') as HTMLTextAreaElement | null;
         if (notes) {
           notes.addEventListener('input', () => { app.logDraft.notes = notes.value; }, { signal: sig });
         }
 
-        // actions
         wrap.querySelector('[data-action="cancel-log"]')?.addEventListener('click', () => {
-          app.expandedSession = null;
+          app.selectedDay = null;
+          renderDashboard();
+        }, { signal: sig });
+
+        wrap.querySelector('[data-action="close-detail"]')?.addEventListener('click', () => {
+          app.selectedDay = null;
           renderDashboard();
         }, { signal: sig });
 
         wrap.querySelector('[data-action="save-log"]')?.addEventListener('click', () => {
           saveLog(weekNum, day);
         }, { signal: sig });
-
-        return wrap;
       };
 
       const saveLog = async (weekNum: number, day: string) => {
@@ -1462,7 +1635,7 @@ import Layout from '../../../layouts/Layout.astro';
           if (!r.ok) { alert('log failed'); return; }
           const data = await r.json();
           if (data?.state) app.state = data.state as State;
-          app.expandedSession = null;
+          app.selectedDay = null;
           renderDashboard();
         } catch { alert('log failed (network)'); }
       };
@@ -1472,12 +1645,20 @@ import Layout from '../../../layouts/Layout.astro';
         const form = $('[data-bind="chat-form"]') as HTMLFormElement | null;
         const ta = $('[data-bind="chat-input"]') as HTMLTextAreaElement | null;
         if (!form || !ta) return;
+
+        // submit on Enter, newline on Shift+Enter
+        ta.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            form.requestSubmit();
+          }
+        }, { signal: sig });
+
         form.addEventListener('submit', async (e) => {
           e.preventDefault();
           const message = ta.value.trim();
           if (!message) return;
 
-          // optimistic: push user message
           if (app.state) {
             app.state.coachLog = [
               { ts: Date.now(), kind: 'user', body: message },
@@ -1516,7 +1697,7 @@ import Layout from '../../../layouts/Layout.astro';
         }, { signal: sig });
       };
 
-      // ---- tips & utils ----
+      // ---- tips ----
       const renderTips = (el: HTMLElement, tips: Tip[]) => {
         el.innerHTML = '';
         if (!tips.length) {
@@ -1537,7 +1718,7 @@ import Layout from '../../../layouts/Layout.astro';
       const formatTime = (ts: number): string => {
         try {
           const d = new Date(ts);
-          return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+          return d.toLocaleString(undefined, { hour: 'numeric', minute: '2-digit' });
         } catch { return ''; }
       };
 
@@ -1553,6 +1734,22 @@ import Layout from '../../../layouts/Layout.astro';
           const url = new URL(window.location.href);
           url.searchParams.delete('id');
           window.location.href = url.toString();
+        }, { signal: sig });
+
+        $('[data-action="prev-week"]')?.addEventListener('click', () => {
+          if (app.selectedWeek > 0) {
+            app.selectedWeek--;
+            app.selectedDay = null;
+            renderDashboard();
+          }
+        }, { signal: sig });
+
+        $('[data-action="next-week"]')?.addEventListener('click', () => {
+          if (app.state?.plan && app.selectedWeek < app.state.plan.weeks.length - 1) {
+            app.selectedWeek++;
+            app.selectedDay = null;
+            renderDashboard();
+          }
         }, { signal: sig });
       };
 
@@ -1579,7 +1776,7 @@ import Layout from '../../../layouts/Layout.astro';
               return;
             }
           }
-        } catch { /* fallthrough to intake */ }
+        } catch { /* fallthrough */ }
 
         setView('intake');
       };
