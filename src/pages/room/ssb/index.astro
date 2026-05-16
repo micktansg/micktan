@@ -35,12 +35,12 @@ import Layout from '../../../layouts/Layout.astro';
 
       <div class="form-grid">
         <label class="field">
-          <span class="lbl">issue month</span>
-          <select id="fldMonth"></select>
-        </label>
-        <label class="field">
           <span class="lbl">issue year</span>
           <select id="fldYear"></select>
+        </label>
+        <label class="field">
+          <span class="lbl">issue month</span>
+          <select id="fldMonth"></select>
         </label>
         <label class="field">
           <span class="lbl">amount invested (SGD)</span>
@@ -73,8 +73,7 @@ Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
       </label>
 
       <div class="form-actions">
-        <button class="io-btn" id="btnParse" type="button">parse rates</button>
-        <button class="io-btn io-btn--ghost" id="btnSample" type="button">try a sample bond</button>
+        <button class="io-btn" id="btnParse" type="button">extract rates</button>
         <span class="io-spacer"></span>
         <button class="io-btn io-btn--cancel-edit" id="btnCancelEdit" type="button" hidden>cancel edit</button>
         <button class="io-btn io-btn--primary" id="btnAdd" type="button" disabled>add bond</button>
@@ -111,18 +110,18 @@ Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
       min-height: 100vh;
       max-width: 64rem;
       margin: 0 auto;
-      padding: 2rem 1.25rem 6rem;
+      padding: 1.25rem 1rem 3rem;
       font-family: 'Lora', Georgia, serif;
       color: #2a2a27;
       font-feature-settings: 'tnum' 1;
     }
 
-    .ssb .topbar { margin-bottom: 2.5rem; }
-    .ssb .back { color: inherit; opacity: 0.45; text-decoration: none; font-size: 0.85rem; }
+    .ssb .topbar { margin-bottom: 1.25rem; }
+    .ssb .back { color: inherit; opacity: 0.45; text-decoration: none; font-size: 0.82rem; }
     .ssb .back:hover { opacity: 0.95; }
 
     .ssb .head h1 {
-      font-size: clamp(2.25rem, 6vw, 3.5rem);
+      font-size: clamp(1.9rem, 5vw, 2.6rem);
       font-weight: 500;
       line-height: 1.05;
       letter-spacing: -0.01em;
@@ -130,30 +129,31 @@ Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
     }
     .ssb .head .dot { color: #f4a563; }
     .ssb .head .sub {
-      margin-top: 1rem;
+      margin-top: 0.6rem;
       font-style: italic;
       opacity: 0.6;
       max-width: 36rem;
-      line-height: 1.55;
+      line-height: 1.5;
+      font-size: 0.95rem;
     }
 
     .ssb .privacy {
-      margin-top: 2rem;
-      padding: 0.9rem 1.1rem;
+      margin-top: 1rem;
+      padding: 0.65rem 0.9rem;
       background: rgba(244, 165, 99, 0.12);
       border-left: 3px solid #f4a563;
       border-radius: 2px;
-      font-size: 0.9rem;
-      line-height: 1.55;
+      font-size: 0.84rem;
+      line-height: 1.5;
     }
     .ssb .privacy strong { font-weight: 600; }
     .ssb .privacy em { font-style: normal; font-weight: 600; color: #8a4a18; }
 
     .ssb .io-row {
-      margin-top: 1.25rem;
+      margin-top: 0.85rem;
       display: flex;
       flex-wrap: wrap;
-      gap: 0.6rem;
+      gap: 0.5rem;
       align-items: center;
     }
     .ssb .io-spacer { flex: 1; }
@@ -183,45 +183,45 @@ Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
     .ssb .io-btn--file { cursor: pointer; }
 
     .ssb .summary {
-      margin-top: 2.5rem;
+      margin-top: 1.5rem;
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
-      gap: 1.25rem;
+      gap: 0.75rem;
     }
     .ssb .summary .cell {
-      padding: 1rem 1.1rem;
+      padding: 0.7rem 0.85rem;
       border: 1px solid rgba(42, 42, 39, 0.15);
       border-radius: 4px;
       background: rgba(255, 255, 255, 0.4);
     }
     .ssb .summary .cell .k {
       display: block;
-      font-size: 0.72rem;
+      font-size: 0.68rem;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.07em;
       opacity: 0.55;
     }
     .ssb .summary .cell .v {
       display: block;
-      margin-top: 0.4rem;
-      font-size: 1.4rem;
+      margin-top: 0.25rem;
+      font-size: 1.2rem;
       font-weight: 500;
       color: #1a1812;
       font-feature-settings: 'tnum' 1;
     }
     .ssb .summary .cell .vsub {
       display: block;
-      margin-top: 0.2rem;
-      font-size: 0.78rem;
+      margin-top: 0.15rem;
+      font-size: 0.72rem;
       opacity: 0.55;
       font-style: italic;
     }
 
     .ssb h2 {
-      font-size: clamp(1.25rem, 3vw, 1.6rem);
+      font-size: clamp(1.1rem, 2.5vw, 1.35rem);
       font-weight: 500;
-      margin-top: 3.5rem;
-      margin-bottom: 1.25rem;
+      margin-top: 1.75rem;
+      margin-bottom: 0.7rem;
       letter-spacing: -0.005em;
       color: #1a1812;
     }
@@ -347,7 +347,7 @@ Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
     .ssb .bond-card {
       border: 1px solid rgba(42, 42, 39, 0.15);
       border-radius: 4px;
-      margin-bottom: 1rem;
+      margin-bottom: 0.65rem;
       background: rgba(255, 255, 255, 0.45);
       overflow: hidden;
     }
@@ -356,8 +356,8 @@ Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 0.8rem 1.4rem;
-      padding: 0.9rem 1.1rem;
+      gap: 0.55rem 1.1rem;
+      padding: 0.6rem 0.85rem;
       border-bottom: 1px solid rgba(42, 42, 39, 0.08);
       background: rgba(42, 42, 39, 0.03);
     }
@@ -500,13 +500,47 @@ Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
     }
 
     .ssb .foot {
-      margin-top: 4rem;
-      padding-top: 1.5rem;
+      margin-top: 2.25rem;
+      padding-top: 1rem;
       border-top: 1px solid rgba(42, 42, 39, 0.1);
-      font-size: 0.78rem;
+      font-size: 0.74rem;
       opacity: 0.55;
-      line-height: 1.55;
+      line-height: 1.5;
     }
+
+    .ssb .cashflow-picker {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem 1.4rem;
+      align-items: flex-end;
+      margin-bottom: 0.6rem;
+      padding: 0.55rem 0.8rem;
+      background: rgba(255, 255, 255, 0.4);
+      border: 1px solid rgba(42, 42, 39, 0.12);
+      border-radius: 4px;
+    }
+    .ssb .cashflow-picker-lbl { display: flex; flex-direction: column; gap: 0.2rem; min-width: 7rem; }
+    .ssb .cashflow-picker-lbl .lbl { font-size: 0.68rem; opacity: 0.65; text-transform: uppercase; letter-spacing: 0.05em; }
+    .ssb .cashflow-picker-lbl select {
+      background: rgba(255,255,255,0.7);
+      border: 1px solid rgba(42, 42, 39, 0.25);
+      border-radius: 3px;
+      padding: 0.3rem 0.55rem;
+      font-family: inherit;
+      font-size: 0.92rem;
+      color: #2a2a27;
+      font-feature-settings: 'tnum' 1;
+    }
+    .ssb .cashflow-year-totals {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem 1.4rem;
+      font-feature-settings: 'tnum' 1;
+      flex: 1;
+      align-self: center;
+    }
+    .ssb .cashflow-year-totals .k { font-size: 0.66rem; opacity: 0.55; text-transform: uppercase; letter-spacing: 0.05em; margin-right: 0.3rem; }
+    .ssb .cashflow-year-totals .v { font-size: 0.92rem; }
 
     @media (max-width: 640px) {
       .ssb { padding: 1.25rem 1rem 4rem; }
@@ -543,6 +577,7 @@ Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
       editingId: string | null;
       expandedBonds: Set<string>;
       expandedMonths: Set<number>; // monthIdx values
+      selectedCashflowYear: number | null;
     };
 
     // ---------- Constants ----------
@@ -663,6 +698,7 @@ Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
       editingId: null,
       expandedBonds: new Set(),
       expandedMonths: new Set(),
+      selectedCashflowYear: null,
     };
 
     // ---------- Parser ----------
@@ -840,8 +876,6 @@ Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
       const active = portfolio.filter(b => !isMatured(b));
       const totalInvested = active.reduce((s, b) => s + b.amount, 0);
       const remainingInterest = active.reduce((s, b) => s + bondRemainingInterest(b), 0);
-      const remainingPrincipal = active.reduce((s, b) => s + bondRemainingPrincipal(b), 0);
-      const remainingPayout = remainingInterest + remainingPrincipal;
 
       // blended current yield: weighted avg of current rate by principal across ACTIVE bonds
       let curWeighted = 0, curWeight = 0;
@@ -856,11 +890,12 @@ Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
       const blendedLifetime = lifeWeight > 0 ? lifeWeighted / lifeWeight : 0;
 
       const maturedCount = portfolio.length - active.length;
+      const t = todayParts();
+      const monthLbl = `${MONTH_NAMES[t.month - 1]} ${t.year}`;
       const cells = [
         { k: 'total invested', v: fmtMoney(totalInvested), vsub: active.length === 1 ? '1 active bond' : `${active.length} active bonds` + (maturedCount ? ` · ${maturedCount} matured` : '') },
         { k: 'projected interest (remaining)', v: fmtMoney(remainingInterest), vsub: 'from next coupon to maturity' },
-        { k: 'projected total payout (remaining)', v: fmtMoney(remainingPayout), vsub: 'interest + principal still to come' },
-        { k: 'blended current yield', v: fmtRate(blendedCurrent), vsub: 'this-year rate, weighted by principal' },
+        { k: `blended current yield · ${monthLbl}`, v: fmtRate(blendedCurrent), vsub: `rate as of ${monthLbl}, weighted by principal` },
         { k: 'blended lifetime yield', v: fmtRate(blendedLifetime), vsub: 'mean 10-yr rate, weighted by principal' },
       ];
       root.innerHTML = '';
@@ -885,7 +920,7 @@ Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
       if (state.portfolio.length === 0) {
         const empty = document.createElement('div');
         empty.className = 'portfolio-empty';
-        empty.innerHTML = `<p>no bonds yet. add one above — or click <em>try a sample bond</em> to pre-fill the form with illustrative data you can edit before adding.</p>`;
+        empty.innerHTML = `<p>no bonds yet. fill in the form above — pick an issue year and month, enter the amount, paste the MAS rate table, click <em>extract rates</em>, then <em>add bond</em>.</p>`;
         root.appendChild(empty);
         return;
       }
@@ -1036,7 +1071,45 @@ Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
         return;
       }
 
+      // Group buckets by calendar year
+      const byYear = new Map<number, typeof buckets>();
+      for (const b of buckets) {
+        const y = fromIdx(b.monthIdx).year;
+        let list = byYear.get(y);
+        if (!list) { list = []; byYear.set(y, list); }
+        list.push(b);
+      }
+      const years = [...byYear.keys()].sort((a, b) => a - b);
+
+      // Pick the selected year (default: current year if present, else earliest)
       const t = todayParts();
+      let selected = state.selectedCashflowYear;
+      if (selected === null || !byYear.has(selected)) {
+        selected = byYear.has(t.year) ? t.year : years[0];
+        state.selectedCashflowYear = selected;
+      }
+
+      // Year picker row + this-year total
+      const yearTotal = byYear.get(selected)!.reduce((s, b) => s + b.interest + b.principal, 0);
+      const yearInterest = byYear.get(selected)!.reduce((s, b) => s + b.interest, 0);
+      const yearPrincipal = byYear.get(selected)!.reduce((s, b) => s + b.principal, 0);
+
+      const picker = document.createElement('div');
+      picker.className = 'cashflow-picker';
+      const yearSelect = years.map(y => `<option value="${y}"${y === selected ? ' selected' : ''}>${y}${y === t.year ? ' (this year)' : ''}</option>`).join('');
+      picker.innerHTML = `
+        <label class="cashflow-picker-lbl">
+          <span class="lbl">year</span>
+          <select id="cashflowYear">${yearSelect}</select>
+        </label>
+        <div class="cashflow-year-totals">
+          <span><span class="k">interest</span> <span class="v">${fmtMoney(yearInterest)}</span></span>
+          <span><span class="k">principal returned</span> <span class="v">${yearPrincipal ? fmtMoney(yearPrincipal) : '—'}</span></span>
+          <span><span class="k">${selected} total</span> <span class="v"><strong>${fmtMoney(yearTotal)}</strong></span></span>
+        </div>
+      `;
+      root.appendChild(picker);
+
       const wrap = document.createElement('div');
       wrap.style.overflowX = 'auto';
       const tbl = document.createElement('table');
@@ -1051,7 +1124,7 @@ Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
         </tr></thead>
       `;
       const tbody = document.createElement('tbody');
-      for (const b of buckets) {
+      for (const b of byYear.get(selected)!) {
         const total = b.interest + b.principal;
         const past = b.monthIdx < t.idx || (b.monthIdx === t.idx && t.day > 1);
         const tr = document.createElement('tr');
@@ -1087,6 +1160,13 @@ Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
       tbl.appendChild(tbody);
       wrap.appendChild(tbl);
       root.appendChild(wrap);
+
+      // Wire the dropdown
+      const sel = document.getElementById('cashflowYear') as HTMLSelectElement | null;
+      sel?.addEventListener('change', (e) => {
+        state.selectedCashflowYear = parseInt((e.target as HTMLSelectElement).value, 10);
+        renderCashflow();
+      });
     }
 
     function renderChart() {
@@ -1235,29 +1315,6 @@ Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
       } else {
         state.formFeedback = { tone: 'ok', text: 'parsed 10 rates. preview below — edit if anything looks off, then click add bond.' };
       }
-      renderForm();
-    }
-
-    function doSample() {
-      // Illustrative ONLY. User should replace with real MAS data before relying on it.
-      const t = todayParts();
-      state.formMonth = t.month;
-      state.formYear = t.year;
-      state.formAmount = '10000';
-      state.formPaste =
-        'Year from issue date\tInterest %\tAverage return per year %\n' +
-        '1\t2.48\t2.48\n' +
-        '2\t2.79\t2.63\n' +
-        '3\t2.85\t2.71\n' +
-        '4\t2.90\t2.75\n' +
-        '5\t2.95\t2.79\n' +
-        '6\t2.98\t2.82\n' +
-        '7\t3.00\t2.84\n' +
-        '8\t3.03\t2.86\n' +
-        '9\t3.06\t2.88\n' +
-        '10\t3.10\t2.90\n';
-      doParse();
-      state.formFeedback = { tone: 'warn', text: 'sample data loaded for demo. replace with real MAS rates for your actual issuance before adding.' };
       renderForm();
     }
 
@@ -1431,7 +1488,6 @@ Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
 
       // buttons
       $('btnParse').addEventListener('click', () => doParse(), { signal });
-      $('btnSample').addEventListener('click', () => doSample(), { signal });
       $('btnAdd').addEventListener('click', () => commitBond(), { signal });
       $('btnCancelEdit').addEventListener('click', () => cancelEdit(), { signal });
       $('btnExport').addEventListener('click', () => exportJson(), { signal });
