@@ -49,16 +49,27 @@ import Layout from '../../../layouts/Layout.astro';
         </label>
       </div>
 
+      <div class="mas-link-row">
+        <span class="mas-link-lbl">MAS step-up table:</span>
+        <a class="mas-link" href="https://eservices.mas.gov.sg/statistics/fdanet/StepUpInterest.aspx" target="_blank" rel="noopener noreferrer">eservices.mas.gov.sg/statistics/fdanet/StepUpInterest.aspx ↗</a>
+        <button class="io-btn io-btn--ghost mas-copy-btn" id="btnCopyMasLink" type="button">copy link</button>
+      </div>
+
       <label class="field field--paste">
         <span class="lbl">paste the MAS step-up table for this issuance</span>
-        <textarea id="fldPaste" rows="6" spellcheck="false" placeholder={`paste from eservices.mas.gov.sg/statistics/fdanet/StepUpInterest.aspx
+        <textarea id="fldPaste" rows="6" spellcheck="false" placeholder={`paste the MAS table — either format works:
 
-Year from issue date    Interest %    Average return per year %
-1                       2.48          2.48
-2                       2.79          2.63
+(A) MAS native (years across, rates below):
+Year from issue date    1    2    3 ... 10
+Interest, %             3.08% 3.15% 3.18% ... 3.30%
+Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
+
+(B) year-per-row:
+1    2.48    2.48
+2    2.79    2.63
 ...
-10                      3.10          2.85`}></textarea>
-        <span class="hint">parser keeps the <em>interest %</em> column (year-on-year), ignores the average-return column.</span>
+10   3.10    2.85`}></textarea>
+        <span class="hint">parser reads the <em>interest %</em> row (or column) only — ignores the average-return row.</span>
       </label>
 
       <div class="form-actions">
@@ -248,6 +259,29 @@ Year from issue date    Interest %    Average return per year %
     .ssb .field textarea { font-family: 'Courier New', monospace; font-size: 0.85rem; line-height: 1.45; resize: vertical; }
     .ssb .field .hint { font-size: 0.75rem; opacity: 0.5; font-style: italic; }
     .ssb .field--paste { margin-bottom: 1rem; }
+
+    .ssb .mas-link-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem 0.7rem;
+      margin: 0.5rem 0 0.9rem;
+      padding: 0.55rem 0.8rem;
+      background: rgba(42, 42, 39, 0.04);
+      border: 1px dashed rgba(42, 42, 39, 0.18);
+      border-radius: 3px;
+      font-size: 0.82rem;
+    }
+    .ssb .mas-link-lbl { opacity: 0.7; }
+    .ssb .mas-link {
+      color: #2a2a27;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      word-break: break-all;
+      flex: 1 1 auto;
+    }
+    .ssb .mas-link:hover { color: #8a4a18; }
+    .ssb .mas-copy-btn { padding: 0.25rem 0.7rem; font-size: 0.78rem; flex: 0 0 auto; }
 
     .ssb .form-actions {
       display: flex;
@@ -632,30 +666,51 @@ Year from issue date    Interest %    Average return per year %
     };
 
     // ---------- Parser ----------
-    // Tolerates tabs, multiple spaces, header rows, extra junk.
-    // Looks for lines starting with an integer 1..10 followed by two decimals;
-    // grabs the FIRST decimal as the interest %.
+    // Handles two formats:
+    //   (A) MAS native: a row labelled "Interest, %" with 10 percentages across.
+    //   (B) year-per-row: "1\t2.48\t2.48", "2\t2.79\t2.63", ...
     function parseRates(input: string): { rates: ParsedPreview; warning: string | null; error: string | null } {
       const lines = input.split(/\r?\n/);
+
+      // Strategy A: transposed MAS format. Find a line that mentions "interest"
+      // but not "average", pull every numeric token, accept if exactly 10.
+      for (const raw of lines) {
+        const line = raw.trim();
+        if (!line) continue;
+        const lower = line.toLowerCase();
+        if (!lower.includes('interest')) continue;
+        if (lower.includes('average')) continue;
+        const nums = [...line.matchAll(/(\d+(?:\.\d+)?)/g)]
+          .map(m => parseFloat(m[1]))
+          .filter(n => isFinite(n));
+        if (nums.length === 10) {
+          return { rates: nums as ParsedPreview, warning: null, error: null };
+        }
+        // If we got exactly 10 plausible rates (between 0 and 20) plus some
+        // trailing junk like a footnote ref, take the first 10 plausible ones.
+        const plausible = nums.filter(n => n >= 0 && n <= 20);
+        if (plausible.length === 10) {
+          return { rates: plausible as ParsedPreview, warning: null, error: null };
+        }
+      }
+
+      // Strategy B: year-per-row format.
       const found: ParsedPreview = Array(10).fill(null);
       let anyMatched = 0;
       for (const raw of lines) {
         const line = raw.trim();
         if (!line) continue;
-        // Match: leading integer 1..10, then at least one numeric token
-        // We accept "1\t2.48\t2.48" or "1   2.48   2.48" or even just "1 2.48"
         const m = line.match(/^(\d{1,2})\b[\s\t]+([+-]?\d+(?:\.\d+)?)\s*%?(?:[\s\t]+([+-]?\d+(?:\.\d+)?))?/);
         if (!m) continue;
         const year = parseInt(m[1], 10);
         const rate = parseFloat(m[2]);
         if (year < 1 || year > 10) continue;
         if (!isFinite(rate)) continue;
-        // skip header rows where year happens to be e.g. "1" but rate is silly — but our regex already requires a decimal
         found[year - 1] = rate;
         anyMatched++;
       }
       if (anyMatched === 0) {
-        return { rates: found, warning: null, error: 'no rate rows found. paste the MAS step-up table including the year numbers and interest % columns.' };
+        return { rates: found, warning: null, error: 'could not find rates. paste either the MAS table as-is (it has an "Interest, %" row), or a year-per-row format like "1  2.48  2.48".' };
       }
       const filled = found.filter(r => r !== null).length;
       if (filled < 10) {
@@ -1381,6 +1436,20 @@ Year from issue date    Interest %    Average return per year %
       $('btnCancelEdit').addEventListener('click', () => cancelEdit(), { signal });
       $('btnExport').addEventListener('click', () => exportJson(), { signal });
       $('btnClear').addEventListener('click', () => clearAll(), { signal });
+
+      $('btnCopyMasLink').addEventListener('click', async () => {
+        const url = 'https://eservices.mas.gov.sg/statistics/fdanet/StepUpInterest.aspx';
+        const btn = $opt<HTMLButtonElement>('btnCopyMasLink')!;
+        const orig = btn.textContent;
+        try {
+          await navigator.clipboard.writeText(url);
+          btn.textContent = 'copied ✓';
+        } catch {
+          // fallback: select-into-prompt
+          window.prompt('copy this link:', url);
+        }
+        setTimeout(() => { btn.textContent = orig; }, 1600);
+      }, { signal });
 
       const fileImport = $opt<HTMLInputElement>('fileImport')!;
       fileImport.addEventListener('change', (e) => {
