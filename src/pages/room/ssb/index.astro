@@ -1,0 +1,1431 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+---
+
+<Layout title="ssb calculator. — Mick Tan" description="singapore savings bond yield calculator">
+  <main class="ssb">
+    <div class="topbar">
+      <a class="back" href="/room/" data-astro-prefetch>&larr; the room</a>
+    </div>
+
+    <header class="head">
+      <h1>ssb calculator<span class="dot">.</span></h1>
+      <p class="sub">track a portfolio of singapore savings bonds. project every payout, every month, for the next ten years.</p>
+    </header>
+
+    <div class="privacy" role="note">
+      <strong>nothing is saved.</strong>
+      this calculator keeps everything in your browser tab. refresh or close = portfolio gone. use <em>export</em> to save a JSON copy if you want to come back to it later, and <em>import</em> to load it again.
+    </div>
+
+    <section class="io-row">
+      <button class="io-btn" id="btnExport" type="button">export json</button>
+      <label class="io-btn io-btn--file">
+        import json
+        <input type="file" id="fileImport" accept="application/json,.json" hidden />
+      </label>
+      <span class="io-spacer"></span>
+      <button class="io-btn io-btn--danger" id="btnClear" type="button">clear all</button>
+    </section>
+
+    <section class="summary" id="summary"></section>
+
+    <section class="add-bond">
+      <h2 id="formTitle">add a bond</h2>
+
+      <div class="form-grid">
+        <label class="field">
+          <span class="lbl">issue month</span>
+          <select id="fldMonth"></select>
+        </label>
+        <label class="field">
+          <span class="lbl">issue year</span>
+          <select id="fldYear"></select>
+        </label>
+        <label class="field">
+          <span class="lbl">amount invested (SGD)</span>
+          <input id="fldAmount" type="number" min="500" max="200000" step="500" inputmode="numeric" placeholder="e.g. 10000" />
+          <span class="hint">min $500, max $200,000 per issuance (MAS rules)</span>
+        </label>
+      </div>
+
+      <label class="field field--paste">
+        <span class="lbl">paste the MAS step-up table for this issuance</span>
+        <textarea id="fldPaste" rows="6" spellcheck="false" placeholder={`paste from eservices.mas.gov.sg/statistics/fdanet/StepUpInterest.aspx
+
+Year from issue date    Interest %    Average return per year %
+1                       2.48          2.48
+2                       2.79          2.63
+...
+10                      3.10          2.85`}></textarea>
+        <span class="hint">parser keeps the <em>interest %</em> column (year-on-year), ignores the average-return column.</span>
+      </label>
+
+      <div class="form-actions">
+        <button class="io-btn" id="btnParse" type="button">parse rates</button>
+        <button class="io-btn io-btn--ghost" id="btnSample" type="button">try a sample bond</button>
+        <span class="io-spacer"></span>
+        <button class="io-btn io-btn--cancel-edit" id="btnCancelEdit" type="button" hidden>cancel edit</button>
+        <button class="io-btn io-btn--primary" id="btnAdd" type="button" disabled>add bond</button>
+      </div>
+
+      <div class="parse-feedback" id="parseFeedback" hidden></div>
+
+      <div class="rate-preview" id="ratePreview" hidden>
+        <div class="rate-preview-head">preview — edit any cell to fix typos before adding</div>
+        <table class="rate-table">
+          <thead>
+            <tr><th>year</th><th>interest %</th></tr>
+          </thead>
+          <tbody id="ratePreviewBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="portfolio" id="portfolio"></section>
+
+    <section class="cashflow" id="cashflow"></section>
+
+    <section class="chart-section" id="chartSection"></section>
+
+    <footer class="foot">
+      <p>SSB mechanics modelled per MAS: 6-month coupons on the 1st of issue month and issue-month + 6; payout = (year-of-holding rate) × principal ÷ 2; principal returned with the final coupon at month 120. hold-to-maturity only — no early redemption modelling.</p>
+    </footer>
+  </main>
+
+  <style is:global>
+    html:has(main.ssb), html:has(main.ssb) body { background: #f0ece4; color: #2a2a27; color-scheme: light; }
+
+    .ssb {
+      min-height: 100vh;
+      max-width: 64rem;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 6rem;
+      font-family: 'Lora', Georgia, serif;
+      color: #2a2a27;
+      font-feature-settings: 'tnum' 1;
+    }
+
+    .ssb .topbar { margin-bottom: 2.5rem; }
+    .ssb .back { color: inherit; opacity: 0.45; text-decoration: none; font-size: 0.85rem; }
+    .ssb .back:hover { opacity: 0.95; }
+
+    .ssb .head h1 {
+      font-size: clamp(2.25rem, 6vw, 3.5rem);
+      font-weight: 500;
+      line-height: 1.05;
+      letter-spacing: -0.01em;
+      color: #1a1812;
+    }
+    .ssb .head .dot { color: #f4a563; }
+    .ssb .head .sub {
+      margin-top: 1rem;
+      font-style: italic;
+      opacity: 0.6;
+      max-width: 36rem;
+      line-height: 1.55;
+    }
+
+    .ssb .privacy {
+      margin-top: 2rem;
+      padding: 0.9rem 1.1rem;
+      background: rgba(244, 165, 99, 0.12);
+      border-left: 3px solid #f4a563;
+      border-radius: 2px;
+      font-size: 0.9rem;
+      line-height: 1.55;
+    }
+    .ssb .privacy strong { font-weight: 600; }
+    .ssb .privacy em { font-style: normal; font-weight: 600; color: #8a4a18; }
+
+    .ssb .io-row {
+      margin-top: 1.25rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      align-items: center;
+    }
+    .ssb .io-spacer { flex: 1; }
+
+    .ssb .io-btn {
+      background: transparent;
+      border: 1px solid rgba(42, 42, 39, 0.4);
+      color: #2a2a27;
+      padding: 0.5rem 1rem;
+      border-radius: 3px;
+      font-family: inherit;
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: all 180ms;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .ssb .io-btn:hover { background: #2a2a27; color: #f0ece4; }
+    .ssb .io-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .ssb .io-btn:disabled:hover { background: transparent; color: #2a2a27; }
+    .ssb .io-btn--primary { background: #f4a563; border-color: #f4a563; color: #2a1408; font-weight: 600; }
+    .ssb .io-btn--primary:hover { background: #2a2a27; border-color: #2a2a27; color: #f4a563; }
+    .ssb .io-btn--ghost { opacity: 0.75; }
+    .ssb .io-btn--danger { border-color: rgba(160, 50, 50, 0.5); color: #8a2a2a; }
+    .ssb .io-btn--danger:hover { background: #8a2a2a; color: #f0ece4; }
+    .ssb .io-btn--file { cursor: pointer; }
+
+    .ssb .summary {
+      margin-top: 2.5rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+      gap: 1.25rem;
+    }
+    .ssb .summary .cell {
+      padding: 1rem 1.1rem;
+      border: 1px solid rgba(42, 42, 39, 0.15);
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.4);
+    }
+    .ssb .summary .cell .k {
+      display: block;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      opacity: 0.55;
+    }
+    .ssb .summary .cell .v {
+      display: block;
+      margin-top: 0.4rem;
+      font-size: 1.4rem;
+      font-weight: 500;
+      color: #1a1812;
+      font-feature-settings: 'tnum' 1;
+    }
+    .ssb .summary .cell .vsub {
+      display: block;
+      margin-top: 0.2rem;
+      font-size: 0.78rem;
+      opacity: 0.55;
+      font-style: italic;
+    }
+
+    .ssb h2 {
+      font-size: clamp(1.25rem, 3vw, 1.6rem);
+      font-weight: 500;
+      margin-top: 3.5rem;
+      margin-bottom: 1.25rem;
+      letter-spacing: -0.005em;
+      color: #1a1812;
+    }
+    .ssb h3 {
+      font-size: 1.05rem;
+      font-weight: 500;
+      margin-bottom: 0.6rem;
+      color: #1a1812;
+    }
+
+    .ssb .add-bond { margin-top: 0; }
+    .ssb .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .ssb .field { display: flex; flex-direction: column; gap: 0.35rem; }
+    .ssb .field .lbl { font-size: 0.78rem; opacity: 0.7; }
+    .ssb .field input, .ssb .field select, .ssb .field textarea {
+      background: rgba(255, 255, 255, 0.6);
+      border: 1px solid rgba(42, 42, 39, 0.3);
+      border-radius: 3px;
+      padding: 0.5rem 0.7rem;
+      font-family: inherit;
+      font-size: 0.95rem;
+      color: #2a2a27;
+      width: 100%;
+    }
+    .ssb .field input:focus, .ssb .field select:focus, .ssb .field textarea:focus {
+      outline: none;
+      border-color: #f4a563;
+      box-shadow: 0 0 0 2px rgba(244, 165, 99, 0.25);
+    }
+    .ssb .field textarea { font-family: 'Courier New', monospace; font-size: 0.85rem; line-height: 1.45; resize: vertical; }
+    .ssb .field .hint { font-size: 0.75rem; opacity: 0.5; font-style: italic; }
+    .ssb .field--paste { margin-bottom: 1rem; }
+
+    .ssb .form-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .ssb .parse-feedback {
+      margin-top: 1rem;
+      padding: 0.7rem 0.9rem;
+      border-radius: 3px;
+      font-size: 0.85rem;
+    }
+    .ssb .parse-feedback.warn { background: rgba(244, 165, 99, 0.18); border-left: 3px solid #f4a563; }
+    .ssb .parse-feedback.err { background: rgba(160, 50, 50, 0.12); border-left: 3px solid #8a2a2a; color: #6a1f1f; }
+    .ssb .parse-feedback.ok { background: rgba(80, 140, 80, 0.12); border-left: 3px solid #4a8a4a; color: #2f5a2f; }
+
+    .ssb .rate-preview {
+      margin-top: 1rem;
+      border: 1px solid rgba(42, 42, 39, 0.15);
+      border-radius: 4px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.45);
+    }
+    .ssb .rate-preview-head {
+      padding: 0.6rem 0.9rem;
+      background: rgba(42, 42, 39, 0.05);
+      font-size: 0.78rem;
+      opacity: 0.75;
+    }
+    .ssb .rate-table { width: 100%; border-collapse: collapse; }
+    .ssb .rate-table th, .ssb .rate-table td {
+      padding: 0.45rem 0.9rem;
+      text-align: left;
+      font-size: 0.9rem;
+      border-bottom: 1px solid rgba(42, 42, 39, 0.08);
+    }
+    .ssb .rate-table th { font-weight: 500; opacity: 0.6; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .ssb .rate-table tr:last-child td { border-bottom: none; }
+    .ssb .rate-table input.rate-cell {
+      width: 5rem;
+      padding: 0.25rem 0.45rem;
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid rgba(42, 42, 39, 0.2);
+      border-radius: 2px;
+      font-family: inherit;
+      font-feature-settings: 'tnum' 1;
+      font-size: 0.9rem;
+      color: #2a2a27;
+    }
+    .ssb .rate-table input.rate-cell.empty { background: rgba(160, 50, 50, 0.08); border-color: rgba(160, 50, 50, 0.4); }
+
+    .ssb .portfolio-empty {
+      padding: 2rem;
+      text-align: center;
+      font-style: italic;
+      opacity: 0.55;
+      border: 1px dashed rgba(42, 42, 39, 0.25);
+      border-radius: 4px;
+    }
+
+    .ssb .bond-card {
+      border: 1px solid rgba(42, 42, 39, 0.15);
+      border-radius: 4px;
+      margin-bottom: 1rem;
+      background: rgba(255, 255, 255, 0.45);
+      overflow: hidden;
+    }
+    .ssb .bond-card.matured { opacity: 0.65; }
+    .ssb .bond-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.8rem 1.4rem;
+      padding: 0.9rem 1.1rem;
+      border-bottom: 1px solid rgba(42, 42, 39, 0.08);
+      background: rgba(42, 42, 39, 0.03);
+    }
+    .ssb .bond-head .bid {
+      font-weight: 500;
+      font-size: 1.05rem;
+      color: #1a1812;
+    }
+    .ssb .bond-head .meta { display: inline-flex; flex-direction: column; gap: 0.05rem; }
+    .ssb .bond-head .meta .k { font-size: 0.7rem; opacity: 0.55; text-transform: uppercase; letter-spacing: 0.06em; }
+    .ssb .bond-head .meta .v { font-size: 0.92rem; font-feature-settings: 'tnum' 1; }
+    .ssb .bond-head .badge {
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      background: rgba(42, 42, 39, 0.1);
+    }
+    .ssb .bond-head .badge.matured-badge { background: rgba(160, 50, 50, 0.15); color: #6a1f1f; }
+    .ssb .bond-head .badge.active-badge { background: rgba(80, 140, 80, 0.18); color: #2f5a2f; }
+    .ssb .bond-head .spacer { flex: 1; }
+    .ssb .bond-head .actions { display: inline-flex; gap: 0.4rem; }
+    .ssb .bond-head .actions button {
+      background: transparent;
+      border: 1px solid rgba(42, 42, 39, 0.3);
+      border-radius: 3px;
+      padding: 0.3rem 0.65rem;
+      font-family: inherit;
+      font-size: 0.78rem;
+      color: inherit;
+      cursor: pointer;
+    }
+    .ssb .bond-head .actions button:hover { background: #2a2a27; color: #f0ece4; border-color: #2a2a27; }
+    .ssb .bond-head .actions button.del:hover { background: #8a2a2a; border-color: #8a2a2a; }
+
+    .ssb .bond-body { padding: 0.4rem 0; }
+    .ssb .payout-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    .ssb .payout-table th, .ssb .payout-table td {
+      padding: 0.4rem 1.1rem;
+      text-align: right;
+      font-feature-settings: 'tnum' 1;
+      border-bottom: 1px solid rgba(42, 42, 39, 0.05);
+    }
+    .ssb .payout-table th { font-weight: 500; opacity: 0.55; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .ssb .payout-table th:first-child, .ssb .payout-table td:first-child { text-align: left; }
+    .ssb .payout-table tr.past td { opacity: 0.4; }
+    .ssb .payout-table tr.final td { font-weight: 500; background: rgba(244, 165, 99, 0.08); }
+    .ssb .payout-table tr.next td { background: rgba(80, 140, 80, 0.08); }
+    .ssb .payout-table tr:last-child td { border-bottom: none; }
+    .ssb .payout-table .yrlbl {
+      display: inline-block;
+      min-width: 2.4rem;
+      font-size: 0.7rem;
+      opacity: 0.55;
+      letter-spacing: 0.04em;
+    }
+
+    .ssb .bond-toggle {
+      width: 100%;
+      text-align: left;
+      background: transparent;
+      border: none;
+      padding: 0.6rem 1.1rem;
+      font-family: inherit;
+      font-size: 0.82rem;
+      opacity: 0.65;
+      cursor: pointer;
+      border-top: 1px dashed rgba(42, 42, 39, 0.1);
+    }
+    .ssb .bond-toggle:hover { opacity: 1; }
+
+    .ssb .cashflow-empty {
+      padding: 1.5rem;
+      text-align: center;
+      font-style: italic;
+      opacity: 0.5;
+    }
+    .ssb .cashflow-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    .ssb .cashflow-table th, .ssb .cashflow-table td {
+      padding: 0.55rem 0.9rem;
+      text-align: right;
+      font-feature-settings: 'tnum' 1;
+      border-bottom: 1px solid rgba(42, 42, 39, 0.08);
+    }
+    .ssb .cashflow-table th { font-weight: 500; opacity: 0.6; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .ssb .cashflow-table th:first-child, .ssb .cashflow-table td:first-child { text-align: left; }
+    .ssb .cashflow-table tr.past td { opacity: 0.45; }
+    .ssb .cashflow-table tr.principal-row td { background: rgba(244, 165, 99, 0.07); }
+    .ssb .cashflow-table tr.expand-row td {
+      padding: 0;
+      background: rgba(42, 42, 39, 0.03);
+    }
+    .ssb .breakdown {
+      padding: 0.5rem 0.9rem 0.8rem;
+      font-size: 0.8rem;
+    }
+    .ssb .breakdown .bd-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.18rem 0;
+      opacity: 0.85;
+    }
+    .ssb .breakdown .bd-row .bd-bond { opacity: 0.7; }
+
+    .ssb .toggle-btn {
+      background: transparent;
+      border: 1px solid rgba(42, 42, 39, 0.25);
+      border-radius: 3px;
+      padding: 0.18rem 0.5rem;
+      font-family: inherit;
+      font-size: 0.72rem;
+      color: inherit;
+      cursor: pointer;
+      opacity: 0.7;
+    }
+    .ssb .toggle-btn:hover { opacity: 1; background: #2a2a27; color: #f0ece4; border-color: #2a2a27; }
+
+    .ssb .chart-wrap {
+      overflow-x: auto;
+      border: 1px solid rgba(42, 42, 39, 0.12);
+      border-radius: 4px;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.4);
+    }
+    .ssb .chart-wrap svg { display: block; }
+    .ssb .chart-empty {
+      padding: 1.5rem;
+      text-align: center;
+      font-style: italic;
+      opacity: 0.5;
+    }
+
+    .ssb .foot {
+      margin-top: 4rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid rgba(42, 42, 39, 0.1);
+      font-size: 0.78rem;
+      opacity: 0.55;
+      line-height: 1.55;
+    }
+
+    @media (max-width: 640px) {
+      .ssb { padding: 1.25rem 1rem 4rem; }
+      .ssb .summary .cell .v { font-size: 1.2rem; }
+      .ssb .bond-head { gap: 0.6rem 1rem; }
+      .ssb .bond-head .meta .v { font-size: 0.85rem; }
+      .ssb .payout-table th, .ssb .payout-table td { padding: 0.35rem 0.6rem; }
+      .ssb .cashflow-table th, .ssb .cashflow-table td { padding: 0.45rem 0.55rem; }
+      .ssb .bond-head .bid { font-size: 0.95rem; }
+    }
+  </style>
+
+  <script>
+    // ---------- Types ----------
+    type Bond = {
+      id: string;
+      issueMonth: number; // 1-12
+      issueYear: number;
+      amount: number;
+      rates: number[]; // length 10, percentages (e.g. 2.48)
+    };
+
+    type ParsedPreview = (number | null)[]; // length 10
+
+    type State = {
+      portfolio: Bond[];
+      formMonth: number;
+      formYear: number;
+      formAmount: string;
+      formPaste: string;
+      formPreview: ParsedPreview;
+      formPreviewVisible: boolean;
+      formFeedback: { tone: 'ok' | 'warn' | 'err'; text: string } | null;
+      editingId: string | null;
+      expandedBonds: Set<string>;
+      expandedMonths: Set<number>; // monthIdx values
+    };
+
+    // ---------- Constants ----------
+    const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const MIN_ISSUE_YEAR = 2015;
+    const MIN_ISSUE_MONTH_2015 = 10; // SSBs started Oct 2015
+    const MIN_AMOUNT = 500;
+    const MAX_AMOUNT = 200000;
+    const AMOUNT_STEP = 500;
+
+    // ---------- Helpers ----------
+    function monthIdx(year: number, month1to12: number): number {
+      return year * 12 + (month1to12 - 1);
+    }
+    function fromIdx(idx: number): { year: number; month: number } {
+      return { year: Math.floor(idx / 12), month: (idx % 12) + 1 };
+    }
+    function fmtMoney(n: number): string {
+      const sign = n < 0 ? '-' : '';
+      const abs = Math.abs(n);
+      return sign + '$' + abs.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    function fmtMoneyRound(n: number): string {
+      const sign = n < 0 ? '-' : '';
+      const abs = Math.abs(n);
+      return sign + '$' + Math.round(abs).toLocaleString('en-US');
+    }
+    function fmtRate(r: number): string { return r.toFixed(2) + '%'; }
+    function fmtDateIdx(idx: number, day = 1): string {
+      const { year, month } = fromIdx(idx);
+      return `${day} ${MONTH_NAMES[month - 1]} ${year}`;
+    }
+    function uid(): string { return 'b' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-3); }
+
+    function todayParts(): { year: number; month: number; day: number; idx: number } {
+      const d = new Date();
+      const year = d.getFullYear(), month = d.getMonth() + 1, day = d.getDate();
+      return { year, month, day, idx: monthIdx(year, month) };
+    }
+
+    // ---------- Domain math ----------
+    // Payout k is the k-th coupon (k=0..19). It occurs 6*(k+1) months after issue.
+    // Year of holding = floor(k/2) + 1; rate index = floor(k/2).
+    function payoutMonthIdx(bond: Bond, k: number): number {
+      return monthIdx(bond.issueYear, bond.issueMonth) + 6 * (k + 1);
+    }
+    function payoutRateForK(bond: Bond, k: number): number {
+      return bond.rates[Math.floor(k / 2)] ?? 0;
+    }
+    function payoutInterest(bond: Bond, k: number): number {
+      return bond.amount * (payoutRateForK(bond, k) / 100) / 2;
+    }
+
+    // months elapsed since issue, on the FIRST of today's month
+    function monthsElapsed(bond: Bond): number {
+      const t = todayParts();
+      return t.idx - monthIdx(bond.issueYear, bond.issueMonth);
+    }
+    function isMatured(bond: Bond): boolean {
+      // matured once 120 months elapsed AND we are past the final coupon date
+      return monthsElapsed(bond) >= 120;
+    }
+    function currentYearOfHolding(bond: Bond): number {
+      const m = monthsElapsed(bond);
+      if (m < 0) return 0; // not yet issued
+      return Math.min(10, Math.floor(m / 12) + 1);
+    }
+    function currentAnnualRate(bond: Bond): number {
+      const y = currentYearOfHolding(bond);
+      if (y <= 0 || y > 10) return 0;
+      return bond.rates[y - 1] ?? 0;
+    }
+    // next payout index (0..19) that is strictly after today; -1 if none left
+    function nextPayoutK(bond: Bond): number {
+      const t = todayParts();
+      for (let k = 0; k < 20; k++) {
+        const idx = payoutMonthIdx(bond, k);
+        // payout is on day 1; "strictly after today" means idx > t.idx, OR (idx == t.idx && t.day == 1) is the day-of payout — count as upcoming if t.day <= 1
+        if (idx > t.idx) return k;
+        if (idx === t.idx && t.day === 1) return k;
+      }
+      return -1;
+    }
+    function bondTotalInterest(bond: Bond): number {
+      let s = 0;
+      for (let k = 0; k < 20; k++) s += payoutInterest(bond, k);
+      return s;
+    }
+    function bondRemainingInterest(bond: Bond): number {
+      const nk = nextPayoutK(bond);
+      if (nk < 0) return 0;
+      let s = 0;
+      for (let k = nk; k < 20; k++) s += payoutInterest(bond, k);
+      return s;
+    }
+    function bondRemainingPrincipal(bond: Bond): number {
+      // principal returns with final coupon (k=19). If that's still upcoming, count it.
+      const nk = nextPayoutK(bond);
+      return nk >= 0 && nk <= 19 ? bond.amount : 0;
+    }
+    function meanRate(bond: Bond): number {
+      let s = 0;
+      for (const r of bond.rates) s += r;
+      return s / 10;
+    }
+
+    // ---------- State ----------
+    const t0 = todayParts();
+    const state: State = {
+      portfolio: [],
+      formMonth: t0.month,
+      formYear: t0.year,
+      formAmount: '',
+      formPaste: '',
+      formPreview: Array(10).fill(null),
+      formPreviewVisible: false,
+      formFeedback: null,
+      editingId: null,
+      expandedBonds: new Set(),
+      expandedMonths: new Set(),
+    };
+
+    // ---------- Parser ----------
+    // Tolerates tabs, multiple spaces, header rows, extra junk.
+    // Looks for lines starting with an integer 1..10 followed by two decimals;
+    // grabs the FIRST decimal as the interest %.
+    function parseRates(input: string): { rates: ParsedPreview; warning: string | null; error: string | null } {
+      const lines = input.split(/\r?\n/);
+      const found: ParsedPreview = Array(10).fill(null);
+      let anyMatched = 0;
+      for (const raw of lines) {
+        const line = raw.trim();
+        if (!line) continue;
+        // Match: leading integer 1..10, then at least one numeric token
+        // We accept "1\t2.48\t2.48" or "1   2.48   2.48" or even just "1 2.48"
+        const m = line.match(/^(\d{1,2})\b[\s\t]+([+-]?\d+(?:\.\d+)?)\s*%?(?:[\s\t]+([+-]?\d+(?:\.\d+)?))?/);
+        if (!m) continue;
+        const year = parseInt(m[1], 10);
+        const rate = parseFloat(m[2]);
+        if (year < 1 || year > 10) continue;
+        if (!isFinite(rate)) continue;
+        // skip header rows where year happens to be e.g. "1" but rate is silly — but our regex already requires a decimal
+        found[year - 1] = rate;
+        anyMatched++;
+      }
+      if (anyMatched === 0) {
+        return { rates: found, warning: null, error: 'no rate rows found. paste the MAS step-up table including the year numbers and interest % columns.' };
+      }
+      const filled = found.filter(r => r !== null).length;
+      if (filled < 10) {
+        return {
+          rates: found,
+          warning: `found ${filled} of 10 expected rates. fill in the missing years below before adding the bond.`,
+          error: null,
+        };
+      }
+      return { rates: found, warning: null, error: null };
+    }
+
+    // ---------- DOM lookups ----------
+    function $(id: string): HTMLElement {
+      const el = document.getElementById(id);
+      if (!el) throw new Error('missing #' + id);
+      return el;
+    }
+    function $opt<T extends HTMLElement>(id: string): T | null {
+      return document.getElementById(id) as T | null;
+    }
+
+    // ---------- Renderers ----------
+    function renderForm() {
+      // Populate month and year selects (idempotent — only fill on first call)
+      const monthSel = $opt<HTMLSelectElement>('fldMonth')!;
+      const yearSel = $opt<HTMLSelectElement>('fldYear')!;
+      if (monthSel.options.length === 0) {
+        for (let m = 1; m <= 12; m++) {
+          const opt = document.createElement('option');
+          opt.value = String(m);
+          opt.textContent = MONTH_NAMES[m - 1];
+          monthSel.appendChild(opt);
+        }
+      }
+      if (yearSel.options.length === 0) {
+        const t = todayParts();
+        for (let y = MIN_ISSUE_YEAR; y <= t.year; y++) {
+          const opt = document.createElement('option');
+          opt.value = String(y);
+          opt.textContent = String(y);
+          yearSel.appendChild(opt);
+        }
+      }
+      monthSel.value = String(state.formMonth);
+      yearSel.value = String(state.formYear);
+
+      ($opt<HTMLInputElement>('fldAmount')!).value = state.formAmount;
+      ($opt<HTMLTextAreaElement>('fldPaste')!).value = state.formPaste;
+
+      // form title & buttons
+      $('formTitle').textContent = state.editingId ? 'edit bond' : 'add a bond';
+      const addBtn = $opt<HTMLButtonElement>('btnAdd')!;
+      addBtn.textContent = state.editingId ? 'save changes' : 'add bond';
+      const cancel = $opt<HTMLButtonElement>('btnCancelEdit')!;
+      cancel.hidden = !state.editingId;
+
+      // feedback
+      const fb = $('parseFeedback');
+      if (!state.formFeedback) {
+        fb.hidden = true;
+        fb.className = 'parse-feedback';
+        fb.innerHTML = '';
+      } else {
+        fb.hidden = false;
+        fb.className = 'parse-feedback ' + state.formFeedback.tone;
+        fb.textContent = state.formFeedback.text;
+      }
+
+      // preview
+      const pv = $('ratePreview');
+      const body = $('ratePreviewBody');
+      if (!state.formPreviewVisible) {
+        pv.hidden = true;
+        body.innerHTML = '';
+      } else {
+        pv.hidden = false;
+        body.innerHTML = '';
+        for (let i = 0; i < 10; i++) {
+          const tr = document.createElement('tr');
+          const tdY = document.createElement('td');
+          tdY.textContent = 'year ' + (i + 1);
+          const tdR = document.createElement('td');
+          const input = document.createElement('input');
+          input.type = 'number';
+          input.step = '0.01';
+          input.className = 'rate-cell';
+          input.dataset.year = String(i);
+          const val = state.formPreview[i];
+          if (val === null || val === undefined) {
+            input.value = '';
+            input.classList.add('empty');
+            input.placeholder = '—';
+          } else {
+            input.value = String(val);
+          }
+          tdR.appendChild(input);
+          tr.appendChild(tdY);
+          tr.appendChild(tdR);
+          body.appendChild(tr);
+        }
+      }
+
+      // disable add until form is valid
+      const valid = formIsValid();
+      addBtn.disabled = !valid;
+    }
+
+    function formIsValid(): boolean {
+      const amt = parseFloat(state.formAmount);
+      if (!isFinite(amt)) return false;
+      if (amt < MIN_AMOUNT || amt > MAX_AMOUNT) return false;
+      if (state.formYear === MIN_ISSUE_YEAR && state.formMonth < MIN_ISSUE_MONTH_2015) return false;
+      const fut = monthIdx(state.formYear, state.formMonth) > todayParts().idx;
+      if (fut) return false;
+      if (!state.formPreviewVisible) return false;
+      for (let i = 0; i < 10; i++) {
+        const v = state.formPreview[i];
+        if (v === null || v === undefined || !isFinite(v as number) || (v as number) < 0) return false;
+      }
+      return true;
+    }
+
+    function renderSummary() {
+      const root = $('summary');
+      const portfolio = state.portfolio;
+      const active = portfolio.filter(b => !isMatured(b));
+      const totalInvested = active.reduce((s, b) => s + b.amount, 0);
+      const remainingInterest = active.reduce((s, b) => s + bondRemainingInterest(b), 0);
+      const remainingPrincipal = active.reduce((s, b) => s + bondRemainingPrincipal(b), 0);
+      const remainingPayout = remainingInterest + remainingPrincipal;
+
+      // blended current yield: weighted avg of current rate by principal across ACTIVE bonds
+      let curWeighted = 0, curWeight = 0;
+      let lifeWeighted = 0, lifeWeight = 0;
+      for (const b of active) {
+        curWeighted += b.amount * currentAnnualRate(b);
+        curWeight += b.amount;
+        lifeWeighted += b.amount * meanRate(b);
+        lifeWeight += b.amount;
+      }
+      const blendedCurrent = curWeight > 0 ? curWeighted / curWeight : 0;
+      const blendedLifetime = lifeWeight > 0 ? lifeWeighted / lifeWeight : 0;
+
+      const maturedCount = portfolio.length - active.length;
+      const cells = [
+        { k: 'total invested', v: fmtMoney(totalInvested), vsub: active.length === 1 ? '1 active bond' : `${active.length} active bonds` + (maturedCount ? ` · ${maturedCount} matured` : '') },
+        { k: 'projected interest (remaining)', v: fmtMoney(remainingInterest), vsub: 'from next coupon to maturity' },
+        { k: 'projected total payout (remaining)', v: fmtMoney(remainingPayout), vsub: 'interest + principal still to come' },
+        { k: 'blended current yield', v: fmtRate(blendedCurrent), vsub: 'this-year rate, weighted by principal' },
+        { k: 'blended lifetime yield', v: fmtRate(blendedLifetime), vsub: 'mean 10-yr rate, weighted by principal' },
+      ];
+      root.innerHTML = '';
+      for (const c of cells) {
+        const div = document.createElement('div');
+        div.className = 'cell';
+        div.innerHTML = `<span class="k"></span><span class="v"></span><span class="vsub"></span>`;
+        (div.querySelector('.k') as HTMLElement).textContent = c.k;
+        (div.querySelector('.v') as HTMLElement).textContent = c.v;
+        (div.querySelector('.vsub') as HTMLElement).textContent = c.vsub;
+        root.appendChild(div);
+      }
+    }
+
+    function renderPortfolio() {
+      const root = $('portfolio');
+      root.innerHTML = '';
+      const h = document.createElement('h2');
+      h.textContent = 'portfolio';
+      root.appendChild(h);
+
+      if (state.portfolio.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'portfolio-empty';
+        empty.innerHTML = `<p>no bonds yet. add one above — or click <em>try a sample bond</em> to pre-fill the form with illustrative data you can edit before adding.</p>`;
+        root.appendChild(empty);
+        return;
+      }
+
+      // sort by issue date ascending
+      const sorted = [...state.portfolio].sort((a, b) =>
+        monthIdx(a.issueYear, a.issueMonth) - monthIdx(b.issueYear, b.issueMonth)
+      );
+      for (const bond of sorted) root.appendChild(renderBondCard(bond));
+    }
+
+    function renderBondCard(bond: Bond): HTMLElement {
+      const card = document.createElement('div');
+      card.className = 'bond-card';
+      const matured = isMatured(bond);
+      if (matured) card.classList.add('matured');
+
+      const issueLbl = `${MONTH_NAMES[bond.issueMonth - 1]} ${bond.issueYear}`;
+      const curYr = currentYearOfHolding(bond);
+      const curRate = currentAnnualRate(bond);
+      const nk = nextPayoutK(bond);
+      const nextLbl = nk < 0
+        ? '—'
+        : fmtDateIdx(payoutMonthIdx(bond, nk)) + ' · ' + fmtMoney(payoutInterest(bond, nk) + (nk === 19 ? bond.amount : 0));
+
+      const head = document.createElement('div');
+      head.className = 'bond-head';
+      head.innerHTML = `
+        <span class="bid">${issueLbl}</span>
+        <span class="badge ${matured ? 'matured-badge' : 'active-badge'}">${matured ? 'matured' : 'active'}</span>
+        <span class="meta"><span class="k">principal</span><span class="v">${fmtMoney(bond.amount)}</span></span>
+        <span class="meta"><span class="k">year of holding</span><span class="v">${matured ? '10 (done)' : 'year ' + curYr + ' of 10'}</span></span>
+        <span class="meta"><span class="k">current rate</span><span class="v">${matured ? '—' : fmtRate(curRate)}</span></span>
+        <span class="meta"><span class="k">next payout</span><span class="v">${nextLbl}</span></span>
+        <span class="spacer"></span>
+        <span class="actions">
+          <button data-action="edit" data-bond="${bond.id}">edit</button>
+          <button class="del" data-action="del" data-bond="${bond.id}">delete</button>
+        </span>
+      `;
+      card.appendChild(head);
+
+      const expanded = state.expandedBonds.has(bond.id);
+      const toggleBtn = document.createElement('button');
+      toggleBtn.className = 'bond-toggle';
+      toggleBtn.dataset.action = 'toggle-bond';
+      toggleBtn.dataset.bond = bond.id;
+      toggleBtn.textContent = expanded ? '▾ hide 10-year payout schedule' : '▸ show 10-year payout schedule';
+
+      if (expanded) {
+        const body = document.createElement('div');
+        body.className = 'bond-body';
+        body.appendChild(renderBondPayoutTable(bond));
+        card.appendChild(body);
+      }
+      card.appendChild(toggleBtn);
+
+      return card;
+    }
+
+    function renderBondPayoutTable(bond: Bond): HTMLElement {
+      const t = todayParts();
+      const nk = nextPayoutK(bond);
+      const wrap = document.createElement('div');
+      wrap.style.overflowX = 'auto';
+      const tbl = document.createElement('table');
+      tbl.className = 'payout-table';
+      tbl.innerHTML = `
+        <thead><tr>
+          <th>date</th>
+          <th>interest</th>
+          <th>principal</th>
+          <th>running total</th>
+        </tr></thead>
+      `;
+      const tbody = document.createElement('tbody');
+      let running = 0;
+      for (let k = 0; k < 20; k++) {
+        const idx = payoutMonthIdx(bond, k);
+        const isFinal = k === 19;
+        const interest = payoutInterest(bond, k);
+        const principal = isFinal ? bond.amount : 0;
+        running += interest + principal;
+
+        const tr = document.createElement('tr');
+        const past = idx < t.idx || (idx === t.idx && t.day > 1);
+        const isNext = k === nk;
+        if (past) tr.classList.add('past');
+        if (isFinal) tr.classList.add('final');
+        if (isNext) tr.classList.add('next');
+
+        const yr = Math.floor(k / 2) + 1;
+        const r = bond.rates[yr - 1] ?? 0;
+        tr.innerHTML = `
+          <td>${fmtDateIdx(idx)} <span class="yrlbl">yr ${yr} · ${fmtRate(r)}</span></td>
+          <td>${fmtMoney(interest)}</td>
+          <td>${principal ? fmtMoney(principal) : '—'}</td>
+          <td>${fmtMoney(running)}</td>
+        `;
+        tbody.appendChild(tr);
+      }
+      tbl.appendChild(tbody);
+      wrap.appendChild(tbl);
+      return wrap;
+    }
+
+    type MonthBucket = {
+      monthIdx: number;
+      interest: number;
+      principal: number;
+      byBond: { bondId: string; bondLabel: string; interest: number; principal: number }[];
+    };
+
+    function buildCashflow(): MonthBucket[] {
+      const buckets = new Map<number, MonthBucket>();
+      for (const bond of state.portfolio) {
+        const lbl = `${MONTH_NAMES[bond.issueMonth - 1]} ${bond.issueYear} · ${fmtMoneyRound(bond.amount)}`;
+        for (let k = 0; k < 20; k++) {
+          const idx = payoutMonthIdx(bond, k);
+          const interest = payoutInterest(bond, k);
+          const principal = k === 19 ? bond.amount : 0;
+          let b = buckets.get(idx);
+          if (!b) {
+            b = { monthIdx: idx, interest: 0, principal: 0, byBond: [] };
+            buckets.set(idx, b);
+          }
+          b.interest += interest;
+          b.principal += principal;
+          b.byBond.push({ bondId: bond.id, bondLabel: lbl, interest, principal });
+        }
+      }
+      return [...buckets.values()].sort((a, b) => a.monthIdx - b.monthIdx);
+    }
+
+    function renderCashflow() {
+      const root = $('cashflow');
+      root.innerHTML = '';
+      const h = document.createElement('h2');
+      h.textContent = 'monthly cashflow';
+      root.appendChild(h);
+
+      const buckets = buildCashflow();
+      if (buckets.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'cashflow-empty';
+        empty.textContent = 'cashflow will appear once you add at least one bond.';
+        root.appendChild(empty);
+        return;
+      }
+
+      const t = todayParts();
+      const wrap = document.createElement('div');
+      wrap.style.overflowX = 'auto';
+      const tbl = document.createElement('table');
+      tbl.className = 'cashflow-table';
+      tbl.innerHTML = `
+        <thead><tr>
+          <th>month</th>
+          <th>interest</th>
+          <th>principal returned</th>
+          <th>total payout</th>
+          <th></th>
+        </tr></thead>
+      `;
+      const tbody = document.createElement('tbody');
+      for (const b of buckets) {
+        const total = b.interest + b.principal;
+        const past = b.monthIdx < t.idx || (b.monthIdx === t.idx && t.day > 1);
+        const tr = document.createElement('tr');
+        if (past) tr.classList.add('past');
+        if (b.principal > 0) tr.classList.add('principal-row');
+        tr.innerHTML = `
+          <td>${fmtDateIdx(b.monthIdx)}</td>
+          <td>${fmtMoney(b.interest)}</td>
+          <td>${b.principal ? fmtMoney(b.principal) : '—'}</td>
+          <td><strong>${fmtMoney(total)}</strong></td>
+          <td><button class="toggle-btn" data-action="toggle-month" data-month="${b.monthIdx}">${state.expandedMonths.has(b.monthIdx) ? '▾' : '▸'} by bond</button></td>
+        `;
+        tbody.appendChild(tr);
+        if (state.expandedMonths.has(b.monthIdx)) {
+          const er = document.createElement('tr');
+          er.className = 'expand-row';
+          const td = document.createElement('td');
+          td.colSpan = 5;
+          const bd = document.createElement('div');
+          bd.className = 'breakdown';
+          for (const row of b.byBond) {
+            const line = document.createElement('div');
+            line.className = 'bd-row';
+            const amt = row.interest + row.principal;
+            line.innerHTML = `<span class="bd-bond">${row.bondLabel}</span><span>${fmtMoney(amt)}${row.principal ? ' (incl. principal)' : ''}</span>`;
+            bd.appendChild(line);
+          }
+          td.appendChild(bd);
+          er.appendChild(td);
+          tbody.appendChild(er);
+        }
+      }
+      tbl.appendChild(tbody);
+      wrap.appendChild(tbl);
+      root.appendChild(wrap);
+    }
+
+    function renderChart() {
+      const root = $('chartSection');
+      root.innerHTML = '';
+      const h = document.createElement('h2');
+      h.textContent = 'monthly payouts over time';
+      root.appendChild(h);
+
+      const buckets = buildCashflow();
+      if (buckets.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'chart-empty';
+        empty.textContent = 'chart will appear once you add at least one bond.';
+        root.appendChild(empty);
+        return;
+      }
+
+      const wrap = document.createElement('div');
+      wrap.className = 'chart-wrap';
+
+      // Build per-month dense series from earliest to latest monthIdx
+      const minIdx = buckets[0].monthIdx;
+      const maxIdx = buckets[buckets.length - 1].monthIdx;
+      const months = maxIdx - minIdx + 1;
+      const byMonth = new Map<number, { interest: number; principal: number }>();
+      for (const b of buckets) byMonth.set(b.monthIdx, { interest: b.interest, principal: b.principal });
+
+      // Chart dims
+      const barW = Math.max(4, Math.min(14, Math.floor(800 / months)));
+      const gap = barW >= 8 ? 2 : 1;
+      const colW = barW + gap;
+      const chartW = Math.max(640, colW * months + 60);
+      const chartH = 240;
+      const padL = 50, padR = 16, padT = 16, padB = 36;
+      const plotW = chartW - padL - padR;
+      const plotH = chartH - padT - padB;
+
+      let maxVal = 0;
+      for (let i = 0; i < months; i++) {
+        const v = byMonth.get(minIdx + i);
+        const total = v ? v.interest + v.principal : 0;
+        if (total > maxVal) maxVal = total;
+      }
+      if (maxVal === 0) maxVal = 1;
+
+      const yMax = niceCeiling(maxVal);
+      const yTicks = 4;
+      const t = todayParts();
+
+      let svg = `<svg width="${chartW}" height="${chartH}" viewBox="0 0 ${chartW} ${chartH}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="monthly payouts">`;
+
+      // y gridlines + labels
+      for (let i = 0; i <= yTicks; i++) {
+        const y = padT + (plotH * i) / yTicks;
+        const v = yMax * (1 - i / yTicks);
+        svg += `<line x1="${padL}" y1="${y}" x2="${chartW - padR}" y2="${y}" stroke="rgba(42,42,39,0.12)" stroke-width="1"/>`;
+        svg += `<text x="${padL - 6}" y="${y + 4}" text-anchor="end" font-size="10" fill="rgba(42,42,39,0.6)" font-family="Lora,Georgia,serif">${fmtMoneyRound(v)}</text>`;
+      }
+
+      // x-axis year markers (Jan of each year)
+      const startYM = fromIdx(minIdx);
+      const endYM = fromIdx(maxIdx);
+      for (let y = startYM.year; y <= endYM.year + 1; y++) {
+        const idx = monthIdx(y, 1);
+        if (idx < minIdx || idx > maxIdx + 1) continue;
+        const i = idx - minIdx;
+        const x = padL + i * (plotW / months);
+        if (x > chartW - padR) continue;
+        svg += `<line x1="${x}" y1="${padT}" x2="${x}" y2="${chartH - padB}" stroke="rgba(42,42,39,0.18)" stroke-width="1" stroke-dasharray="2,3"/>`;
+        svg += `<text x="${x + 2}" y="${chartH - padB + 14}" font-size="10" fill="rgba(42,42,39,0.65)" font-family="Lora,Georgia,serif">${y}</text>`;
+      }
+
+      // "today" line
+      if (t.idx >= minIdx && t.idx <= maxIdx) {
+        const i = t.idx - minIdx;
+        const x = padL + (i + 0.5) * (plotW / months);
+        svg += `<line x1="${x}" y1="${padT}" x2="${x}" y2="${chartH - padB}" stroke="#f4a563" stroke-width="1.2"/>`;
+        svg += `<text x="${x + 4}" y="${padT + 12}" font-size="10" fill="#8a4a18" font-family="Lora,Georgia,serif">today</text>`;
+      }
+
+      // bars
+      for (let i = 0; i < months; i++) {
+        const v = byMonth.get(minIdx + i);
+        if (!v) continue;
+        const x = padL + i * (plotW / months) + ((plotW / months) - barW) / 2;
+        const idxHere = minIdx + i;
+        const past = idxHere < t.idx || (idxHere === t.idx && t.day > 1);
+        const totalH = ((v.interest + v.principal) / yMax) * plotH;
+        const principalH = (v.principal / yMax) * plotH;
+        const interestH = totalH - principalH;
+
+        // interest bottom
+        const yInterestTop = padT + plotH - interestH;
+        svg += `<rect x="${x}" y="${yInterestTop}" width="${barW}" height="${interestH}" fill="${past ? 'rgba(42,42,39,0.32)' : '#2a2a27'}" />`;
+        if (principalH > 0) {
+          const yPrincipalTop = padT + plotH - totalH;
+          svg += `<rect x="${x}" y="${yPrincipalTop}" width="${barW}" height="${principalH}" fill="${past ? 'rgba(244,165,99,0.4)' : '#f4a563'}" />`;
+        }
+        // hover title
+        svg += `<title>${fmtDateIdx(idxHere)} — interest ${fmtMoney(v.interest)}${v.principal ? ' + principal ' + fmtMoney(v.principal) : ''}</title>`;
+      }
+
+      // legend
+      const legY = chartH - 6;
+      svg += `<rect x="${padL}" y="${legY - 8}" width="10" height="10" fill="#2a2a27"/>`;
+      svg += `<text x="${padL + 16}" y="${legY}" font-size="10" fill="rgba(42,42,39,0.7)" font-family="Lora,Georgia,serif">interest</text>`;
+      svg += `<rect x="${padL + 80}" y="${legY - 8}" width="10" height="10" fill="#f4a563"/>`;
+      svg += `<text x="${padL + 96}" y="${legY}" font-size="10" fill="rgba(42,42,39,0.7)" font-family="Lora,Georgia,serif">principal</text>`;
+
+      svg += `</svg>`;
+      wrap.innerHTML = svg;
+      root.appendChild(wrap);
+    }
+
+    function niceCeiling(n: number): number {
+      if (n <= 0) return 1;
+      const mag = Math.pow(10, Math.floor(Math.log10(n)));
+      const norm = n / mag;
+      let nice = 10;
+      if (norm <= 1) nice = 1;
+      else if (norm <= 2) nice = 2;
+      else if (norm <= 2.5) nice = 2.5;
+      else if (norm <= 5) nice = 5;
+      return nice * mag;
+    }
+
+    function renderAll() {
+      renderForm();
+      renderSummary();
+      renderPortfolio();
+      renderCashflow();
+      renderChart();
+    }
+
+    // ---------- Actions ----------
+    function doParse() {
+      const txt = state.formPaste;
+      const { rates, warning, error } = parseRates(txt);
+      state.formPreview = rates;
+      state.formPreviewVisible = !error;
+      if (error) {
+        state.formFeedback = { tone: 'err', text: error };
+      } else if (warning) {
+        state.formFeedback = { tone: 'warn', text: warning };
+      } else {
+        state.formFeedback = { tone: 'ok', text: 'parsed 10 rates. preview below — edit if anything looks off, then click add bond.' };
+      }
+      renderForm();
+    }
+
+    function doSample() {
+      // Illustrative ONLY. User should replace with real MAS data before relying on it.
+      const t = todayParts();
+      state.formMonth = t.month;
+      state.formYear = t.year;
+      state.formAmount = '10000';
+      state.formPaste =
+        'Year from issue date\tInterest %\tAverage return per year %\n' +
+        '1\t2.48\t2.48\n' +
+        '2\t2.79\t2.63\n' +
+        '3\t2.85\t2.71\n' +
+        '4\t2.90\t2.75\n' +
+        '5\t2.95\t2.79\n' +
+        '6\t2.98\t2.82\n' +
+        '7\t3.00\t2.84\n' +
+        '8\t3.03\t2.86\n' +
+        '9\t3.06\t2.88\n' +
+        '10\t3.10\t2.90\n';
+      doParse();
+      state.formFeedback = { tone: 'warn', text: 'sample data loaded for demo. replace with real MAS rates for your actual issuance before adding.' };
+      renderForm();
+    }
+
+    function commitBond() {
+      if (!formIsValid()) return;
+      const rates = state.formPreview.map(r => Number(r));
+      const bond: Bond = {
+        id: state.editingId ?? uid(),
+        issueMonth: state.formMonth,
+        issueYear: state.formYear,
+        amount: Math.round(parseFloat(state.formAmount)),
+        rates,
+      };
+      if (state.editingId) {
+        const i = state.portfolio.findIndex(b => b.id === state.editingId);
+        if (i >= 0) state.portfolio[i] = bond;
+      } else {
+        state.portfolio.push(bond);
+      }
+      state.editingId = null;
+      state.formAmount = '';
+      state.formPaste = '';
+      state.formPreview = Array(10).fill(null);
+      state.formPreviewVisible = false;
+      state.formFeedback = null;
+      renderAll();
+    }
+
+    function startEdit(id: string) {
+      const b = state.portfolio.find(x => x.id === id);
+      if (!b) return;
+      state.editingId = id;
+      state.formMonth = b.issueMonth;
+      state.formYear = b.issueYear;
+      state.formAmount = String(b.amount);
+      state.formPaste = 'year\tinterest %\n' + b.rates.map((r, i) => `${i + 1}\t${r.toFixed(2)}`).join('\n');
+      state.formPreview = [...b.rates];
+      state.formPreviewVisible = true;
+      state.formFeedback = { tone: 'ok', text: 'editing this bond. change anything below and click save changes.' };
+      renderAll();
+      $('formTitle').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function cancelEdit() {
+      state.editingId = null;
+      state.formAmount = '';
+      state.formPaste = '';
+      state.formPreview = Array(10).fill(null);
+      state.formPreviewVisible = false;
+      state.formFeedback = null;
+      renderAll();
+    }
+
+    function deleteBond(id: string) {
+      const b = state.portfolio.find(x => x.id === id);
+      if (!b) return;
+      const lbl = `${MONTH_NAMES[b.issueMonth - 1]} ${b.issueYear} (${fmtMoneyRound(b.amount)})`;
+      if (!confirm(`Delete the bond from ${lbl}?\nThis cannot be undone.`)) return;
+      state.portfolio = state.portfolio.filter(x => x.id !== id);
+      state.expandedBonds.delete(id);
+      if (state.editingId === id) cancelEdit();
+      renderAll();
+    }
+
+    function clearAll() {
+      if (state.portfolio.length === 0) return;
+      if (!confirm(`Clear the entire portfolio (${state.portfolio.length} bond${state.portfolio.length === 1 ? '' : 's'})?\nThis cannot be undone.`)) return;
+      state.portfolio = [];
+      state.expandedBonds.clear();
+      state.expandedMonths.clear();
+      cancelEdit();
+      renderAll();
+    }
+
+    function exportJson() {
+      const data = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        bonds: state.portfolio.map(b => ({
+          issueMonth: b.issueMonth,
+          issueYear: b.issueYear,
+          amount: b.amount,
+          rates: b.rates,
+        })),
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const d = new Date();
+      const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+      a.href = url;
+      a.download = `ssb-portfolio-${stamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function importJson(file: File) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const txt = String(reader.result ?? '');
+          const data = JSON.parse(txt);
+          const list = Array.isArray(data) ? data : data?.bonds;
+          if (!Array.isArray(list)) throw new Error('JSON has no bonds array');
+          const parsed: Bond[] = [];
+          for (const raw of list) {
+            const issueMonth = Number(raw.issueMonth);
+            const issueYear = Number(raw.issueYear);
+            const amount = Number(raw.amount);
+            const rates = Array.isArray(raw.rates) ? raw.rates.map((r: any) => Number(r)) : [];
+            if (!Number.isInteger(issueMonth) || issueMonth < 1 || issueMonth > 12) continue;
+            if (!Number.isInteger(issueYear) || issueYear < MIN_ISSUE_YEAR) continue;
+            if (!isFinite(amount) || amount < MIN_AMOUNT || amount > MAX_AMOUNT) continue;
+            if (rates.length !== 10 || rates.some(r => !isFinite(r))) continue;
+            parsed.push({ id: uid(), issueMonth, issueYear, amount: Math.round(amount), rates });
+          }
+          if (parsed.length === 0) {
+            alert('No valid bonds found in that file.');
+            return;
+          }
+          if (state.portfolio.length > 0) {
+            if (!confirm(`This will replace your current portfolio (${state.portfolio.length} bond${state.portfolio.length === 1 ? '' : 's'}) with ${parsed.length} from the file. Continue?`)) return;
+          }
+          state.portfolio = parsed;
+          state.expandedBonds.clear();
+          state.expandedMonths.clear();
+          cancelEdit();
+          renderAll();
+        } catch (e: any) {
+          alert('Could not read that JSON: ' + (e?.message ?? 'unknown error'));
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // ---------- Wiring ----------
+    let pageController: AbortController | null = null;
+
+    function teardown() {
+      pageController?.abort();
+      pageController = null;
+    }
+
+    function init() {
+      // Only run on the SSB page
+      if (!document.querySelector('main.ssb')) return;
+      teardown();
+      pageController = new AbortController();
+      const signal = pageController.signal;
+
+      renderAll();
+
+      // form fields
+      $opt<HTMLSelectElement>('fldMonth')!.addEventListener('change', (e) => {
+        state.formMonth = parseInt((e.target as HTMLSelectElement).value, 10);
+        renderForm();
+      }, { signal });
+      $opt<HTMLSelectElement>('fldYear')!.addEventListener('change', (e) => {
+        state.formYear = parseInt((e.target as HTMLSelectElement).value, 10);
+        renderForm();
+      }, { signal });
+      $opt<HTMLInputElement>('fldAmount')!.addEventListener('input', (e) => {
+        state.formAmount = (e.target as HTMLInputElement).value;
+        renderForm();
+      }, { signal });
+      $opt<HTMLTextAreaElement>('fldPaste')!.addEventListener('input', (e) => {
+        state.formPaste = (e.target as HTMLTextAreaElement).value;
+      }, { signal });
+
+      // buttons
+      $('btnParse').addEventListener('click', () => doParse(), { signal });
+      $('btnSample').addEventListener('click', () => doSample(), { signal });
+      $('btnAdd').addEventListener('click', () => commitBond(), { signal });
+      $('btnCancelEdit').addEventListener('click', () => cancelEdit(), { signal });
+      $('btnExport').addEventListener('click', () => exportJson(), { signal });
+      $('btnClear').addEventListener('click', () => clearAll(), { signal });
+
+      const fileImport = $opt<HTMLInputElement>('fileImport')!;
+      fileImport.addEventListener('change', (e) => {
+        const f = (e.target as HTMLInputElement).files?.[0];
+        if (f) importJson(f);
+        (e.target as HTMLInputElement).value = ''; // allow re-import same file
+      }, { signal });
+
+      // rate-cell edits (delegated; preview is rebuilt on every renderForm call, so re-attach via delegation)
+      document.addEventListener('input', (e) => {
+        const t = e.target as HTMLElement;
+        if (!t || !(t instanceof HTMLInputElement)) return;
+        if (!t.classList.contains('rate-cell')) return;
+        const y = parseInt(t.dataset.year ?? '-1', 10);
+        if (y < 0 || y > 9) return;
+        const v = t.value.trim();
+        state.formPreview[y] = v === '' ? null : parseFloat(v);
+        // re-validate add button without full re-render
+        const addBtn = $opt<HTMLButtonElement>('btnAdd');
+        if (addBtn) addBtn.disabled = !formIsValid();
+        if (v === '') t.classList.add('empty'); else t.classList.remove('empty');
+      }, { signal });
+
+      // portfolio / cashflow / chart click delegation
+      document.addEventListener('click', (e) => {
+        const t = (e.target as HTMLElement)?.closest('[data-action]') as HTMLElement | null;
+        if (!t) return;
+        const action = t.dataset.action;
+        if (action === 'edit') startEdit(t.dataset.bond!);
+        else if (action === 'del') deleteBond(t.dataset.bond!);
+        else if (action === 'toggle-bond') {
+          const id = t.dataset.bond!;
+          if (state.expandedBonds.has(id)) state.expandedBonds.delete(id);
+          else state.expandedBonds.add(id);
+          renderPortfolio();
+        } else if (action === 'toggle-month') {
+          const m = parseInt(t.dataset.month ?? '0', 10);
+          if (state.expandedMonths.has(m)) state.expandedMonths.delete(m);
+          else state.expandedMonths.add(m);
+          renderCashflow();
+        }
+      }, { signal });
+    }
+
+    document.addEventListener('astro:page-load', init);
+    document.addEventListener('astro:before-swap', teardown);
+  </script>
+</Layout>
