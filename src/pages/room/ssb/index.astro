@@ -878,6 +878,7 @@ Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
       const active = portfolio.filter(b => !isMatured(b));
       const totalInvested = active.reduce((s, b) => s + b.amount, 0);
       const remainingInterest = active.reduce((s, b) => s + bondRemainingInterest(b), 0);
+      const totalInterest = active.reduce((s, b) => s + bondTotalInterest(b), 0);
 
       // blended current yield: weighted avg of current rate by principal across ACTIVE bonds
       let curWeighted = 0, curWeight = 0;
@@ -897,6 +898,7 @@ Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
       const cells = [
         { k: 'total invested', v: fmtMoney(totalInvested), vsub: active.length === 1 ? '1 active bond' : `${active.length} active bonds` + (maturedCount ? ` · ${maturedCount} matured` : '') },
         { k: 'projected interest (remaining)', v: fmtMoney(remainingInterest), vsub: 'from next coupon to maturity' },
+        { k: 'projected total yield', v: fmtMoney(totalInterest), vsub: 'interest across full 10-yr holding' },
         { k: `blended current yield · ${monthLbl}`, v: fmtRate(blendedCurrent), vsub: `rate as of ${monthLbl}, weighted by principal` },
         { k: 'blended lifetime yield', v: fmtRate(blendedLifetime), vsub: 'mean 10-yr rate, weighted by principal' },
       ];
