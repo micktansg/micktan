@@ -7,78 +7,60 @@ const markdownRooms = await getCollection('rooms', ({ data, id }) => {
 });
 
 // Interactive rooms — Astro pages under /src/pages/room/<slug>/ — aren't in
-// the content collection, so list them by hand here. Each entry is a gallery
-// placard: medium (the materials line), intent (the hypothesis), and note
-// (the curator's aside — allowed to wander).
+// the content collection, so list them by hand here. Add a new entry per
+// interactive room as it ships.
 const interactiveRooms = [
   {
     id: 'ssb',
     title: 'SSB calculator.',
+    summary: 'work out SSB yields and payouts.',
     date: new Date('2026-05-16'),
     href: '/room/ssb/',
-    medium: 'financial calculator. typescript, tables, deliberate amnesia.',
-    intent: 'hypothesis: a finance tool can respect you — no account, no tracking, no memory. test: a bond calculator that forgets you on purpose.',
-    note: 'the only exhibit your financial advisor may visit.',
   },
   {
     id: 'domsday',
     title: 'domsday machine.',
+    summary: 'no pain no gain.',
     date: new Date('2026-05-08'),
     href: '/room/domsday/',
-    medium: 'adaptive training coach. three-step intake, phased plans, a bookmark instead of a login.',
-    intent: 'hypothesis: a plan that adapts beats a plan that’s perfect. test: a coach that rebuilds your protocol every time life happens.',
-    note: 'the machine forgives missed sessions. mondays are non-negotiable.',
   },
   {
     id: 'mos',
     title: 'MOS.',
+    summary: 'ministry of silly. walk.',
     date: new Date('2026-05-01'),
     href: '/room/mos/',
-    medium: 'browser game. canvas, two buttons, one government department.',
-    intent: 'hypothesis: the dumbest possible input — alternate L and R — can still carry real tension. test: walk silly. don’t fall. apply for funding.',
-    note: 'after cleese & chapman, 1970. the ministry’s budget remains unapproved.',
   },
   {
     id: 'papercut',
     title: 'papercut.',
+    summary: 'tamagotchi for creative worker. feed them exposure.',
     date: new Date('2026-05-01'),
     href: '/room/papercut/',
-    medium: 'desk-pet life sim. sprite sheets, localstorage, zero salary.',
-    intent: 'hypothesis: “we pay in exposure” is a horror premise. test: make it adorable, then watch the burnout bar.',
-    note: 'exposure remains fatal at altitude.',
   },
   {
     id: 'corporateladder',
     title: 'corporatelardder.',
+    summary: 'log workouts to climb the corporate lardder.',
     date: new Date('2026-05-01'),
     href: '/room/corporateladder/',
-    medium: 'multiplayer workout tracker. redis, boss fights, shared accountability.',
-    intent: 'hypothesis: gym consistency is a team sport. test: every workout deals damage. the boss is everyone’s excuses.',
-    note: 'lard is a renewable resource.',
   },
   {
     id: 'cooked',
     title: 'cooked.',
+    summary: '90s big beat song reviews.',
     date: new Date('2026-04-30'),
     href: '/room/cooked/',
-    medium: 'music-review guessing game. 90s big beat, live ai judge.',
-    intent: 'hypothesis: music reviews are theatre. test: read the prose, guess the verdict, argue with a machine.',
-    note: 'the chemical brothers were not consulted.',
   },
 ];
-
-const monthYear = (d: Date | null) =>
-  d ? d.toLocaleString('en-US', { month: 'long', year: 'numeric' }).toLowerCase() : null;
 
 const rooms = [
   ...markdownRooms.map(r => ({
     id: r.id,
     title: r.data.title,
+    summary: r.data.summary,
     date: r.data.date ? new Date(r.data.date) : null,
     href: `/room/${r.id}/`,
-    medium: 'field note. words, mostly.',
-    intent: r.data.summary ?? '',
-    note: null as string | null,
   })),
   ...interactiveRooms,
 ];
@@ -90,17 +72,12 @@ rooms.sort((a, b) => {
 });
 ---
 
-<Layout
-  title="The Room — Mick Tan"
-  description="a live gallery of working experiments by mick tan, creative strategist."
-  themeColor="#f0ece4"
->
+<Layout title="The Room — Mick Tan" description="every room mick tan has built" themeColor="#f0ece4">
   <main class="inverse-page">
     <header class="page-head">
       <a href="/" class="home-link" data-astro-prefetch>&larr; home</a>
       <h1>the room</h1>
-      <p class="sub">a live gallery of working experiments — by mick tan, creative strategist.</p>
-      <p class="sub-hint" aria-hidden="true">hover a placard. the exhibits are alive.</p>
+      <p class="sub">collection of bugs and stuff, mostly buggy stuff.</p>
     </header>
 
     {rooms.length === 0 ? (
@@ -109,47 +86,50 @@ rooms.sort((a, b) => {
         <p class="empty-sub">mick is somewhere, building.</p>
       </div>
     ) : (
-      <div class="gallery-grid">
+      <>
         <ol class="room-list" role="list">
           {rooms.map((room, i) => (
             <li class="room-item" style={`--i: ${i}`}>
               <a href={room.href} class="room-link" data-room={room.id} data-astro-prefetch>
                 <span class="room-number">{String(i + 1).padStart(2, '0')}</span>
-                <span class="placard">
-                  <span class="room-title">{room.title}</span>
-                  <span class="room-medium">{room.medium} {monthYear(room.date) && <span class="room-date">observed {monthYear(room.date)}.</span>}</span>
-                  {room.intent && <span class="room-intent">{room.intent}</span>}
-                  {room.note && <span class="room-note">{room.note}</span>}
-                </span>
+                <span class="room-title">{room.title}</span>
+                {room.summary && <span class="room-summary">{room.summary}</span>}
               </a>
+              {/* Touch / narrow viewports: tap-to-peek. Lives outside the <a>
+                  (no nested interactives); display-gated by media query. */}
+              <div class="peek-zone">
+                <button class="peek-btn" type="button" aria-expanded="false" aria-controls={`peek-${room.id}`} data-peek={room.id}>
+                  peek
+                </button>
+                <div class="peek-panel" id={`peek-${room.id}`} hidden>
+                  <div class="peek-panel-mat" aria-hidden="true">
+                    <div class="peek-panel-frame">
+                      <iframe data-src={room.href} loading="lazy" title={`live preview — ${room.title}`} tabindex="-1"></iframe>
+                    </div>
+                  </div>
+                  <p class="peek-panel-hint">live. tap the title above to step inside.</p>
+                </div>
+              </div>
             </li>
           ))}
         </ol>
 
-        {/* Live exhibit window — decorative duplication of the placard links,
-            hidden from assistive tech and from touch / narrow viewports.
-            iframes stay src-less until first shown, so nothing loads unless
-            a desktop visitor actually engages. */}
-        <aside class="exhibit" aria-hidden="true">
-          <div class="exhibit-sticky">
-            <div class="exhibit-mat">
-              {rooms.map((room) => (
-                <div class="exhibit-frame" data-room={room.id} hidden>
-                  <iframe data-src={room.href} loading="lazy" title={`live preview — ${room.title}`} tabindex="-1"></iframe>
-                </div>
-              ))}
-            </div>
-            <p class="exhibit-caption">
-              <span class="live-dot"></span>
-              now showing — <span class="now-showing" data-now-showing></span>
-            </p>
-            <p class="exhibit-hint">live exhibit. click its placard to step inside.</p>
+        {/* Desktop cursor lens: a small live window that trails the pointer
+            while a row is hovered — same reveal instinct as the homepage lens.
+            Purely decorative (the rows are the real links): aria-hidden,
+            pointer-events none, iframes src-less until first shown. */}
+        <div class="peek-lens" aria-hidden="true">
+          <div class="peek-lens-mat">
+            {rooms.map((room) => (
+              <div class="peek-frame" data-room={room.id} hidden>
+                <iframe data-src={room.href} loading="lazy" title={`live preview — ${room.title}`} tabindex="-1"></iframe>
+              </div>
+            ))}
           </div>
-        </aside>
-      </div>
+          <p class="peek-lens-caption"><span class="live-dot"></span>live</p>
+        </div>
+      </>
     )}
-
-    <p class="wall-note">collection of bugs and stuff, mostly buggy stuff.</p>
   </main>
 </Layout>
 
@@ -167,8 +147,8 @@ rooms.sort((a, b) => {
   }
 
   .page-head {
-    max-width: 76rem;
-    margin: 0 auto 4rem;
+    max-width: 56rem;
+    margin: 0 auto 5rem;
     position: relative;
   }
 
@@ -203,23 +183,12 @@ rooms.sort((a, b) => {
     margin-top: 1.5rem;
     font-size: clamp(1rem, 2vw, 1.15rem);
     font-style: italic;
-    opacity: 0.7;
-    max-width: 34rem;
-  }
-
-  .sub-hint {
-    margin-top: 0.5rem;
-    font-size: 0.85rem;
-    font-style: italic;
-    opacity: 0.45;
-  }
-  /* The hint only makes sense where the exhibit window exists. */
-  @media (max-width: 959px), (hover: none) {
-    .sub-hint { display: none; }
+    opacity: 0.65;
+    max-width: 30rem;
   }
 
   .empty {
-    max-width: 76rem;
+    max-width: 56rem;
     margin: 0 auto;
     padding: 4rem 0;
     font-style: italic;
@@ -227,27 +196,14 @@ rooms.sort((a, b) => {
   }
   .empty-sub { margin-top: 0.4rem; opacity: 0.7; }
 
-  .gallery-grid {
-    max-width: 76rem;
-    margin: 0 auto;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(22rem, 30rem);
-    gap: 0 4rem;
-    align-items: start;
-  }
-
-  @media (max-width: 959px), (hover: none) {
-    .gallery-grid { grid-template-columns: minmax(0, 1fr); }
-    .exhibit { display: none; }
-  }
-
   .room-list {
+    max-width: 56rem;
+    margin: 0 auto;
     list-style: none;
     padding: 0;
-    margin: 0;
   }
 
-  /* Staggered entrance: each placard fades up in sequence, phase-set by --i.
+  /* Staggered entrance: each row fades up in sequence, phase-set by --i.
      Replays on SPA navigations too, since the swap re-inserts the elements. */
   .room-item {
     border-top: 1px solid rgba(42, 42, 39, 0.16);
@@ -263,20 +219,38 @@ rooms.sort((a, b) => {
     to   { opacity: 1; transform: translateY(0); }
   }
 
+  @media (prefers-reduced-motion: reduce) {
+    .room-item { animation: none; }
+    .room-link { transition: none; }
+  }
+
+  .room-item:nth-child(odd) .room-link { padding-left: 2rem; }
+  .room-item:nth-child(even) .room-link { padding-left: 0; padding-right: 2rem; text-align: right; }
+
   .room-link {
     display: grid;
     grid-template-columns: auto 1fr;
-    column-gap: 1.4rem;
+    column-gap: 1.5rem;
     align-items: baseline;
-    padding: 1.5rem 0.75rem 1.5rem 0;
+    padding: 1.6rem 0;
     color: inherit;
     text-decoration: none;
-    transition: transform 280ms cubic-bezier(.2,.8,.2,1), background-color 200ms;
+    transition: transform 280ms cubic-bezier(.2,.8,.2,1), color 200ms;
     position: relative;
   }
 
+  .room-item:nth-child(even) .room-link {
+    grid-template-columns: 1fr auto;
+  }
+
+  .room-item:nth-child(even) .room-number { order: 2; }
+  .room-item:nth-child(even) .room-title,
+  .room-item:nth-child(even) .room-summary { order: 1; }
+
   .room-link:hover,
   .room-link:focus-visible { transform: translateX(8px); }
+  .room-item:nth-child(even) .room-link:hover,
+  .room-item:nth-child(even) .room-link:focus-visible { transform: translateX(-8px); }
 
   .room-link:focus-visible {
     outline: 2px dashed rgba(42, 42, 39, 0.55);
@@ -284,13 +258,11 @@ rooms.sort((a, b) => {
     border-radius: 4px;
   }
 
-  /* The placard currently on display in the exhibit window. */
-  .room-link.is-showing .room-number { opacity: 1; }
-
+  /* Number and summary wake up when the row is engaged. */
   .room-link:hover .room-number,
   .room-link:focus-visible .room-number { opacity: 0.9; }
-  .room-link:hover .room-note,
-  .room-link:focus-visible .room-note { opacity: 0.85; }
+  .room-link:hover .room-summary,
+  .room-link:focus-visible .room-summary { opacity: 0.85; }
 
   .room-number {
     font-size: 0.85rem;
@@ -300,70 +272,64 @@ rooms.sort((a, b) => {
     transition: opacity 200ms;
   }
 
-  .placard {
-    display: block;
-    min-width: 0;
-  }
-
   .room-title {
-    display: block;
-    font-size: clamp(1.4rem, 3vw, 1.9rem);
+    font-size: clamp(1.5rem, 3.5vw, 2.2rem);
     font-weight: 500;
     line-height: 1.2;
     letter-spacing: -0.005em;
   }
 
-  .room-medium {
-    display: block;
-    margin-top: 0.45rem;
-    font-size: 0.82rem;
-    letter-spacing: 0.02em;
-    opacity: 0.65;
-  }
-  .room-date { opacity: 0.8; }
-
-  .room-intent {
-    display: block;
-    margin-top: 0.6rem;
+  .room-summary {
+    grid-column: 2;
     font-size: 0.95rem;
-    line-height: 1.55;
-    opacity: 0.85;
-    max-width: 36rem;
-  }
-
-  .room-note {
-    display: block;
-    margin-top: 0.5rem;
-    font-size: 0.85rem;
     font-style: italic;
     opacity: 0.65;
+    margin-top: 0.4rem;
     transition: opacity 200ms;
   }
-  .room-note::before { content: '\2014 '; }
 
-  /* ---- The exhibit window ---- */
-
-  .exhibit-sticky {
-    position: sticky;
-    top: 3rem;
+  .room-item:nth-child(even) .room-summary {
+    grid-column: 1;
+    text-align: right;
   }
 
-  .exhibit-mat {
+  /* Narrow screens: the asymmetric zigzag needs width to read as intentional.
+     Collapse EVERYTHING to left-aligned — link padding, grid order, number
+     position, and summary alignment. Must stay LAST in this stylesheet: these
+     overrides tie the even-row rules above on specificity, so they only win
+     by source order. */
+  @media (max-width: 600px) {
+    .room-item:nth-child(odd) .room-link,
+    .room-item:nth-child(even) .room-link {
+      padding-left: 0; padding-right: 0; text-align: left;
+      grid-template-columns: auto 1fr;
+    }
+    .room-item:nth-child(even) .room-number { order: 0; }
+    .room-item:nth-child(even) .room-title,
+    .room-item:nth-child(even) .room-summary { order: 0; }
+    .room-item:nth-child(even) .room-summary { grid-column: 2; text-align: left; }
+    .room-item:nth-child(even) .room-link:hover,
+    .room-item:nth-child(even) .room-link:focus-visible { transform: translateX(8px); }
+  }
+
+  /* ---- peek: shared mat styling ---- */
+
+  .peek-lens-mat, .peek-panel-mat {
     background: #ffffff;
     border: 1px solid rgba(42, 42, 39, 0.16);
-    padding: 0.6rem;
+    padding: 0.5rem;
     border-radius: 2px;
   }
 
-  .exhibit-frame {
+  .peek-frame, .peek-panel-frame {
     aspect-ratio: 3 / 2;
     overflow: hidden;
     position: relative;
     background: #f7f5ef;
   }
-  .exhibit-frame[hidden] { display: none; }
+  .peek-frame[hidden] { display: none !important; }
 
-  .exhibit-frame iframe {
+  .peek-frame iframe, .peek-panel-frame iframe {
     width: 200%;
     height: 200%;
     border: 0;
@@ -372,23 +338,14 @@ rooms.sort((a, b) => {
     pointer-events: none;
   }
 
-  .exhibit-caption {
-    margin-top: 0.9rem;
-    font-size: 0.9rem;
-    text-align: center;
-    opacity: 0.85;
-  }
-
-  .now-showing { font-style: italic; }
-
   .live-dot {
     display: inline-block;
-    width: 7px;
-    height: 7px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
     background: #2a2a27;
-    margin-right: 0.45rem;
-    vertical-align: 2px;
+    margin-right: 0.4rem;
+    vertical-align: 1px;
     animation: live-pulse 2.4s ease-in-out infinite;
   }
 
@@ -397,58 +354,171 @@ rooms.sort((a, b) => {
     50%      { opacity: 1; }
   }
 
-  .exhibit-hint {
-    margin-top: 0.35rem;
+  /* ---- desktop cursor lens ---- */
+
+  .peek-lens {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 21rem;
+    z-index: 50;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate3d(-200vw, -200vh, 0);
+    transition: opacity 220ms ease;
+    will-change: transform;
+  }
+  .peek-lens.on { opacity: 1; }
+
+  .peek-lens-caption {
+    margin-top: 0.4rem;
+    font-size: 0.72rem;
+    font-style: italic;
+    letter-spacing: 0.06em;
+    text-align: center;
+    opacity: 0.6;
+  }
+
+  /* The lens only exists for hover devices with room to breathe. */
+  @media (hover: none), (max-width: 719px) {
+    .peek-lens { display: none; }
+  }
+
+  /* ---- touch / narrow peek chips ---- */
+
+  .peek-zone { display: none; }
+
+  @media (hover: none), (max-width: 719px) {
+    .peek-zone { display: block; padding-bottom: 1.3rem; }
+  }
+
+  .peek-btn {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0.4rem 1.1rem;
+    background: transparent;
+    border: 1px solid rgba(42, 42, 39, 0.35);
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-style: italic;
+    color: inherit;
+    opacity: 0.75;
+    cursor: pointer;
+  }
+  .peek-btn[aria-expanded="true"] { background: #2a2a27; color: #f0ece4; opacity: 1; }
+  .peek-btn:focus-visible {
+    outline: 2px dashed rgba(42, 42, 39, 0.55);
+    outline-offset: 2px;
+  }
+
+  .peek-panel { margin-top: 0.9rem; }
+  .peek-panel[hidden] { display: none !important; }
+
+  .peek-panel-hint {
+    margin-top: 0.45rem;
     font-size: 0.78rem;
     font-style: italic;
-    text-align: center;
-    opacity: 0.5;
+    opacity: 0.55;
   }
 
-  .wall-note {
-    max-width: 76rem;
-    margin: 4rem auto 0;
-    font-size: 0.85rem;
-    font-style: italic;
-    text-align: center;
-    opacity: 0.5;
-  }
-
+  /* Chips sit on the row's text side while the zigzag is alive (601–719px). */
+  .room-item:nth-child(odd) .peek-zone { padding-left: 2rem; }
+  .room-item:nth-child(even) .peek-zone { padding-right: 2rem; text-align: right; }
   @media (max-width: 600px) {
-    .inverse-page { padding: 3rem 1.25rem 4rem; }
-    .page-head { margin-bottom: 3rem; }
-    .room-link { column-gap: 1rem; }
+    .room-item:nth-child(odd) .peek-zone,
+    .room-item:nth-child(even) .peek-zone { padding-left: 0; padding-right: 0; text-align: left; }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .room-item { animation: none; }
-    .room-link { transition: none; }
     .live-dot { animation: none; opacity: 0.8; }
+    .peek-lens { transition: none; }
   }
 </style>
 
 <script>
-  // Live exhibit window: hovering (or keyboard-focusing) a placard shows that
-  // room running live in the side panel. iframes only get a src the first
-  // time they're shown, so touch and narrow-viewport visitors load nothing.
-  let galleryAbort: AbortController | null = null;
+  // Two peek systems, gated by capability:
+  //  - hover devices >=720px: a live lens that trails the cursor over the list
+  //  - touch / narrow: per-row "peek" chips expanding an inline live panel
+  // iframes only receive a src the first time they're shown.
+  let peekAbort: AbortController | null = null;
 
-  const initGallery = () => {
-    const list = document.querySelector('.gallery-grid .room-list');
+  const initPeek = () => {
+    const list = document.querySelector<HTMLElement>('.room-list');
     if (!list) return;
 
-    galleryAbort?.abort();
-    galleryAbort = new AbortController();
-    const { signal } = galleryAbort;
+    peekAbort?.abort();
+    peekAbort = new AbortController();
+    const { signal } = peekAbort;
 
-    if (!matchMedia('(min-width: 960px) and (hover: hover)').matches) return;
+    /* ---- touch / narrow chips (listeners always attached; CSS gates display) ---- */
+    const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('.peek-btn'));
+    const closeAllPanels = () => {
+      for (const b of buttons) {
+        b.setAttribute('aria-expanded', 'false');
+        b.textContent = 'peek';
+        const p = document.getElementById('peek-' + (b.dataset.peek ?? ''));
+        if (p) p.hidden = true;
+      }
+    };
+    for (const btn of buttons) {
+      btn.addEventListener('click', () => {
+        const panel = document.getElementById('peek-' + (btn.dataset.peek ?? ''));
+        if (!panel) return;
+        const wasOpen = !panel.hidden;
+        closeAllPanels();
+        if (!wasOpen) {
+          panel.hidden = false;
+          btn.setAttribute('aria-expanded', 'true');
+          btn.textContent = 'close peek';
+          const ifr = panel.querySelector('iframe');
+          if (ifr && !ifr.src) ifr.src = ifr.dataset.src ?? '';
+        }
+      }, { signal });
+    }
 
-    const frames = Array.from(document.querySelectorAll<HTMLElement>('.exhibit-frame'));
-    const caption = document.querySelector<HTMLElement>('[data-now-showing]');
-    const links = Array.from(document.querySelectorAll<HTMLAnchorElement>('.room-link[data-room]'));
-    if (frames.length === 0 || links.length === 0) return;
+    /* ---- desktop cursor lens ---- */
+    if (!matchMedia('(hover: hover) and (min-width: 720px)').matches) return;
+    const lens = document.querySelector<HTMLElement>('.peek-lens');
+    if (!lens) return;
 
-    const show = (id: string | undefined, title: string) => {
+    const frames = Array.from(lens.querySelectorAll<HTMLElement>('.peek-frame'));
+    const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    let targetX = 0, targetY = 0, curX = 0, curY = 0;
+    let raf: number | null = null;
+    let lensOn = false;
+
+    const lensSize = () => ({ w: lens.offsetWidth || 336, h: lens.offsetHeight || 280 });
+
+    const clampPos = (x: number, y: number) => {
+      const { w, h } = lensSize();
+      const pad = 10;
+      return {
+        x: Math.min(Math.max(x, pad), window.innerWidth - w - pad),
+        y: Math.min(Math.max(y, pad), window.innerHeight - h - pad),
+      };
+    };
+
+    const aimAtCursor = (e: MouseEvent) => {
+      const { w, h } = lensSize();
+      // Prefer the right of the cursor; flip left when out of room.
+      let x = e.clientX + 28;
+      if (x + w > window.innerWidth - 10) x = e.clientX - 28 - w;
+      const p = clampPos(x, e.clientY - h / 2);
+      targetX = p.x; targetY = p.y;
+    };
+
+    const tick = () => {
+      const ease = reduceMotion ? 1 : 0.16;
+      curX += (targetX - curX) * ease;
+      curY += (targetY - curY) * ease;
+      lens.style.transform = `translate3d(${curX}px, ${curY}px, 0)`;
+      raf = lensOn ? requestAnimationFrame(tick) : null;
+    };
+
+    const showLens = (id: string | undefined, snapTo?: { x: number; y: number }) => {
       if (!id) return;
       for (const f of frames) {
         const on = f.dataset.room === id;
@@ -458,20 +528,41 @@ rooms.sort((a, b) => {
           if (ifr && !ifr.src) ifr.src = ifr.dataset.src ?? '';
         }
       }
-      for (const l of links) l.classList.toggle('is-showing', l.dataset.room === id);
-      if (caption) caption.textContent = title;
+      if (snapTo) {
+        const p = clampPos(snapTo.x, snapTo.y);
+        targetX = p.x; targetY = p.y;
+        if (!lensOn) { curX = p.x; curY = p.y; }
+      }
+      if (!lensOn) {
+        lensOn = true;
+        lens.classList.add('on');
+        if (raf === null) raf = requestAnimationFrame(tick);
+      }
     };
 
+    const hideLens = () => {
+      lensOn = false;
+      lens.classList.remove('on');
+    };
+
+    const links = Array.from(list.querySelectorAll<HTMLAnchorElement>('.room-link[data-room]'));
     for (const link of links) {
-      const title = link.querySelector('.room-title')?.textContent ?? '';
-      link.addEventListener('mouseenter', () => show(link.dataset.room, title), { signal });
-      link.addEventListener('focusin', () => show(link.dataset.room, title), { signal });
+      link.addEventListener('mouseenter', (e) => {
+        showLens(link.dataset.room, { x: (e as MouseEvent).clientX + 28, y: (e as MouseEvent).clientY - 140 });
+      }, { signal });
+      // Keyboard: anchor the lens beside the focused row.
+      link.addEventListener('focusin', () => {
+        const r = link.getBoundingClientRect();
+        showLens(link.dataset.room, { x: r.right - 320, y: r.bottom + 12 });
+      }, { signal });
+      link.addEventListener('focusout', hideLens, { signal });
     }
 
-    // Opening exhibit: the newest room, so the window is never blank.
-    const first = links[0];
-    show(first.dataset.room, first.querySelector('.room-title')?.textContent ?? '');
+    list.addEventListener('mousemove', (e) => { if (lensOn) aimAtCursor(e); }, { signal });
+    list.addEventListener('mouseleave', hideLens, { signal });
+
+    signal.addEventListener('abort', () => { if (raf !== null) cancelAnimationFrame(raf); });
   };
 
-  document.addEventListener('astro:page-load', initGallery);
+  document.addEventListener('astro:page-load', initPeek);
 </script>
