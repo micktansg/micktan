@@ -72,7 +72,7 @@ rooms.sort((a, b) => {
 });
 ---
 
-<Layout title="The Room — Mick Tan" description="every room mick tan has built">
+<Layout title="The Room — Mick Tan" description="every room mick tan has built" themeColor="#f0ece4">
   <main class="inverse-page">
     <header class="page-head">
       <a href="/" class="home-link" data-astro-prefetch>&larr; home</a>
@@ -86,7 +86,7 @@ rooms.sort((a, b) => {
         <p class="empty-sub">mick is somewhere, building.</p>
       </div>
     ) : (
-      <ol class="room-list">
+      <ol class="room-list" role="list">
         {rooms.map((room, i) => (
           <li class="room-item" style={`--i: ${i}`}>
             <a href={room.href} class="room-link" data-astro-prefetch>
@@ -120,16 +120,24 @@ rooms.sort((a, b) => {
     position: relative;
   }
 
+  /* Padded for a ~44px tap target; negative margin keeps the visual position. */
   .home-link {
     display: inline-block;
     color: #2a2a27;
     text-decoration: none;
     font-size: 0.85rem;
-    opacity: 0.45;
-    margin-bottom: 3rem;
+    opacity: 0.6;
+    padding: 0.8rem;
+    margin: -0.8rem -0.8rem 2.2rem;
     transition: opacity 200ms;
   }
   .home-link:hover { opacity: 0.95; }
+  .home-link:focus-visible {
+    outline: 2px dashed rgba(42, 42, 39, 0.55);
+    outline-offset: 2px;
+    border-radius: 4px;
+    opacity: 0.95;
+  }
 
   .page-head h1 {
     font-size: clamp(3rem, 9vw, 5.5rem);
@@ -143,7 +151,7 @@ rooms.sort((a, b) => {
     margin-top: 1.5rem;
     font-size: clamp(1rem, 2vw, 1.15rem);
     font-style: italic;
-    opacity: 0.55;
+    opacity: 0.65;
     max-width: 30rem;
   }
 
@@ -163,23 +171,29 @@ rooms.sort((a, b) => {
     padding: 0;
   }
 
+  /* Staggered entrance: each row fades up in sequence, phase-set by --i.
+     Replays on SPA navigations too, since the swap re-inserts the elements. */
   .room-item {
     border-top: 1px solid rgba(42, 42, 39, 0.16);
-    transition: padding 280ms cubic-bezier(.2,.8,.2,1);
+    animation: room-enter 480ms cubic-bezier(.2,.8,.2,1) backwards;
+    animation-delay: calc(var(--i, 0) * 45ms);
   }
   .room-item:last-child {
     border-bottom: 1px solid rgba(42, 42, 39, 0.16);
   }
 
+  @keyframes room-enter {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .room-item { animation: none; }
+    .room-link { transition: none; }
+  }
+
   .room-item:nth-child(odd) .room-link { padding-left: 2rem; }
   .room-item:nth-child(even) .room-link { padding-left: 0; padding-right: 2rem; text-align: right; }
-
-  @media (max-width: 600px) {
-    .room-item:nth-child(odd) .room-link,
-    .room-item:nth-child(even) .room-link {
-      padding-left: 0; padding-right: 0; text-align: left;
-    }
-  }
 
   .room-link {
     display: grid;
@@ -201,14 +215,29 @@ rooms.sort((a, b) => {
   .room-item:nth-child(even) .room-title,
   .room-item:nth-child(even) .room-summary { order: 1; }
 
-  .room-link:hover { transform: translateX(8px); }
-  .room-item:nth-child(even) .room-link:hover { transform: translateX(-8px); }
+  .room-link:hover,
+  .room-link:focus-visible { transform: translateX(8px); }
+  .room-item:nth-child(even) .room-link:hover,
+  .room-item:nth-child(even) .room-link:focus-visible { transform: translateX(-8px); }
+
+  .room-link:focus-visible {
+    outline: 2px dashed rgba(42, 42, 39, 0.55);
+    outline-offset: 4px;
+    border-radius: 4px;
+  }
+
+  /* Number and summary wake up when the row is engaged. */
+  .room-link:hover .room-number,
+  .room-link:focus-visible .room-number { opacity: 0.9; }
+  .room-link:hover .room-summary,
+  .room-link:focus-visible .room-summary { opacity: 0.85; }
 
   .room-number {
     font-size: 0.85rem;
     font-feature-settings: 'tnum';
-    opacity: 0.35;
+    opacity: 0.5;
     align-self: baseline;
+    transition: opacity 200ms;
   }
 
   .room-title {
@@ -222,12 +251,32 @@ rooms.sort((a, b) => {
     grid-column: 2;
     font-size: 0.95rem;
     font-style: italic;
-    opacity: 0.5;
+    opacity: 0.65;
     margin-top: 0.4rem;
+    transition: opacity 200ms;
   }
 
   .room-item:nth-child(even) .room-summary {
     grid-column: 1;
     text-align: right;
+  }
+
+  /* Narrow screens: the asymmetric zigzag needs width to read as intentional.
+     Collapse EVERYTHING to left-aligned — link padding, grid order, number
+     position, and summary alignment. Must stay LAST in this stylesheet: these
+     overrides tie the even-row rules above on specificity, so they only win
+     by source order. */
+  @media (max-width: 600px) {
+    .room-item:nth-child(odd) .room-link,
+    .room-item:nth-child(even) .room-link {
+      padding-left: 0; padding-right: 0; text-align: left;
+      grid-template-columns: auto 1fr;
+    }
+    .room-item:nth-child(even) .room-number { order: 0; }
+    .room-item:nth-child(even) .room-title,
+    .room-item:nth-child(even) .room-summary { order: 0; }
+    .room-item:nth-child(even) .room-summary { grid-column: 2; text-align: left; }
+    .room-item:nth-child(even) .room-link:hover,
+    .room-item:nth-child(even) .room-link:focus-visible { transform: translateX(8px); }
   }
 </style>
