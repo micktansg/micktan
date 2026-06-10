@@ -81,17 +81,7 @@ rooms.sort((a, b) => {
           <span class="h1-ch" aria-hidden="true" style={`--d: ${i * 55}ms`}>{ch === ' ' ? ' ' : ch}</span>
         ))}
       </h1>
-      <p class="sub">
-        <span class="sr-only">collection of bugs and stuff, mostly buggy stuff.</span>
-        <span aria-hidden="true">
-          {'collection of bugs and stuff, mostly buggy stuff.'.split(' ').map((word, wi, arr) => (
-            <>
-              <span class="sub-word">{word.split('').map((ch) => <span class="sub-ch">{ch}</span>)}</span>
-              {wi < arr.length - 1 ? ' ' : ''}
-            </>
-          ))}
-        </span>
-      </p>
+      <p class="sub">collection of bugs and stuff, mostly buggy stuff.</p>
     </header>
 
     {rooms.length === 0 ? (
@@ -209,42 +199,21 @@ rooms.sort((a, b) => {
     .room-item { animation: none; }
     .room-link { transition: none; }
     .h1-ch { animation: none; opacity: 1; transform: none; }
-    .sub-ch { transform: none; }
     .ink-veil { transition: opacity 200ms linear; }
   }
 
-  /* Arrival: the title's letters settle into place with a little weight.
-     The transform runs through --kx/--ky so the kinetic drift can keep
-     steering letters even while the animation's fill state applies. */
+  /* Arrival: the title's letters settle into place with a little weight. */
   .h1-ch {
     display: inline-block;
     opacity: 0;
-    transform: translate(var(--kx, 0px), calc(var(--ky, 0px) + 0.22em));
+    transform: translateY(0.22em);
     animation: h1-settle 560ms cubic-bezier(.18,.9,.22,1.08) forwards;
     animation-delay: var(--d, 0ms);
     white-space: pre;
   }
 
   @keyframes h1-settle {
-    to { opacity: 1; transform: translate(var(--kx, 0px), var(--ky, 0px)); }
-  }
-
-  .sub-word { display: inline-block; }
-  .sub-ch {
-    display: inline-block;
-    transform: translate(var(--kx, 0px), var(--ky, 0px));
-  }
-
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-    border: 0;
+    to { opacity: 1; transform: translateY(0); }
   }
 
   /* Scroll spotlight: the row nearest the viewport centre is awake —
@@ -464,63 +433,39 @@ rooms.sort((a, b) => {
     window.addEventListener('resize', queue, { passive: true, signal });
     spotlight();
 
-    // Kinetic type: row titles drift whole; the header and subheader react
-    // per letter (tighter radius, so a small wave follows the cursor through
-    // the words). Letters apply via --kx/--ky so the h1 settle animation's
-    // fill state and the drift can share the same transform. The rAF loop
-    // sleeps once everything has settled; mousemove wakes it.
+    // Kinetic titles: each row title drifts a few px toward the cursor with
+    // an eased falloff, settling when the mouse rests. The rAF loop sleeps
+    // once everything has settled; mousemove wakes it.
     if (hoverDevice) {
-      type Group = {
-        els: HTMLElement[];
-        cur: { x: number; y: number }[];
-        radius: number;
-        k: number;
-        capX: number;
-        capY: number;
-        useVars: boolean;
-      };
-      const collect = (sel: string, root: ParentNode = document) =>
-        Array.from(root.querySelectorAll<HTMLElement>(sel));
-      const titleEls = items
+      const titles = items
         .map(it => it.querySelector<HTMLElement>('.room-title'))
         .filter((t): t is HTMLElement => t !== null);
-      const letterEls = collect('.page-head .h1-ch, .page-head .sub-ch');
-      const groups: Group[] = [
-        { els: titleEls, cur: titleEls.map(() => ({ x: 0, y: 0 })), radius: 300, k: 0.07, capX: 6, capY: 3, useVars: false },
-        { els: letterEls, cur: letterEls.map(() => ({ x: 0, y: 0 })), radius: 140, k: 0.06, capX: 4, capY: 3, useVars: true },
-      ];
+      const cur = titles.map(() => ({ x: 0, y: 0 }));
       let kRaf: number | null = null;
 
       const kTick = () => {
         kRaf = null;
         let busy = false;
-        for (const g of groups) {
-          for (let i = 0; i < g.els.length; i++) {
-            const el = g.els[i];
-            const c = g.cur[i];
-            const r = el.getBoundingClientRect();
-            const baseX = r.left + r.width / 2 - c.x;
-            const baseY = r.top + r.height / 2 - c.y;
-            let tx = 0, ty = 0;
-            if (pointerY >= 0) {
-              const vx = pointerX - baseX;
-              const vy = pointerY - baseY;
-              const dist = Math.hypot(vx, vy) || 1;
-              const influence = Math.max(0, 1 - dist / g.radius);
-              const pull = influence * influence;
-              tx = Math.max(-g.capX, Math.min(g.capX, vx * g.k * pull));
-              ty = Math.max(-g.capY, Math.min(g.capY, vy * g.k * pull));
-            }
-            c.x += (tx - c.x) * 0.11;
-            c.y += (ty - c.y) * 0.11;
-            if (Math.abs(c.x - tx) > 0.06 || Math.abs(c.y - ty) > 0.06) busy = true;
-            if (g.useVars) {
-              el.style.setProperty('--kx', `${c.x.toFixed(2)}px`);
-              el.style.setProperty('--ky', `${c.y.toFixed(2)}px`);
-            } else {
-              el.style.transform = `translate(${c.x.toFixed(2)}px, ${c.y.toFixed(2)}px)`;
-            }
+        for (let i = 0; i < titles.length; i++) {
+          const t = titles[i];
+          const c = cur[i];
+          const r = t.getBoundingClientRect();
+          const baseX = r.left + r.width / 2 - c.x;
+          const baseY = r.top + r.height / 2 - c.y;
+          let tx = 0, ty = 0;
+          if (pointerY >= 0) {
+            const vx = pointerX - baseX;
+            const vy = pointerY - baseY;
+            const dist = Math.hypot(vx, vy) || 1;
+            const influence = Math.max(0, 1 - dist / 300);
+            const pull = influence * influence;
+            tx = Math.max(-6, Math.min(6, vx * 0.07 * pull));
+            ty = Math.max(-3, Math.min(3, vy * 0.07 * pull));
           }
+          c.x += (tx - c.x) * 0.11;
+          c.y += (ty - c.y) * 0.11;
+          if (Math.abs(c.x - tx) > 0.06 || Math.abs(c.y - ty) > 0.06) busy = true;
+          t.style.transform = `translate(${c.x.toFixed(2)}px, ${c.y.toFixed(2)}px)`;
         }
         if (busy) kRaf = requestAnimationFrame(kTick);
       };
