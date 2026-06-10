@@ -5,9 +5,18 @@ import { ClientRouter } from 'astro:transitions';
 interface Props {
   title?: string;
   description?: string;
+  themeColor?: string;
 }
 
-const { title = 'Mick Tan', description = 'mick tan' } = Astro.props;
+const {
+  title = 'Mick Tan',
+  description = 'a room of interactive objects by mick tan. mostly buggy stuff.',
+  themeColor = '#2a2a27',
+} = Astro.props;
+
+const SITE = 'https://micktan.com';
+const canonicalUrl = SITE + Astro.url.pathname;
+const ogImage = SITE + '/og.png';
 ---
 
 <!doctype html>
@@ -18,6 +27,21 @@ const { title = 'Mick Tan', description = 'mick tan' } = Astro.props;
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
     <meta name="description" content={description} />
+    <meta name="theme-color" content={themeColor} />
+    <link rel="canonical" href={canonicalUrl} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Mick Tan" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="A dark field with a cream lens revealing the word Observing." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2" />
     <link rel="icon" href="/favicon.ico?v=2" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />

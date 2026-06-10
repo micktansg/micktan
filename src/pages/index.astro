@@ -2,8 +2,9 @@
 import Layout from '../layouts/Layout.astro';
 ---
 
-<Layout title="Mick Tan" description="mick tan">
+<Layout title="Mick Tan" description="observing. a room of interactive objects by mick tan.">
   <main class="surface" transition:animate="fade">
+    <h1 class="sr-only">Mick Tan</h1>
     <a href="/room/" id="door" aria-label="Observing — enter the room" data-astro-prefetch>
       <p class="line" aria-label="Observing"><span style="--i:0">O</span><span style="--i:1">b</span><span style="--i:2">s</span><span style="--i:3">e</span><span style="--i:4">r</span><span style="--i:5">v</span><span style="--i:6">i</span><span style="--i:7">n</span><span style="--i:8">g</span><span style="--i:9">.</span></p>
     </a>
@@ -139,7 +140,7 @@ import Layout from '../layouts/Layout.astro';
      lens passes over it. Always readable. */
   footer {
     position: fixed;
-    bottom: 2.5rem;
+    bottom: 1.5rem;
     left: 0;
     right: 0;
     text-align: center;
@@ -147,12 +148,30 @@ import Layout from '../layouts/Layout.astro';
     z-index: 10;
     color: #ffffff;
     mix-blend-mode: difference;
-    opacity: 0.6;
+    opacity: 0.7;
   }
 
-  footer a { color: inherit; text-decoration: none; }
+  /* Generous padding keeps the visual size but gives each link a ~44px tap target. */
+  footer a {
+    color: inherit;
+    text-decoration: none;
+    display: inline-block;
+    padding: 1rem 0.75rem;
+  }
   footer a:hover { opacity: 0.9; }
-  footer span { margin: 0 0.75rem; }
+  footer span { margin: 0 0.25rem; }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
 
   /* Sci-fi cream-white reveal layer — clipped to a circle that follows the cursor.
      The SVG turbulence filter displaces the layer's pixels so the circular
@@ -165,8 +184,12 @@ import Layout from '../layouts/Layout.astro';
     clip-path: circle(var(--lens-r) at var(--mx) var(--my));
     -webkit-clip-path: circle(var(--lens-r) at var(--mx) var(--my));
     transition: clip-path 90ms linear;
-    filter: url(#lens-shimmer);
   }
+
+  /* The shimmer filter and scan-line drift only run while the lens is open.
+     With the lens shut (radius 0) the layer is invisible, but the filter and
+     animation would otherwise keep the GPU busy every frame. */
+  .warm-layer.lens-on { filter: url(#lens-shimmer); }
 
   .warm-bg {
     position: absolute;
@@ -196,7 +219,10 @@ import Layout from '../layouts/Layout.astro';
     mix-blend-mode: multiply;
     pointer-events: none;
     animation: scanlines-drift 0.22s linear infinite;
+    animation-play-state: paused;
   }
+
+  .warm-layer.lens-on .warm-bg::after { animation-play-state: running; }
 
   @keyframes scanlines-drift {
     from { transform: translateY(0); }
@@ -304,7 +330,10 @@ import Layout from '../layouts/Layout.astro';
     let active = false;
     let lastTouch = 0;
 
-    const setLens = (px: number) => root.style.setProperty('--lens-r', `${px}px`);
+    const setLens = (px: number) => {
+      root.style.setProperty('--lens-r', `${px}px`);
+      layer.classList.toggle('lens-on', px > 0);
+    };
     const moveTo = (x: number, y: number) => {
       root.style.setProperty('--mx', `${x}px`);
       root.style.setProperty('--my', `${y}px`);
