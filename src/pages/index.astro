@@ -309,6 +309,10 @@ import Layout from '../layouts/Layout.astro';
 
     if (veil) veil.classList.remove('active');
 
+    // Back/forward cache restores the page with the veil still up;
+    // pageshow fires on those restores, astro:page-load doesn't.
+    window.addEventListener('pageshow', () => veil?.classList.remove('active'), { signal });
+
     // Soften the dark→cream transition: fade the veil in, then navigate.
     // Works identically on desktop and mobile.
     door.addEventListener('click', (e) => {

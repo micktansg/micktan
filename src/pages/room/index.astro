@@ -301,13 +301,18 @@ rooms.sort((a, b) => {
     transition: opacity 200ms;
   }
 
+  /* justify-self makes the title box hug its text instead of stretching
+     across the grid column — the kinetic drift measures distance to the
+     title's centre, which must be the centre of the visible words. */
   .room-title {
     font-size: clamp(1.5rem, 3.5vw, 2.2rem);
     font-weight: 500;
     line-height: 1.2;
     letter-spacing: -0.005em;
     transition: color 240ms;
+    justify-self: start;
   }
+  .room-item:nth-child(even) .room-title { justify-self: end; }
 
   .room-summary {
     grid-column: 2;
@@ -338,6 +343,7 @@ rooms.sort((a, b) => {
     .room-item:nth-child(even) .room-title,
     .room-item:nth-child(even) .room-summary { order: 0; }
     .room-item:nth-child(even) .room-summary { grid-column: 2; text-align: left; }
+    .room-item:nth-child(even) .room-title { justify-self: start; }
     .room-item:nth-child(even) .room-link:hover,
     .room-item:nth-child(even) .room-link:focus-visible { transform: translateX(8px); }
     .room-item.lit .room-link,
@@ -359,10 +365,15 @@ rooms.sort((a, b) => {
     const { signal } = hallAbort;
 
     const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const hoverDevice = matchMedia('(hover: hover)').matches;
     const items = Array.from(list.querySelectorAll<HTMLElement>('.room-item'));
     const veil = document.querySelector<HTMLElement>('.ink-veil');
     const veilText = document.querySelector<HTMLElement>('.ink-veil-text');
     if (veil) veil.classList.remove('active');
+
+    // Back/forward cache restores the page exactly as it was left — with the
+    // veil still up. pageshow fires on those restores; astro:page-load doesn't.
+    window.addEventListener('pageshow', () => veil?.classList.remove('active'), { signal });
 
     // Entry: flood the page with ink, then step through.
     if (veil) {
@@ -380,16 +391,33 @@ rooms.sort((a, b) => {
       }
     }
 
-    // Spotlight: wake the row nearest the viewport centre.
     if (reduceMotion) return;
+
+    // Spotlight: wake the row nearest the focus point. On mouse devices the
+    // focus follows the cursor (a tall window may never scroll, which left
+    // the scroll-driven spotlight frozen on one arbitrary row). On touch it
+    // follows a line that drifts from 35% to 75% of the viewport with scroll
+    // progress, so the last rows of a short page can still reach it.
+    let pointerX = -1;
+    let pointerY = -1;
     let ticking = false;
     const spotlight = () => {
       ticking = false;
-      // The focus line drifts from 35% to 75% of the viewport as you scroll,
-      // so rows near the end of a short page can still reach it.
-      const range = document.documentElement.scrollHeight - window.innerHeight;
-      const progress = range > 0 ? Math.min(1, Math.max(0, window.scrollY / range)) : 0.5;
-      const mid = window.innerHeight * (0.35 + 0.4 * progress);
+      let mid: number;
+      if (hoverDevice && pointerY >= 0) {
+        mid = pointerY;
+      } else {
+        const range = document.documentElement.scrollHeight - window.innerHeight;
+        const progress = range > 0 ? Math.min(1, Math.max(0, window.scrollY / range)) : 0.5;
+        // Scrolled to the very bottom: the last room always gets its moment,
+        // regardless of how the geometry happens to tie-break.
+        if (range > 0 && progress >= 0.99) {
+          const last = items[items.length - 1];
+          for (const item of items) item.classList.toggle('lit', item === last);
+          return;
+        }
+        mid = window.innerHeight * (0.35 + 0.4 * progress);
+      }
       let best: HTMLElement | null = null;
       let bestD = Infinity;
       for (const item of items) {
@@ -399,10 +427,65 @@ rooms.sort((a, b) => {
       }
       for (const item of items) item.classList.toggle('lit', item === best);
     };
+    let wakeKinetic: (() => void) | null = null;
     const queue = () => { if (!ticking) { ticking = true; requestAnimationFrame(spotlight); } };
-    window.addEventListener('scroll', queue, { passive: true, signal });
+    window.addEventListener('scroll', () => { queue(); wakeKinetic?.(); }, { passive: true, signal });
     window.addEventListener('resize', queue, { passive: true, signal });
     spotlight();
+
+    // Kinetic titles: each title drifts a few px toward the cursor with an
+    // eased falloff, settling when the mouse rests. rAF loop sleeps once
+    // every title has settled; mousemove wakes it.
+    if (hoverDevice) {
+      const titles = items
+        .map(it => it.querySelector<HTMLElement>('.room-title'))
+        .filter((t): t is HTMLElement => t !== null);
+      const cur = titles.map(() => ({ x: 0, y: 0 }));
+      let kRaf: number | null = null;
+
+      const kTick = () => {
+        kRaf = null;
+        let busy = false;
+        for (let i = 0; i < titles.length; i++) {
+          const t = titles[i];
+          const r = t.getBoundingClientRect();
+          const baseX = r.left + r.width / 2 - cur[i].x;
+          const baseY = r.top + r.height / 2 - cur[i].y;
+          let tx = 0, ty = 0;
+          if (pointerY >= 0) {
+            const vx = pointerX - baseX;
+            const vy = pointerY - baseY;
+            const dist = Math.hypot(vx, vy) || 1;
+            const influence = Math.max(0, 1 - dist / 300);
+            const pull = influence * influence;
+            tx = Math.max(-10, Math.min(10, vx * 0.12 * pull));
+            ty = Math.max(-5, Math.min(5, vy * 0.12 * pull));
+          }
+          cur[i].x += (tx - cur[i].x) * 0.14;
+          cur[i].y += (ty - cur[i].y) * 0.14;
+          if (Math.abs(cur[i].x - tx) > 0.06 || Math.abs(cur[i].y - ty) > 0.06) busy = true;
+          t.style.transform = `translate(${cur[i].x.toFixed(2)}px, ${cur[i].y.toFixed(2)}px)`;
+        }
+        if (busy) kRaf = requestAnimationFrame(kTick);
+      };
+      wakeKinetic = () => { if (kRaf === null) kRaf = requestAnimationFrame(kTick); };
+
+      window.addEventListener('mousemove', (e) => {
+        pointerX = e.clientX;
+        pointerY = e.clientY;
+        queue();
+        wakeKinetic?.();
+      }, { passive: true, signal });
+
+      document.documentElement.addEventListener('mouseleave', () => {
+        pointerX = -1;
+        pointerY = -1;
+        queue();
+        wakeKinetic?.();
+      }, { signal });
+
+      signal.addEventListener('abort', () => { if (kRaf !== null) cancelAnimationFrame(kRaf); });
+    }
   };
 
   document.addEventListener('astro:page-load', initHall);
