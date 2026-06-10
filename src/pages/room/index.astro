@@ -458,11 +458,11 @@ rooms.sort((a, b) => {
             const dist = Math.hypot(vx, vy) || 1;
             const influence = Math.max(0, 1 - dist / 300);
             const pull = influence * influence;
-            tx = Math.max(-10, Math.min(10, vx * 0.12 * pull));
-            ty = Math.max(-5, Math.min(5, vy * 0.12 * pull));
+            tx = Math.max(-3, Math.min(3, vx * 0.03 * pull));
+            ty = Math.max(-1.5, Math.min(1.5, vy * 0.03 * pull));
           }
-          cur[i].x += (tx - cur[i].x) * 0.14;
-          cur[i].y += (ty - cur[i].y) * 0.14;
+          cur[i].x += (tx - cur[i].x) * 0.08;
+          cur[i].y += (ty - cur[i].y) * 0.08;
           if (Math.abs(cur[i].x - tx) > 0.06 || Math.abs(cur[i].y - ty) > 0.06) busy = true;
           t.style.transform = `translate(${cur[i].x.toFixed(2)}px, ${cur[i].y.toFixed(2)}px)`;
         }
