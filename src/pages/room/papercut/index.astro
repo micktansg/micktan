@@ -2,11 +2,11 @@
 import Layout from '../../../layouts/Layout.astro';
 ---
 
-<Layout title="papercut. — Mick Tan" description="tamagotchi for creative worker. feed them exposure.">
+<Layout title="papercut. — Mick Tan" description="tamagotchi for creative worker. feed them exposure." themeColor="#5da3c4">
   <main class="pc">
     <div class="topbar">
       <a class="back" href="/room/" data-astro-prefetch>&larr; the room</a>
-      <button class="bgm-toggle" id="bgmToggle" type="button" aria-label="toggle ambient audio">
+      <button class="bgm-toggle" id="bgmToggle" type="button" aria-label="toggle ambient audio" aria-pressed="false">
         <span id="bgmIcon">🔇</span>
         <span class="bgm-label" id="bgmLabel">audio off</span>
       </button>
@@ -887,6 +887,17 @@ import Layout from '../../../layouts/Layout.astro';
   }
   .ending-btn:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--pc-yellow); }
 
+  /* Keyboard focus — yellow reads on the cyan field and every button face. */
+  .input-btn:focus-visible,
+  .quit-btn:focus-visible,
+  .bgm-toggle:focus-visible,
+  .back:focus-visible,
+  .ending-btn:focus-visible,
+  .modal-actions button:focus-visible {
+    outline: 3px solid var(--pc-yellow, #f3e09b);
+    outline-offset: 3px;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .sprite, .quit-btn { animation: none !important; }
     :global(.full-fanfare .pxconf),
@@ -899,6 +910,20 @@ import Layout from '../../../layouts/Layout.astro';
   // papercut. — tamagotchi for creative worker
   // Sprite-based reskin: state → cell mapping on a 4×4 sheet.
   // ============================================================================
+
+  // Lifecycle: the whole game initialises inside initPapercut so ClientRouter
+  // SPA navigations re-bind cleanly. The AbortController detaches listeners
+  // and the ticker handle stops the 5s heartbeat when the page is left —
+  // previously the interval ran forever once started.
+  let papercutAbort: AbortController | null = null;
+  let papercutTicker: number | null = null;
+
+  const initPapercut = () => {
+  if (!document.querySelector('main.pc')) return;
+  papercutAbort?.abort();
+  papercutAbort = new AbortController();
+  const { signal } = papercutAbort;
+  if (papercutTicker !== null) { clearInterval(papercutTicker); papercutTicker = null; }
 
   const STORAGE_KEY = 'papercut.state.v2'; // v2 — sprite reskin (old v1 state intentionally orphaned)
 
@@ -1297,6 +1322,7 @@ import Layout from '../../../layouts/Layout.astro';
       sub.textContent = STAGES[state.stage].name + " → " + nextName + ".";
     }
     document.getElementById('promoModal')!.hidden = false;
+    (document.getElementById('btnPromoAck') as HTMLElement | null)?.focus();
     spawnPromoConfetti();
     sfx.cha();
   }
@@ -1304,6 +1330,7 @@ import Layout from '../../../layouts/Layout.astro';
   function hidePromotionModal() {
     document.getElementById('promoModal')!.hidden = true;
     document.getElementById('promoConfetti')!.innerHTML = '';
+    (document.getElementById('btnQuit') as HTMLElement | null)?.focus();
   }
 
   function ackPromotion() {
@@ -1577,6 +1604,7 @@ import Layout from '../../../layouts/Layout.astro';
       isOn: () => on,
       enable: () => { on = true; startBgm(); },
       disable: () => { on = false; stopBgm(); },
+      resume: () => { if (ctx && ctx.state === 'suspended') ctx.resume(); },
       paper: () => noiseBurst(80, 0.06, 1800),
       clap:  () => noiseBurst(50, 0.05, 3200),
       cha:   () => { beep(880, 100, 'square', 0.04); window.setTimeout(() => beep(1320, 120, 'square', 0.035), 80); },
@@ -1601,9 +1629,8 @@ import Layout from '../../../layouts/Layout.astro';
     `;
     endingEl.hidden = false;
     sfx.disable();
-    document.getElementById('bgmToggle')!.classList.remove('on');
-    document.getElementById('bgmIcon')!.textContent = '🔇';
-    document.getElementById('bgmLabel')!.textContent = 'audio off';
+    setBgmUi(false);
+    (document.getElementById('btnReset') as HTMLElement | null)?.focus();
   }
   function startNewLife() {
     resetState();
@@ -1613,7 +1640,7 @@ import Layout from '../../../layouts/Layout.astro';
 
   // ===== ticker =====
   let lastTickAt = Date.now();
-  setInterval(() => {
+  papercutTicker = window.setInterval(() => {
     if (state.ended) return;
     const now = Date.now();
     const dt = (now - lastTickAt) / 1000;
@@ -1685,33 +1712,33 @@ import Layout from '../../../layouts/Layout.astro';
   }
 
   // ===== wiring =====
-  document.getElementById('btnFeed')!.addEventListener('click', feedExposure);
-  document.getElementById('btnRaise')!.addEventListener('click', giveRaise);
-  document.getElementById('btnPraise')!.addEventListener('click', givePraise);
-  document.getElementById('btnQuit')!.addEventListener('click', showQuitAttempt);
-  document.getElementById('btnPromoAck')!.addEventListener('click', ackPromotion);
-  document.getElementById('btnWalkAway')!.addEventListener('click', walkAway);
-  document.getElementById('btnReset')!.addEventListener('click', startNewLife);
+  document.getElementById('btnFeed')!.addEventListener('click', feedExposure, { signal });
+  document.getElementById('btnRaise')!.addEventListener('click', giveRaise, { signal });
+  document.getElementById('btnPraise')!.addEventListener('click', givePraise, { signal });
+  document.getElementById('btnQuit')!.addEventListener('click', showQuitAttempt, { signal });
+  document.getElementById('btnPromoAck')!.addEventListener('click', ackPromotion, { signal });
+  document.getElementById('btnWalkAway')!.addEventListener('click', walkAway, { signal });
+  document.getElementById('btnReset')!.addEventListener('click', startNewLife, { signal });
 
+  const AUDIO_KEY = 'papercut.audio';
   const bgmBtn = document.getElementById('bgmToggle')!;
   const bgmIcon = document.getElementById('bgmIcon')!;
   const bgmLabel = document.getElementById('bgmLabel')!;
+  function setBgmUi(on: boolean) {
+    bgmBtn.classList.toggle('on', on);
+    bgmBtn.setAttribute('aria-pressed', String(on));
+    bgmIcon.textContent = on ? '🔊' : '🔇';
+    bgmLabel.textContent = on ? 'audio on' : 'audio off';
+  }
   bgmBtn.addEventListener('click', () => {
-    if (sfx.isOn()) {
-      sfx.disable();
-      bgmBtn.classList.remove('on');
-      bgmIcon.textContent = '🔇';
-      bgmLabel.textContent = 'audio off';
-    } else {
-      sfx.enable();
-      bgmBtn.classList.add('on');
-      bgmIcon.textContent = '🔊';
-      bgmLabel.textContent = 'audio on';
-    }
-  });
+    const next = !sfx.isOn();
+    if (next) sfx.enable(); else sfx.disable();
+    setBgmUi(next);
+    try { sessionStorage.setItem(AUDIO_KEY, next ? '1' : '0'); } catch {}
+  }, { signal });
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden && sfx.isOn()) sfx.disable();
-  });
+    if (document.hidden && sfx.isOn()) { sfx.disable(); setBgmUi(false); }
+  }, { signal });
 
   if (state.ended) {
     showEnding();
@@ -1719,4 +1746,28 @@ import Layout from '../../../layouts/Layout.astro';
     render();
     applyAutoAdvancement();
   }
+
+  // Restore this session's audio preference. The context may start suspended
+  // (autoplay policy) — the first real tap resumes it.
+  try {
+    if (!state.ended && sessionStorage.getItem(AUDIO_KEY) === '1') {
+      sfx.enable();
+      setBgmUi(true);
+      window.addEventListener('pointerdown', () => sfx.resume(), { once: true, signal });
+    }
+  } catch {}
+
+  // bfcache restores can come back with the bribe modal mid-air or stale UI.
+  window.addEventListener('pageshow', (e) => {
+    if (!(e as PageTransitionEvent).persisted) return;
+    hidePromotionModal();
+    if (state.ended) showEnding(); else render();
+  }, { signal });
+  };
+
+  document.addEventListener('astro:page-load', initPapercut);
+  document.addEventListener('astro:before-swap', () => {
+    papercutAbort?.abort();
+    if (papercutTicker !== null) { clearInterval(papercutTicker); papercutTicker = null; }
+  });
 </script>
