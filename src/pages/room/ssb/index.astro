@@ -2,7 +2,7 @@
 import Layout from '../../../layouts/Layout.astro';
 ---
 
-<Layout title="SSB calculator. — Mick Tan" description="work out SSB yields and payouts">
+<Layout title="SSB calculator. — Mick Tan" description="work out SSB yields and payouts" themeColor="#f7f7f8">
   <main class="ssb">
     <div class="topbar">
       <a class="back" href="/room/" data-astro-prefetch>&larr; the room</a>
@@ -79,7 +79,7 @@ Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
         <button class="io-btn io-btn--cancel-edit" id="btnCancelEdit" type="button" hidden>cancel edit</button>
       </div>
 
-      <div class="parse-feedback" id="parseFeedback" hidden></div>
+      <div class="parse-feedback" id="parseFeedback" aria-live="polite" hidden></div>
 
       <div class="rate-preview" id="ratePreview" hidden>
         <div class="rate-preview-head">preview — edit any cell to fix typos before adding</div>
@@ -111,7 +111,9 @@ Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
       max-width: 64rem;
       margin: 0 auto;
       padding: 1.25rem 1rem 3rem;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      /* System stack — 'Inter' was declared here but never loaded, so every
+         visitor already saw their system font. Now the declaration is honest. */
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       color: #18181b;
       font-feature-settings: 'tnum' 1, 'cv11' 1;
       -webkit-font-smoothing: antialiased;
@@ -175,6 +177,15 @@ Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
       gap: 0.4rem;
     }
     .ssb .io-btn:hover { background: #18181b; color: #ffffff; }
+    .ssb .io-btn:focus-visible,
+    .ssb .toggle-btn:focus-visible,
+    .ssb .bond-toggle:focus-visible,
+    .ssb .bond-head .actions button:focus-visible,
+    .ssb .back:focus-visible {
+      outline: 2px solid #2563eb;
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
     .ssb .io-btn:disabled { opacity: 0.35; cursor: not-allowed; }
     .ssb .io-btn:disabled:hover { background: transparent; color: #18181b; }
     .ssb .io-btn--primary { background: #2563eb; border-color: #2563eb; color: #ffffff; font-weight: 600; }
