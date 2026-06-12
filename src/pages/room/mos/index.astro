@@ -2,7 +2,7 @@
 import Layout from '../../../layouts/Layout.astro';
 ---
 
-<Layout title="MOS — Ministry of Silly. Walk." description="alternate L and R. walk silly. don't fall.">
+<Layout title="MOS — Ministry of Silly. Walk." description="alternate L and R. walk silly. don't fall." themeColor="#f2ecd6">
   <main class="mos">
     <a class="back" href="/room/" data-astro-prefetch>&larr; the room</a>
 
@@ -19,7 +19,7 @@ import Layout from '../../../layouts/Layout.astro';
     </div>
 
     <div class="stage">
-      <canvas data-stage></canvas>
+      <canvas data-stage role="img" aria-label="a silly walk in progress — a figure in a bowler hat attempts increasingly absurd steps"></canvas>
     </div>
 
     <div class="pads" aria-hidden="false">
@@ -60,18 +60,27 @@ import Layout from '../../../layouts/Layout.astro';
     touch-action: manipulation;
   }
 
+  /* Padded for a ~44px tap target; negative margin keeps the visual position. */
   .back {
     position: absolute;
     top: 1.4rem;
     left: 1.4rem;
     color: #3a2e1a;
-    opacity: 0.4;
+    opacity: 0.55;
     text-decoration: none;
     font-size: 0.85rem;
     z-index: 5;
     transition: opacity 200ms;
+    padding: 0.8rem;
+    margin: -0.8rem;
   }
   .back:hover { opacity: 0.95; }
+  .back:focus-visible {
+    outline: 2px dashed rgba(58, 46, 26, 0.6);
+    outline-offset: 2px;
+    border-radius: 4px;
+    opacity: 0.95;
+  }
 
   .hud-head {
     /* top padding clears the absolutely-positioned back link above */
@@ -183,6 +192,10 @@ import Layout from '../../../layouts/Layout.astro';
   .pad.flash { background: rgba(58, 46, 26, 0.10); }
   .pad.flash span { opacity: 1; }
   .pad.flash-bad { background: rgba(178, 34, 34, 0.18); }
+  .pad:focus-visible {
+    outline: 2px dashed rgba(58, 46, 26, 0.6);
+    outline-offset: -6px;
+  }
 
   .overlay {
     position: absolute;
@@ -277,6 +290,18 @@ import Layout from '../../../layouts/Layout.astro';
     .back { top: 1rem; left: 1rem; }
     .hud-counter { top: 1rem; right: 1rem; }
     .overlay .card { padding: 2.4rem 2rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .overlay { animation: none; }
+    /* The stamp's resting state lives in its animation fill — without the
+       animation it must be made visible explicitly. */
+    .overlay .stamp {
+      animation: none;
+      opacity: 0.9;
+      transform: rotate(8deg) scale(1.1);
+    }
+    .hud-counter .time.low { animation: none; font-weight: 700; }
   }
 </style>
 
@@ -1298,6 +1323,12 @@ import Layout from '../../../layouts/Layout.astro';
     overlayEl.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       reset();
+    }, { signal: sig });
+
+    // bfcache restores can bring the page back with a stale REJECTED
+    // overlay mid-slam — reset to a fresh walk.
+    window.addEventListener('pageshow', (e) => {
+      if ((e as PageTransitionEvent).persisted) reset();
     }, { signal: sig });
 
     // ----- current animated pose -----
