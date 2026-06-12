@@ -5,11 +5,11 @@ import data from './data.json';
 const { paths, exercises, bosses } = data;
 ---
 
-<Layout title="corporatelardder. — Mick Tan" description="log workouts to climb the corporate lardder.">
+<Layout title="corporatelardder. — Mick Tan" description="log workouts to climb the corporate lardder." themeColor="#0a0e23">
   <main class="cl">
     <div class="topbar">
       <a class="back" href="/room/" data-astro-prefetch>&larr; the room</a>
-      <button class="bgm-toggle" id="bgmToggle" type="button" aria-label="toggle background music">
+      <button class="bgm-toggle" id="bgmToggle" type="button" aria-label="toggle background music" aria-pressed="false">
         <span id="bgmIcon">🔇</span>
         <span class="bgm-label" id="bgmLabel">music off</span>
       </button>
@@ -164,7 +164,7 @@ const { paths, exercises, bosses } = data;
     --cl-bg: #0a0e23;
     --cl-bg-2: #1a1144;
     --cl-fg: #f6e7ff;
-    --cl-dim: #a48fcc;
+    --cl-dim: #c0aee6; /* was #a48fcc — brightened to clear AA on the dark bg */
     --cl-accent: #ffea3a;
     --cl-pink: #ff4ad9;
     --cl-cyan: #4af1ff;
@@ -235,12 +235,24 @@ const { paths, exercises, bosses } = data;
     text-decoration: none;
     font-size: 0.7rem;
     letter-spacing: 0.05em;
-    padding: 0.4rem 0;
-    min-height: 36px;
+    padding: 0.6rem 0.6rem 0.6rem 0;
+    min-height: 44px;
     display: inline-flex;
     align-items: center;
   }
   .back:hover { color: var(--cl-cyan); }
+
+  /* Keyboard focus — neon, like everything else here. */
+  .back:focus-visible,
+  .primary-btn:focus-visible,
+  .ghost-btn:focus-visible,
+  .bgm-toggle:focus-visible,
+  summary:focus-visible,
+  select:focus-visible,
+  input:focus-visible {
+    outline: 2px solid var(--cl-cyan);
+    outline-offset: 3px;
+  }
 
   .head { margin: 2rem 0 2.5rem; }
   .bgm-toggle {
@@ -1269,6 +1281,7 @@ const { paths, exercises, bosses } = data;
   const BGM_KEY = 'cl.bgm';
   const setBgmUI = (on) => {
     bgmBtn.classList.toggle('on', on);
+    bgmBtn.setAttribute('aria-pressed', String(on));
     bgmIcon.textContent = on ? '🔊' : '🔇';
     bgmLabel.textContent = on ? 'music on' : 'music off';
   };
@@ -1298,6 +1311,19 @@ const { paths, exercises, bosses } = data;
   // Initial UI: read pref but don't auto-start (browsers block autoplay).
   // The user must click once to begin.
   setBgmUI(false);
+
+  // bfcache restores can come back with a stale win overlay or stale team
+  // state — hide the overlay and pull fresh state.
+  window.addEventListener('pageshow', (e) => {
+    if (!e.persisted) return;
+    document.getElementById('winOverlay').hidden = true;
+    refresh();
+  });
+
+  // Defensive: stop polling if the router ever swaps this page away.
+  document.addEventListener('astro:before-swap', () => {
+    if (state.pollHandle) clearInterval(state.pollHandle);
+  });
 
   boot();
 </script>

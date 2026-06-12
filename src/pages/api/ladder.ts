@@ -50,23 +50,68 @@ const redisClient = (() => {
 const localStore: Map<string, Team> = (globalThis as any).__ladderLocal ||= new Map();
 
 const teamKey = (id: string) => `ladder:team:${id}`;
+const versionKey = (id: string) => `ladder:team:${id}:v`;
+const TTL_SECONDS = 60 * 60 * 24 * 60; // 60-day expiry — abandoned teams clean themselves up
 
-const loadTeam = async (id: string): Promise<Team | null> => {
+const loadTeam = async (id: string): Promise<{ team: Team; version: number } | null> => {
   if (redisClient) {
-    const raw = await redisClient.get(teamKey(id));
+    const [raw, v] = await Promise.all([
+      redisClient.get(teamKey(id)),
+      redisClient.get(versionKey(id)),
+    ]);
     if (!raw) return null;
-    return typeof raw === 'string' ? JSON.parse(raw) : (raw as Team);
+    try {
+      const team = typeof raw === 'string' ? JSON.parse(raw) : (raw as Team);
+      return { team, version: Number(v) || 0 };
+    } catch (err) {
+      console.error('[ladder] corrupt team blob for', id, err);
+      return null;
+    }
   }
-  return localStore.get(id) || null;
+  const team = localStore.get(id);
+  return team ? { team, version: 0 } : null;
 };
 
+// Unconditional write — used only for freshly created teams (no concurrent
+// writer can exist before the id has been shared).
 const saveTeam = async (team: Team): Promise<void> => {
   if (redisClient) {
-    // 60-day expiry — abandoned teams clean themselves up
-    await redisClient.set(teamKey(team.id), JSON.stringify(team), { ex: 60 * 60 * 24 * 60 });
+    await redisClient.set(teamKey(team.id), JSON.stringify(team), { ex: TTL_SECONDS });
+    await redisClient.set(versionKey(team.id), '1', { ex: TTL_SECONDS });
     return;
   }
   localStore.set(team.id, team);
+};
+
+// Compare-and-set write: succeeds only if nobody else saved since we loaded.
+// Two members logging in the same instant used to be a lost update (last
+// write wins); now the loser reloads and re-applies its mutation.
+const CAS_SCRIPT = `
+local cur = tonumber(redis.call('GET', KEYS[2]) or '0')
+if cur == tonumber(ARGV[2]) then
+  redis.call('SET', KEYS[1], ARGV[1], 'EX', tonumber(ARGV[3]))
+  redis.call('SET', KEYS[2], tostring(cur + 1), 'EX', tonumber(ARGV[3]))
+  return 1
+end
+return 0
+`;
+
+const trySaveTeam = async (team: Team, expectedVersion: number): Promise<boolean> => {
+  if (redisClient) {
+    try {
+      const ok = await redisClient.eval(
+        CAS_SCRIPT,
+        [teamKey(team.id), versionKey(team.id)],
+        [JSON.stringify(team), String(expectedVersion), String(TTL_SECONDS)]
+      );
+      return Number(ok) === 1;
+    } catch (err) {
+      console.error('[ladder] save failed for', team.id, err);
+      throw err;
+    }
+  }
+  localStore.set(team.id, team);
+  return true;
 };
 
 const newId = (): string => {
@@ -148,136 +193,167 @@ const json = (obj: any, status = 200) =>
     headers: { 'Content-Type': 'application/json' },
   });
 
+// Backfill: any legacy member without `active` is treated as active.
+const ensureActiveFlag = (team: Team) => {
+  for (const m of team.members) {
+    if (m.active === undefined) m.active = true;
+  }
+};
+
+type MutationOutcome =
+  | { error: string; status: number }
+  | { result: Record<string, any> };
+
+// Load → mutate → compare-and-set, retrying on conflict so concurrent
+// writers (two members logging in the same second) never lose updates.
+const withTeam = async (
+  teamId: string,
+  mutate: (team: Team) => MutationOutcome
+): Promise<Response> => {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const loaded = await loadTeam(teamId);
+    if (!loaded) return json({ error: 'team not found' }, 404);
+    const { team, version } = loaded;
+    ensureActiveFlag(team);
+    const out = mutate(team);
+    if ('error' in out) return json({ error: out.error }, out.status);
+    if (await trySaveTeam(team, version)) return json(out.result);
+  }
+  return json({ error: 'the ladder is busy — try again' }, 409);
+};
+
 export const POST: APIRoute = async ({ request, url }) => {
-  const action = url.searchParams.get('action') || '';
-  let body: any = {};
-  try { body = await request.json(); } catch { /* allow empty */ }
+  try {
+    const action = url.searchParams.get('action') || '';
+    let body: any = {};
+    try { body = await request.json(); } catch { /* allow empty */ }
 
-  // CREATE
-  if (action === 'create') {
-    const t = newTeam();
-    await saveTeam(t);
-    return json({ teamId: t.id, team: t });
-  }
-
-  // Backfill: any legacy member without `active` is treated as active.
-  const ensureActiveFlag = (team: Team) => {
-    for (const m of team.members) {
-      if (m.active === undefined) m.active = true;
+    // CREATE
+    if (action === 'create') {
+      const t = newTeam();
+      await saveTeam(t);
+      return json({ teamId: t.id, team: t });
     }
-  };
 
-  // All other actions need a teamId
-  const teamId = String(body?.teamId || '').trim();
-  if (!teamId || teamId.length > 32) return json({ error: 'invalid teamId' }, 400);
-  const team = await loadTeam(teamId);
-  if (!team) return json({ error: 'team not found' }, 404);
-  ensureActiveFlag(team);
+    // All other actions need a teamId
+    const teamId = String(body?.teamId || '').trim();
+    if (!teamId || teamId.length > 32) return json({ error: 'invalid teamId' }, 400);
 
-  // GET
-  if (action === 'get') {
-    return json({ team });
-  }
-
-  // JOIN
-  if (action === 'join') {
-    const handle = sanitizeHandle(String(body?.handle || ''));
-    const path = String(body?.path || '').trim();
-    if (!handle || handle.length < 1) return json({ error: 'handle required' }, 400);
-    if (!validPath(path)) return json({ error: 'invalid path' }, 400);
-    const existing = team.members.find((m) => m.handle === handle);
-    const oldN = activeCount(team);
-    if (existing) {
-      // Re-joining: allow path change. Reactivate if previously stepped out.
-      existing.path = path;
-      existing.active = true;
-    } else {
-      if (team.members.length >= 12) return json({ error: 'team full (12)' }, 400);
-      team.members.push({ handle, path, totalDamage: 0, joinedAt: Date.now(), active: true });
+    // GET (read-only — no CAS needed)
+    if (action === 'get') {
+      const loaded = await loadTeam(teamId);
+      if (!loaded) return json({ error: 'team not found' }, 404);
+      ensureActiveFlag(loaded.team);
+      return json({ team: loaded.team });
     }
-    const newN = activeCount(team);
-    if (oldN === 0 && newN > 0) {
-      // First active member: HP scales to newN from a previous "0" → use baseHp × newN.
-      const boss = (data.bosses as any[])[team.currentBossIdx];
-      if (boss) team.currentBossHp = boss.hp * newN;
-    } else {
-      rescaleHpForSizeChange(team, oldN, newN);
+
+    // JOIN
+    if (action === 'join') {
+      const handle = sanitizeHandle(String(body?.handle || ''));
+      const path = String(body?.path || '').trim();
+      if (!handle || handle.length < 1) return json({ error: 'handle required' }, 400);
+      if (!validPath(path)) return json({ error: 'invalid path' }, 400);
+      return withTeam(teamId, (team) => {
+        const existing = team.members.find((m) => m.handle === handle);
+        const oldN = activeCount(team);
+        if (existing) {
+          // Re-joining: allow path change. Reactivate if previously stepped out.
+          existing.path = path;
+          existing.active = true;
+        } else {
+          if (team.members.length >= 12) return { error: 'team full (12)', status: 400 };
+          team.members.push({ handle, path, totalDamage: 0, joinedAt: Date.now(), active: true });
+        }
+        const newN = activeCount(team);
+        if (oldN === 0 && newN > 0) {
+          // First active member: HP scales to newN from a previous "0" → use baseHp × newN.
+          const boss = (data.bosses as any[])[team.currentBossIdx];
+          if (boss) team.currentBossHp = boss.hp * newN;
+        } else {
+          rescaleHpForSizeChange(team, oldN, newN);
+        }
+        return { result: { team } };
+      });
     }
-    await saveTeam(team);
-    return json({ team });
-  }
 
-  // STEP_OUT — soft pause. Toggle active flag; rescale HP.
-  if (action === 'step_out' || action === 'step_in') {
-    const handle = sanitizeHandle(String(body?.handle || ''));
-    const member = team.members.find(m => m.handle === handle);
-    if (!member) return json({ error: 'not a team member' }, 400);
-    const oldN = activeCount(team);
-    member.active = action === 'step_in';
-    const newN = activeCount(team);
-    rescaleHpForSizeChange(team, oldN, newN);
-    await saveTeam(team);
-    return json({ team });
-  }
+    // STEP_OUT — soft pause. Toggle active flag; rescale HP.
+    if (action === 'step_out' || action === 'step_in') {
+      const handle = sanitizeHandle(String(body?.handle || ''));
+      return withTeam(teamId, (team) => {
+        const member = team.members.find(m => m.handle === handle);
+        if (!member) return { error: 'not a team member', status: 400 };
+        const oldN = activeCount(team);
+        member.active = action === 'step_in';
+        const newN = activeCount(team);
+        rescaleHpForSizeChange(team, oldN, newN);
+        return { result: { team } };
+      });
+    }
 
-  // LOG
-  if (action === 'log') {
-    const handle = sanitizeHandle(String(body?.handle || ''));
-    const exerciseId = String(body?.exerciseId || '').trim();
-    const amountRaw = Number(body?.amount);
-    if (!Number.isFinite(amountRaw) || amountRaw <= 0) return json({ error: 'invalid amount' }, 400);
-    const amount = Math.min(Math.floor(amountRaw), 1000);
-    const member = team.members.find((m) => m.handle === handle);
-    if (!member) return json({ error: 'not a team member' }, 400);
-    if (member.active === false) return json({ error: 'you are stepped out — step back in to log' }, 400);
-    const ex = (data.exercises as any[]).find((e) => e.id === exerciseId);
-    if (!ex) return json({ error: 'unknown exercise' }, 400);
-    const boss = (data.bosses as any[])[team.currentBossIdx];
-    if (!boss) return json({ error: 'no active boss' }, 400);
-    const calc = calcDamage(exerciseId, amount, member.path, boss.weakness);
-    const dealt = Math.min(calc.damage, team.currentBossHp);
-    team.currentBossHp -= dealt;
-    member.totalDamage += dealt;
-    const hitLine = boss.hits[Math.floor(Math.random() * boss.hits.length)];
-    let defeated = false;
-    let advancedBoss: any = null;
-    if (team.currentBossHp <= 0) {
-      defeated = true;
-      // auto-advance to next boss if any
-      if (team.currentBossIdx + 1 < (data.bosses as any[]).length) {
+    // LOG
+    if (action === 'log') {
+      const handle = sanitizeHandle(String(body?.handle || ''));
+      const exerciseId = String(body?.exerciseId || '').trim();
+      const amountRaw = Number(body?.amount);
+      if (!Number.isFinite(amountRaw) || amountRaw <= 0) return json({ error: 'invalid amount' }, 400);
+      const amount = Math.min(Math.floor(amountRaw), 1000);
+      return withTeam(teamId, (team) => {
+        const member = team.members.find((m) => m.handle === handle);
+        if (!member) return { error: 'not a team member', status: 400 };
+        if (member.active === false) return { error: 'you are stepped out — step back in to log', status: 400 };
+        const ex = (data.exercises as any[]).find((e) => e.id === exerciseId);
+        if (!ex) return { error: 'unknown exercise', status: 400 };
+        const boss = (data.bosses as any[])[team.currentBossIdx];
+        if (!boss) return { error: 'no active boss', status: 400 };
+        const calc = calcDamage(exerciseId, amount, member.path, boss.weakness);
+        const dealt = Math.min(calc.damage, team.currentBossHp);
+        team.currentBossHp -= dealt;
+        member.totalDamage += dealt;
+        const hitLine = boss.hits[Math.floor(Math.random() * boss.hits.length)];
+        let defeated = false;
+        let advancedBoss: any = null;
+        if (team.currentBossHp <= 0) {
+          defeated = true;
+          // auto-advance to next boss if any
+          if (team.currentBossIdx + 1 < (data.bosses as any[]).length) {
+            team.currentBossIdx += 1;
+            const nextBoss = (data.bosses as any[])[team.currentBossIdx];
+            team.currentBossHp = nextBoss.hp * Math.max(1, activeCount(team));
+            advancedBoss = nextBoss;
+          } else {
+            team.currentBossHp = 0;
+          }
+        }
+        team.log.unshift({
+          ts: Date.now(),
+          handle,
+          exerciseId,
+          amount,
+          damage: dealt,
+          bossId: boss.id,
+          bossName: boss.name,
+          hitLine,
+          defeated,
+        });
+        if (team.log.length > 100) team.log = team.log.slice(0, 100);
+        return { result: { team, dealt, calc, hitLine, defeated, advancedBoss } };
+      });
+    }
+
+    // ADVANCE (manual nudge if needed)
+    if (action === 'advance') {
+      return withTeam(teamId, (team) => {
+        if (team.currentBossHp > 0) return { error: 'current boss still alive', status: 400 };
+        if (team.currentBossIdx + 1 >= (data.bosses as any[]).length) return { error: 'top of ladder', status: 400 };
         team.currentBossIdx += 1;
-        const nextBoss = (data.bosses as any[])[team.currentBossIdx];
-        team.currentBossHp = nextBoss.hp * Math.max(1, activeCount(team));
-        advancedBoss = nextBoss;
-      } else {
-        team.currentBossHp = 0;
-      }
+        team.currentBossHp = (data.bosses as any[])[team.currentBossIdx].hp * Math.max(1, activeCount(team));
+        return { result: { team } };
+      });
     }
-    team.log.unshift({
-      ts: Date.now(),
-      handle,
-      exerciseId,
-      amount,
-      damage: dealt,
-      bossId: boss.id,
-      bossName: boss.name,
-      hitLine,
-      defeated,
-    });
-    if (team.log.length > 100) team.log = team.log.slice(0, 100);
-    await saveTeam(team);
-    return json({ team, dealt, calc, hitLine, defeated, advancedBoss });
-  }
 
-  // ADVANCE (manual nudge if needed)
-  if (action === 'advance') {
-    if (team.currentBossHp > 0) return json({ error: 'current boss still alive' }, 400);
-    if (team.currentBossIdx + 1 >= (data.bosses as any[]).length) return json({ error: 'top of ladder' }, 400);
-    team.currentBossIdx += 1;
-    team.currentBossHp = (data.bosses as any[])[team.currentBossIdx].hp * Math.max(1, activeCount(team));
-    await saveTeam(team);
-    return json({ team });
+    return json({ error: 'unknown action' }, 400);
+  } catch (err) {
+    console.error('[ladder] request failed:', err);
+    return json({ error: 'the ladder wobbled. try again.' }, 500);
   }
-
-  return json({ error: 'unknown action' }, 400);
 };
