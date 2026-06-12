@@ -5,7 +5,7 @@
 import Layout from '../../../layouts/Layout.astro';
 ---
 
-<Layout title="DOMSDAY MACHINE — Mick Tan" description="performance training coach. evidence-based, adaptive.">
+<Layout title="DOMSDAY MACHINE — Mick Tan" description="performance training coach. evidence-based, adaptive." themeColor="#fafaf7">
   <main class="dm-root" data-view="loading">
 
     <!-- Top nav -->
@@ -269,7 +269,7 @@ import Layout from '../../../layouts/Layout.astro';
             <h2 class="dm-h3">Coach</h2>
             <span class="dm-coach-status" data-bind="coach-status">listening</span>
           </header>
-          <div class="dm-coach-log" data-bind="coach-log"></div>
+          <div class="dm-coach-log" data-bind="coach-log" aria-live="polite" aria-label="coach messages"></div>
           <form class="dm-chat" data-bind="chat-form">
             <textarea class="dm-input dm-chat-input" rows="2"
               placeholder="Ask Coach a question, or tell them what to change…"
@@ -341,8 +341,8 @@ import Layout from '../../../layouts/Layout.astro';
       <div class="dm-modal-card">
         <h3 id="dm-recover-title" class="dm-h3">Recover a plan</h3>
         <p class="dm-helper">Paste your full plan ID (UUID) or the URL you bookmarked. We'll take you to that plan.</p>
-        <input type="text" class="dm-input dm-recover-input" data-bind="recover-input" placeholder="e.g. 58f7c066-b978-4d58-80cc-a9d7a05d27a8 or full URL" autocomplete="off" />
-        <p class="dm-helper" data-bind="recover-error" style="color: #dc2626; display: none;"></p>
+        <input type="text" class="dm-input dm-recover-input" data-bind="recover-input" placeholder="e.g. 58f7c066-b978-4d58-80cc-a9d7a05d27a8 or full URL" autocomplete="off" aria-describedby="dm-recover-error" />
+        <p class="dm-helper" id="dm-recover-error" data-bind="recover-error" role="alert" style="color: #dc2626; display: none;"></p>
         <div class="dm-modal-actions">
           <button type="button" class="dm-btn dm-btn-ghost dm-btn-sm" data-action="close-recover">Cancel</button>
           <button type="button" class="dm-btn dm-btn-primary dm-btn-sm" data-action="do-recover">Open plan</button>
@@ -760,12 +760,28 @@ import Layout from '../../../layouts/Layout.astro';
     .dm-week-nav { display: inline-flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
     .dm-icon-btn {
       display: inline-flex; align-items: center; justify-content: center;
-      width: 30px; height: 30px;
+      width: 44px; height: 44px;
       background: var(--surface);
       border: 1px solid var(--line);
       border-radius: 7px;
       color: var(--ink-2); cursor: pointer;
       transition: all 160ms;
+    }
+
+    /* Keyboard focus — one consistent ring across every control. */
+    :global(.dm-root button:focus-visible),
+    :global(.dm-root select:focus-visible),
+    :global(.dm-root input:focus-visible),
+    :global(.dm-root textarea:focus-visible),
+    :global(.dm-root summary:focus-visible),
+    :global(.dm-root a:focus-visible) {
+      outline: 2px solid var(--accent, #f97316);
+      outline-offset: 2px;
+    }
+
+    .dm-recover-input.dm-input-error {
+      border-color: #dc2626;
+      box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
     }
     .dm-icon-btn:hover { color: var(--ink); border-color: var(--line-2); }
     .dm-icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
@@ -2138,7 +2154,7 @@ import Layout from '../../../layouts/Layout.astro';
         m.hidden = false;
         const inp = $('[data-bind="recover-input"]') as HTMLInputElement | null;
         const err = $('[data-bind="recover-error"]') as HTMLElement | null;
-        if (inp) { inp.value = ''; setTimeout(() => inp.focus(), 30); }
+        if (inp) { inp.value = ''; inp.classList.remove('dm-input-error'); setTimeout(() => inp.focus(), 30); }
         if (err) err.style.display = 'none';
       };
       const closeRecover = () => {
@@ -2153,8 +2169,11 @@ import Layout from '../../../layouts/Layout.astro';
         let id = raw;
         // accept full URL
         try { const u = new URL(raw); id = u.searchParams.get('id') || ''; } catch { /* not a url */ }
+        inp.classList.remove('dm-input-error');
         if (!/^[a-z0-9-]{8,40}$/i.test(id)) {
           if (err) { err.textContent = 'That doesn\'t look like a valid plan ID.'; err.style.display = 'block'; }
+          inp.classList.add('dm-input-error');
+          inp.focus();
           return;
         }
         try { localStorage.setItem('domsday:userId', id); } catch {}
@@ -2172,7 +2191,21 @@ import Layout from '../../../layouts/Layout.astro';
         if (inp) {
           inp.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') { e.preventDefault(); doRecover(); }
-            if (e.key === 'Escape') closeRecover();
+          }, { signal: sig });
+        }
+        // Containment: Tab cycles inside the dialog, Escape leaves it.
+        const modal = $('[data-bind="recover-modal"]') as HTMLElement | null;
+        if (modal) {
+          modal.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') { closeRecover(); return; }
+            if (e.key !== 'Tab') return;
+            const focusables = Array.from(modal.querySelectorAll<HTMLElement>('input, button'))
+              .filter(el => el.offsetParent !== null);
+            if (!focusables.length) return;
+            const first = focusables[0];
+            const last = focusables[focusables.length - 1];
+            if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+            else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
           }, { signal: sig });
         }
       };
