@@ -5,12 +5,18 @@
 import Layout from '../../../layouts/Layout.astro';
 ---
 
-<Layout title="DOMSDAY MACHINE — Mick Tan" description="performance training coach. evidence-based, adaptive." themeColor="#fafaf7">
+<Layout
+  title="DOMSDAY MACHINE — Mick Tan"
+  description="performance training coach. evidence-based, adaptive."
+  themeColor="#fafaf7"
+  ogImage="/og/domsday.png"
+  ogAlt="domsday machine. — a training progress bar reading week 7 of 12. no pain no gain."
+>
   <main class="dm-root" data-view="loading">
 
     <!-- Top nav -->
     <header class="dm-nav">
-      <a class="dm-back" href="/room/" data-astro-prefetch>&larr; the room</a>
+      <a class="dm-back" href="/room/" data-astro-prefetch data-veil-exit>&larr; the room</a>
       <div class="dm-brand">domsday machine</div>
       <button class="dm-bookmark" type="button" data-action="bookmark">
         <svg class="dm-icon-bookmark" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
@@ -359,6 +365,7 @@ import Layout from '../../../layouts/Layout.astro';
       </div>
     </section>
 
+    <p class="dm-next-room"><a href="/room/mos/" data-veil-exit="#f2ecd6" data-astro-prefetch>next room — MOS. &rarr;</a></p>
   </main>
 
   <style>
@@ -783,6 +790,14 @@ import Layout from '../../../layouts/Layout.astro';
       border-color: #dc2626;
       box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
     }
+
+    .dm-next-room {
+      text-align: center;
+      padding: 1.5rem 0 2.25rem;
+      font-size: 0.85rem;
+    }
+    .dm-next-room a { color: var(--ink-2, #55554f); text-decoration: none; padding: 0.6rem; display: inline-block; }
+    .dm-next-room a:hover { color: var(--accent, #f97316); }
     .dm-icon-btn:hover { color: var(--ink); border-color: var(--line-2); }
     .dm-icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
     .dm-icon-btn svg { width: 14px; height: 14px; }

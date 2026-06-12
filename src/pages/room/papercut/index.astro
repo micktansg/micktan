@@ -2,10 +2,16 @@
 import Layout from '../../../layouts/Layout.astro';
 ---
 
-<Layout title="papercut. — Mick Tan" description="tamagotchi for creative worker. feed them exposure." themeColor="#5da3c4">
+<Layout
+  title="papercut. — Mick Tan"
+  description="tamagotchi for creative worker. feed them exposure."
+  themeColor="#5da3c4"
+  ogImage="/og/papercut.png"
+  ogAlt="papercut. — a pixel heart on a cyan field. tamagotchi for creative worker."
+>
   <main class="pc">
     <div class="topbar">
-      <a class="back" href="/room/" data-astro-prefetch>&larr; the room</a>
+      <a class="back" href="/room/" data-astro-prefetch data-veil-exit>&larr; the room</a>
       <button class="bgm-toggle" id="bgmToggle" type="button" aria-label="toggle ambient audio" aria-pressed="false">
         <span id="bgmIcon">🔇</span>
         <span class="bgm-label" id="bgmLabel">audio off</span>
@@ -69,6 +75,8 @@ import Layout from '../../../layouts/Layout.astro';
         <div class="trophy-empty">no awards yet. keep feeding.</div>
       </div>
      </div>
+
+     <p class="next-room"><a href="/room/corporateladder/" data-veil-exit="#0a0e23" data-astro-prefetch>next room — corporatelardder. &rarr;</a></p>
     </section>
 
     {/* Quit-attempt modal — the boss bribes you to stay every time you try to leave. */}
@@ -886,6 +894,15 @@ import Layout from '../../../layouts/Layout.astro';
     touch-action: manipulation;
   }
   .ending-btn:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--pc-yellow); }
+
+  .next-room {
+    margin-top: 1.8rem;
+    text-align: center;
+    font-size: 0.85rem;
+  }
+  .next-room a { color: #f7f0dc; opacity: 0.6; text-decoration: none; padding: 0.6rem; display: inline-block; }
+  .next-room a:hover { opacity: 1; }
+  .next-room a:focus-visible { outline: 3px solid var(--pc-yellow, #f3e09b); outline-offset: 3px; }
 
   /* Keyboard focus — yellow reads on the cyan field and every button face. */
   .input-btn:focus-visible,

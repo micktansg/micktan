@@ -2,9 +2,15 @@
 import Layout from '../../../layouts/Layout.astro';
 ---
 
-<Layout title="MOS — Ministry of Silly. Walk." description="alternate L and R. walk silly. don't fall." themeColor="#f2ecd6">
+<Layout
+  title="MOS — Ministry of Silly. Walk."
+  description="alternate L and R. walk silly. don't fall."
+  themeColor="#f2ecd6"
+  ogImage="/og/mos.png"
+  ogAlt="MOS. ministry of silly. walk. — a parchment application form stamped REJECTED."
+>
   <main class="mos">
-    <a class="back" href="/room/" data-astro-prefetch>&larr; the room</a>
+    <a class="back" href="/room/" data-astro-prefetch data-veil-exit>&larr; the room</a>
 
     <header class="hud-head">
       <h1>MOS.</h1>
@@ -37,6 +43,7 @@ import Layout from '../../../layouts/Layout.astro';
           <dt>Best</dt><dd><span data-final-best>0</span> m</dd>
         </dl>
         <p class="retry">tap to resubmit</p>
+        <p class="next-room"><a href="/room/papercut/" data-veil-exit="#5da3c4" data-mos-next>or flee to the next room — papercut. &rarr;</a></p>
       </div>
     </div>
   </main>
@@ -283,6 +290,23 @@ import Layout from '../../../layouts/Layout.astro';
     font-style: italic;
     opacity: 0.5;
     font-size: 0.9rem;
+  }
+  .overlay .next-room {
+    margin-top: 0.9rem;
+    font-size: 0.82rem;
+  }
+  .overlay .next-room a {
+    color: #3a2e1a;
+    opacity: 0.55;
+    font-style: italic;
+    padding: 0.5rem;
+    display: inline-block;
+  }
+  .overlay .next-room a:hover { opacity: 0.95; }
+  .overlay .next-room a:focus-visible {
+    outline: 2px dashed rgba(58, 46, 26, 0.6);
+    outline-offset: 2px;
+    border-radius: 4px;
   }
 
   @media (max-width: 600px) {
@@ -1329,6 +1353,14 @@ import Layout from '../../../layouts/Layout.astro';
     // overlay mid-slam — reset to a fresh walk.
     window.addEventListener('pageshow', (e) => {
       if ((e as PageTransitionEvent).persisted) reset();
+    }, { signal: sig });
+
+    // The next-room link sits inside the tap-to-retry overlay; stop its
+    // pointerdown from reaching the overlay so following it doesn't also
+    // restart the walk (and so the overlay's preventDefault can't eat the
+    // click that the site-wide exit veil listens for).
+    document.querySelector('[data-mos-next]')?.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
     }, { signal: sig });
 
     // ----- current animated pose -----

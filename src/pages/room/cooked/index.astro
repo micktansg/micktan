@@ -5,9 +5,15 @@ import data from './songs.json';
 const { songs, personas } = data;
 ---
 
-<Layout title="cooked. — Mick Tan" description="a 90s big beat banger reviewer-guessing game" themeColor="#fdf3e6">
+<Layout
+  title="cooked. — Mick Tan"
+  description="a 90s big beat banger reviewer-guessing game"
+  themeColor="#fdf3e6"
+  ogImage="/og/cooked.png"
+  ogAlt="cooked. — a vinyl record on a warm peach field. 90s big beat song reviews."
+>
   <main class="cooked">
-    <a class="back" href="/room/" data-astro-prefetch>&larr; the room</a>
+    <a class="back" href="/room/" data-astro-prefetch data-veil-exit>&larr; the room</a>
 
     <header class="head">
       <h1>cooked. <span class="emoji">🍳</span></h1>
@@ -96,6 +102,8 @@ const { songs, personas } = data;
       </form>
       <p class="req-status" id="reqStatus" aria-live="polite"></p>
     </section>
+
+    <p class="next-room"><a href="/room/ssb/" data-veil-exit="#f7f7f8" data-astro-prefetch>next room — SSB calculator. &rarr;</a></p>
   </main>
 </Layout>
 
@@ -505,6 +513,16 @@ const { songs, personas } = data;
   }
   .req-status.ok { color: #2d8a4f; }
   .req-status.err { color: var(--accent-1); }
+
+  .next-room {
+    margin-top: 3.5rem;
+    text-align: center;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+  .next-room a { color: var(--ink-soft); text-decoration: none; padding: 0.6rem; display: inline-block; }
+  .next-room a:hover { color: var(--accent-1); }
+  .next-room a:focus-visible { outline: 3px solid var(--accent-3); outline-offset: 3px; border-radius: 6px; }
 
   @media (max-width: 600px) {
     .cooked { padding: 2rem 1rem 6rem; }

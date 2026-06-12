@@ -5,10 +5,16 @@ import data from './data.json';
 const { paths, exercises, bosses } = data;
 ---
 
-<Layout title="corporatelardder. — Mick Tan" description="log workouts to climb the corporate lardder." themeColor="#0a0e23">
+<Layout
+  title="corporatelardder. — Mick Tan"
+  description="log workouts to climb the corporate lardder."
+  themeColor="#0a0e23"
+  ogImage="/og/corporateladder.png"
+  ogAlt="corporatelardder. — neon arcade type and a pixel ladder climbing a dark field."
+>
   <main class="cl">
     <div class="topbar">
-      <a class="back" href="/room/" data-astro-prefetch>&larr; the room</a>
+      <a class="back" href="/room/" data-astro-prefetch data-veil-exit>&larr; the room</a>
       <button class="bgm-toggle" id="bgmToggle" type="button" aria-label="toggle background music" aria-pressed="false">
         <span id="bgmIcon">🔇</span>
         <span class="bgm-label" id="bgmLabel">music off</span>
@@ -155,6 +161,8 @@ const { paths, exercises, bosses } = data;
         </div>
       </div>
     </section>
+
+    <p class="next-room"><a href="/room/cooked/" data-veil-exit="#fdf3e6" data-astro-prefetch>next room — cooked. &rarr;</a></p>
   </main>
 </Layout>
 
@@ -412,7 +420,44 @@ const { paths, exercises, bosses } = data;
   }
 
   /* Boss card */
+  .next-room {
+    margin-top: 2.5rem;
+    text-align: center;
+    font-size: 0.65rem;
+    letter-spacing: 0.06em;
+  }
+  .next-room a { color: var(--cl-dim); text-decoration: none; padding: 0.6rem; display: inline-block; }
+  .next-room a:hover { color: var(--cl-cyan); }
+
+  /* Damage juice: floating hit numbers + a two-step flash on the boss card.
+     :global() because the float is created at runtime by JS. */
+  :global(.cl .dmg-float) {
+    position: absolute;
+    right: 1.2rem;
+    top: 28%;
+    font-family: inherit;
+    font-size: 1.3rem;
+    color: var(--cl-accent);
+    text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.65);
+    pointer-events: none;
+    animation: dmg-rise 900ms ease-out forwards;
+    z-index: 4;
+  }
+  @keyframes dmg-rise {
+    from { transform: translateY(0); opacity: 1; }
+    to   { transform: translateY(-72px); opacity: 0; }
+  }
+  :global(.cl .boss-card.hit) { animation: boss-hit 280ms steps(2, jump-none); }
+  @keyframes boss-hit {
+    50% { filter: brightness(1.7) saturate(1.4); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :global(.cl .dmg-float) { animation: none; opacity: 0; }
+    :global(.cl .boss-card.hit) { animation: none; }
+  }
+
   .boss-card {
+    position: relative;
     background: linear-gradient(180deg, rgba(255, 74, 217, 0.12), rgba(0,0,0,0.4));
     border: 2px solid var(--cl-pink);
     border-radius: 4px;
@@ -1118,6 +1163,20 @@ const { paths, exercises, bosses } = data;
       hpFill.classList.remove('shake');
       void hpFill.offsetWidth; // restart
       hpFill.classList.add('shake');
+      // Damage juice: floating hit number + boss flash
+      if (dealt > 0 && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        const card = document.querySelector('.boss-card');
+        if (card) {
+          const float = document.createElement('span');
+          float.className = 'dmg-float';
+          float.textContent = `-${dealt}`;
+          card.appendChild(float);
+          card.classList.remove('hit');
+          void card.offsetWidth;
+          card.classList.add('hit');
+          setTimeout(() => { float.remove(); card.classList.remove('hit'); }, 950);
+        }
+      }
       // Quip
       document.getElementById('bossQuip').textContent = defeated
         ? (team.log[0]?.bossName ? `${team.log[0].bossName} defeated!` : 'defeated!')
@@ -1308,9 +1367,17 @@ const { paths, exercises, bosses } = data;
     }
   });
 
-  // Initial UI: read pref but don't auto-start (browsers block autoplay).
-  // The user must click once to begin.
+  // Initial UI: restore the saved preference visually; actual playback waits
+  // for the first tap (browsers block autoplay), same pattern as papercut.
   setBgmUI(false);
+  try {
+    if (localStorage.getItem(BGM_KEY) === '1') {
+      setBgmUI(true);
+      window.addEventListener('pointerdown', () => {
+        if (bgmBtn.classList.contains('on') && !bgm.isOn()) bgm.start();
+      }, { once: true });
+    }
+  } catch {}
 
   // bfcache restores can come back with a stale win overlay or stale team
   // state — hide the overlay and pull fresh state.

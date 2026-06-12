@@ -75,7 +75,7 @@ rooms.sort((a, b) => {
 <Layout title="The Room — Mick Tan" description="every room mick tan has built" themeColor="#f0ece4">
   <main class="inverse-page">
     <header class="page-head">
-      <a href="/" class="home-link" data-astro-prefetch>&larr; home</a>
+      <a href="/" class="home-link" data-astro-prefetch data-veil-exit="#2a2a27">&larr; home</a>
       <h1 aria-label="the room">
         {'the room'.split('').map((ch, i) => (
           <span class="h1-ch" aria-hidden="true" style={`--d: ${i * 55}ms`}>{ch === ' ' ? ' ' : ch}</span>

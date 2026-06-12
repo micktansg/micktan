@@ -1,0 +1,69 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="404 — Mick Tan" description="this room doesn't exist. yet." themeColor="#f0ece4">
+  <main class="lost">
+    <h1>404.</h1>
+    <p class="sub">this room doesn't exist. yet.</p>
+    <nav class="ways" aria-label="ways out">
+      <a href="/room/" data-astro-prefetch>&larr; back to the hall</a>
+      <span aria-hidden="true">&middot;</span>
+      <a href="/" data-veil-exit="#2a2a27">the void</a>
+    </nav>
+  </main>
+</Layout>
+
+<style>
+  html, body { background: #f0ece4; }
+
+  .lost {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    background: #f0ece4;
+    color: #2a2a27;
+    font-family: 'Lora', Georgia, serif;
+    text-align: center;
+    padding: 2rem;
+  }
+
+  h1 {
+    font-size: clamp(4.5rem, 16vw, 9rem);
+    font-weight: 500;
+    line-height: 1;
+    color: #1a1812;
+    letter-spacing: -0.01em;
+  }
+
+  .sub {
+    font-style: italic;
+    opacity: 0.6;
+    font-size: clamp(1rem, 2.2vw, 1.2rem);
+  }
+
+  .ways {
+    margin-top: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+  }
+  .ways a {
+    color: inherit;
+    opacity: 0.55;
+    text-decoration: none;
+    padding: 0.7rem;
+    transition: opacity 200ms;
+  }
+  .ways a:hover { opacity: 0.95; }
+  .ways a:focus-visible {
+    outline: 2px dashed rgba(42, 42, 39, 0.55);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  .ways span { opacity: 0.3; }
+</style>

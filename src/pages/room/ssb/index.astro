@@ -2,10 +2,16 @@
 import Layout from '../../../layouts/Layout.astro';
 ---
 
-<Layout title="SSB calculator. — Mick Tan" description="work out SSB yields and payouts" themeColor="#f7f7f8">
+<Layout
+  title="SSB calculator. — Mick Tan"
+  description="work out SSB yields and payouts"
+  themeColor="#f7f7f8"
+  ogImage="/og/ssb.png"
+  ogAlt="SSB calculator. — rising blue yield bars on a clean light field."
+>
   <main class="ssb">
     <div class="topbar">
-      <a class="back" href="/room/" data-astro-prefetch>&larr; the room</a>
+      <a class="back" href="/room/" data-astro-prefetch data-veil-exit>&larr; the room</a>
     </div>
 
     <header class="head">
@@ -101,6 +107,8 @@ Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
     <footer class="foot">
       <p>SSB mechanics modelled per MAS: 6-month coupons on the 1st of issue month and issue-month + 6; payout = (year-of-holding rate) × principal ÷ 2; principal returned with the final coupon at month 120. hold-to-maturity only — no early redemption modelling.</p>
     </footer>
+
+    <p class="next-room"><a href="/room/domsday/" data-veil-exit="#fafaf7" data-astro-prefetch>next room — domsday machine. &rarr;</a></p>
   </main>
 
   <style is:global>
@@ -177,10 +185,19 @@ Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
       gap: 0.4rem;
     }
     .ssb .io-btn:hover { background: #18181b; color: #ffffff; }
+    .ssb .next-room {
+      margin-top: 1.5rem;
+      text-align: center;
+      font-size: 0.85rem;
+    }
+    .ssb .next-room a { color: inherit; opacity: 0.55; text-decoration: none; padding: 0.6rem; display: inline-block; }
+    .ssb .next-room a:hover { opacity: 0.95; }
+
     .ssb .io-btn:focus-visible,
     .ssb .toggle-btn:focus-visible,
     .ssb .bond-toggle:focus-visible,
     .ssb .bond-head .actions button:focus-visible,
+    .ssb .next-room a:focus-visible,
     .ssb .back:focus-visible {
       outline: 2px solid #2563eb;
       outline-offset: 2px;
