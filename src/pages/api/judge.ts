@@ -69,7 +69,11 @@ Rules for "reply":
 };
 
 const callGemini = async (apiKey: string, prompt: string): Promise<{ correct: boolean; reply: string } | null> => {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  // flash-lite via rolling alias: a game guess needs a fast verdict (full
+  // flash free tier measured 12-20s in 2026-07 — it would blow the 12s
+  // timeout and always fall back to keywords). Lite is ~1s and plenty smart
+  // for "did they name the right persona". Alias because pinned ids rot.
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${apiKey}`;
   try {
     const r = await fetchWithTimeout(url, {
       method: 'POST',

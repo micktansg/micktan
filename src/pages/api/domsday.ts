@@ -306,7 +306,9 @@ const parseGroundedJson = (text: string, candidate: any): { parsed: any; citatio
 };
 
 const callGemini = async (apiKey: string, prompt: string, useGrounding = true, timeoutMs = 30_000): Promise<{ text: string; citations: Citation[] } | null> => {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  // Rolling alias — gemini-2.5-flash was deprecated for this key (2026-07);
+  // the alias tracks the current flash model so this doesn't rot again.
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`;
   try {
     const r = await fetchWithTimeout(url, {
       method: 'POST',

@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import { ClientRouter } from 'astro:transitions';
+import Bob from '../components/Bob.astro';
 
 interface Props {
   title?: string;
@@ -28,6 +29,10 @@ const pageBg = bg || themeColor;
 const SITE = 'https://micktan.com';
 const canonicalUrl = SITE + Astro.url.pathname;
 const ogImageUrl = SITE + ogImage;
+
+// Bob haunts every page except the VOID surface — the homepage stays one
+// lonely word, and Bob isn't allowed in there anyway. It's a whole thing.
+const showBob = Astro.url.pathname !== '/';
 ---
 
 <!doctype html>
@@ -76,6 +81,7 @@ const ogImageUrl = SITE + ogImage;
   </head>
   <body>
     <slot />
+    {showBob && <Bob />}
     {/* Site-wide exit veil: any <a data-veil-exit[="#color"]> fades this over
         the page before navigating — the symmetric twin of the hall's ink
         flood. Rooms opt in by adding the attribute to their back links. */}
