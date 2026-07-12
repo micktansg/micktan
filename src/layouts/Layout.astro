@@ -6,6 +6,7 @@ interface Props {
   title?: string;
   description?: string;
   themeColor?: string;
+  bg?: string;
   ogImage?: string;
   ogAlt?: string;
 }
@@ -14,9 +15,15 @@ const {
   title = 'Mick Tan',
   description = 'a room of interactive objects by mick tan. mostly buggy stuff.',
   themeColor = '#2a2a27',
+  // Page background. Every page's themeColor already matches its background,
+  // so bg defaults to it — set on <html> as an inline var so the right color
+  // paints on first parse (no flash of the dark default on light rooms).
+  bg = undefined,
   ogImage = '/og.png',
   ogAlt = 'A dark field with a cream lens revealing the word Observing.',
 } = Astro.props;
+
+const pageBg = bg || themeColor;
 
 const SITE = 'https://micktan.com';
 const canonicalUrl = SITE + Astro.url.pathname;
@@ -24,7 +31,7 @@ const ogImageUrl = SITE + ogImage;
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" style={`--page-bg: ${pageBg}`}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -50,10 +57,21 @@ const ogImageUrl = SITE + ogImage;
     <link rel="icon" href="/favicon.ico?v=2" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    {/* Async font load: media="print" makes the stylesheet non-render-blocking;
+        onload flips it live. Text paints immediately in the serif fallback
+        (display=swap), so no page waits on Google Fonts. */}
     <link
       href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap"
       rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
     />
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap"
+        rel="stylesheet"
+      />
+    </noscript>
     <ClientRouter />
   </head>
   <body>
@@ -71,7 +89,10 @@ const ogImageUrl = SITE + ogImage;
     --ink: #f0ece4;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { background: var(--paper); color: var(--ink); font-family: 'Lora', Georgia, serif; min-height: 100vh; }
+  /* Safety net (see project gotchas): a container with an explicit display
+     (flex/grid) otherwise overrides [hidden] and keeps eating clicks. */
+  [hidden] { display: none !important; }
+  html, body { background: var(--page-bg, var(--paper)); color: var(--ink); font-family: 'Lora', Georgia, serif; min-height: 100vh; }
   ::selection { background: #ebe9e0; color: #1a1812; }
 
   .site-exit-veil {
@@ -81,7 +102,7 @@ const ogImageUrl = SITE + ogImage;
     opacity: 0;
     pointer-events: none;
     z-index: 9999;
-    transition: opacity 420ms cubic-bezier(.4, 0, .2, 1);
+    transition: opacity 220ms cubic-bezier(.4, 0, .2, 1);
   }
   .site-exit-veil.active { opacity: 1; pointer-events: auto; }
 
@@ -116,7 +137,7 @@ const ogImageUrl = SITE + ogImage;
       veil.style.setProperty('--veil-c', a.dataset.veilExit || '#f0ece4');
       veil.classList.add('active');
       const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-      setTimeout(() => { window.location.href = a.href; }, reduce ? 180 : 440);
+      setTimeout(() => { window.location.href = a.href; }, reduce ? 140 : 240);
     }, { signal });
   };
 

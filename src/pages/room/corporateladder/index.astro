@@ -1,8 +1,10 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
+import { nextRoom } from '../../../data/rooms.mjs';
 import data from './data.json';
 
 const { paths, exercises, bosses } = data;
+const next = nextRoom('corporateladder');
 ---
 
 <Layout
@@ -162,7 +164,7 @@ const { paths, exercises, bosses } = data;
       </div>
     </section>
 
-    <p class="next-room"><a href="/room/cooked/" data-veil-exit="#fdf3e6" data-astro-prefetch>next room — cooked. &rarr;</a></p>
+    <p class="next-room"><a href={next.href} data-veil-exit={next.bg} data-astro-prefetch>next room — {next.title} &rarr;</a></p>
   </main>
 </Layout>
 
@@ -183,8 +185,8 @@ const { paths, exercises, bosses } = data;
     --cl-card-border: rgba(74, 241, 255, 0.25);
   }
 
+  /* Background comes from Layout's --page-bg (via themeColor). */
   html, body {
-    background: var(--cl-bg);
     color: var(--cl-fg);
     font-family: 'Press Start 2P', system-ui, monospace;
     overflow-x: hidden;
@@ -817,12 +819,36 @@ const { paths, exercises, bosses } = data;
 {/* Load Press Start 2P just for this page */}
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+{/* Non-blocking load (see Layout.astro) — monospace fallback paints first.
+    No <noscript> fallback here: the room needs JS anyway, and a root-level
+    <noscript> stops Astro from hoisting the room script below. */}
 <link
   href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
   rel="stylesheet"
+  media="print"
+  onload="this.media='all'"
 />
 
-<script define:vars={{ DATA: data }}>
+<script type="application/json" id="clData" is:inline set:html={JSON.stringify(data)}></script>
+<script>
+  // Standard room lifecycle (same pattern as cooked/ssb): init on
+  // astro:page-load so SPA navigations re-wire the room, AbortController for
+  // document/window listeners, and a teardown that stops polling + BGM.
+  // The old define:vars script ran once at parse time — dead controls after
+  // a ClientRouter swap, and no way to clean up.
+  let clAbort: AbortController | null = null;
+  let clTeardown: (() => void) | null = null;
+
+  const initLadder = () => {
+  const dataEl = document.getElementById('clData');
+  if (!dataEl) return; // some other page's astro:page-load
+
+  clTeardown?.();
+  clAbort?.abort();
+  clAbort = new AbortController();
+  const { signal } = clAbort;
+
+  const DATA = JSON.parse(dataEl.textContent || '{}');
   const PATHS = DATA.paths;
   const EXERCISES = DATA.exercises;
   const BOSSES = DATA.bosses;
@@ -1365,7 +1391,7 @@ const { paths, exercises, bosses } = data;
     } else if (!document.hidden && bgmBtn.classList.contains('on') && !bgm.isOn()) {
       bgm.start();
     }
-  });
+  }, { signal });
 
   // Initial UI: restore the saved preference visually; actual playback waits
   // for the first tap (browsers block autoplay), same pattern as papercut.
@@ -1375,22 +1401,31 @@ const { paths, exercises, bosses } = data;
       setBgmUI(true);
       window.addEventListener('pointerdown', () => {
         if (bgmBtn.classList.contains('on') && !bgm.isOn()) bgm.start();
-      }, { once: true });
+      }, { once: true, signal });
     }
   } catch {}
 
   // bfcache restores can come back with a stale win overlay or stale team
   // state — hide the overlay and pull fresh state.
   window.addEventListener('pageshow', (e) => {
-    if (!e.persisted) return;
-    document.getElementById('winOverlay').hidden = true;
+    if (!(e as PageTransitionEvent).persisted) return;
+    const overlay = document.getElementById('winOverlay');
+    if (overlay) overlay.hidden = true;
     refresh();
-  });
+  }, { signal });
 
-  // Defensive: stop polling if the router ever swaps this page away.
-  document.addEventListener('astro:before-swap', () => {
+  clTeardown = () => {
     if (state.pollHandle) clearInterval(state.pollHandle);
-  });
+    bgm.stop();
+    clTeardown = null;
+  };
 
   boot();
+  };
+
+  document.addEventListener('astro:page-load', initLadder);
+  document.addEventListener('astro:before-swap', () => {
+    clTeardown?.();
+    clAbort?.abort();
+  });
 </script>

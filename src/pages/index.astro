@@ -116,7 +116,7 @@ import Layout from '../layouts/Layout.astro';
 
   /* Exit veil: cream-white overlay that fades in on click, matching /room/'s bg.
      The document swap happens behind it, so the brightness ramps up gradually
-     over 600ms instead of a hard cut. */
+     instead of a hard cut. */
   #exit-veil {
     position: fixed;
     top: 0;
@@ -127,7 +127,7 @@ import Layout from '../layouts/Layout.astro';
     opacity: 0;
     pointer-events: none;
     z-index: 100;
-    transition: opacity 600ms cubic-bezier(.4, 0, .2, 1);
+    transition: opacity 300ms cubic-bezier(.4, 0, .2, 1);
   }
   #exit-veil.active {
     opacity: 1;
@@ -251,14 +251,6 @@ import Layout from '../layouts/Layout.astro';
        (R/G/B channel split + offset). Cleaner than text-shadow. */
   }
 
-  .warm-hint {
-    font-size: clamp(0.85rem, 1.8vw, 1rem);
-    font-style: italic;
-    opacity: 0.5;
-    letter-spacing: 0.04em;
-    margin-top: 0.4rem;
-  }
-
   /* When over Observing, the lens grows to --lens-r-hover via the 280ms
      transition. Once it's settled, JS sets --lens-r-breathing each frame
      to a sinusoidal value, producing a slow breathe in/out around hover size.
@@ -319,7 +311,7 @@ import Layout from '../layouts/Layout.astro';
       if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
       e.preventDefault();
       if (veil) veil.classList.add('active');
-      setTimeout(() => { window.location.href = '/room/'; }, 620);
+      setTimeout(() => { window.location.href = '/room/'; }, 320);
     }, { signal });
 
     // Touch-only devices: skip all cursor/touch lens behavior.
