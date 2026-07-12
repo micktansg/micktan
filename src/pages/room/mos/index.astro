@@ -1,5 +1,7 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
+import { nextRoom } from '../../../data/rooms.mjs';
+const next = nextRoom('mos');
 ---
 
 <Layout
@@ -43,7 +45,7 @@ import Layout from '../../../layouts/Layout.astro';
           <dt>Best</dt><dd><span data-final-best>0</span> m</dd>
         </dl>
         <p class="retry">tap to resubmit</p>
-        <p class="next-room"><a href="/room/papercut/" data-veil-exit="#5da3c4" data-mos-next>or flee to the next room — papercut. &rarr;</a></p>
+        <p class="next-room"><a href={next.href} data-veil-exit={next.bg} data-mos-next>or flee to the next room — {next.title} &rarr;</a></p>
       </div>
     </div>
   </main>
@@ -53,7 +55,8 @@ import Layout from '../../../layouts/Layout.astro';
   /* Light parchment palette — clean warm cream, sepia ink, faded brown
      accents. A touch warmer than /room/ so MOS reads as its own surface
      without going saturated/sickly like the earlier manila. */
-  html, body { background: #f2ecd6; overflow: hidden; }
+  /* Background comes from Layout's --page-bg (via themeColor). */
+  html, body { overflow: hidden; }
 
   .mos {
     position: fixed;

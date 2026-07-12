@@ -1,59 +1,15 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
+import { interactiveRooms, roomHref } from '../../data/rooms.mjs';
 
 const markdownRooms = await getCollection('rooms', ({ data, id }) => {
   return !data.draft && !id.startsWith('_');
 });
 
-// Interactive rooms — Astro pages under /src/pages/room/<slug>/ — aren't in
-// the content collection, so list them by hand here. Add a new entry per
-// interactive room as it ships.
-const interactiveRooms = [
-  {
-    id: 'ssb',
-    title: 'SSB calculator.',
-    summary: 'work out SSB yields and payouts.',
-    date: new Date('2026-05-16'),
-    href: '/room/ssb/',
-  },
-  {
-    id: 'domsday',
-    title: 'domsday machine.',
-    summary: 'no pain no gain.',
-    date: new Date('2026-05-08'),
-    href: '/room/domsday/',
-  },
-  {
-    id: 'mos',
-    title: 'MOS.',
-    summary: 'ministry of silly. walk.',
-    date: new Date('2026-05-01'),
-    href: '/room/mos/',
-  },
-  {
-    id: 'papercut',
-    title: 'papercut.',
-    summary: 'tamagotchi for creative worker. feed them exposure.',
-    date: new Date('2026-05-01'),
-    href: '/room/papercut/',
-  },
-  {
-    id: 'corporateladder',
-    title: 'corporatelardder.',
-    summary: 'log workouts to climb the corporate lardder.',
-    date: new Date('2026-05-01'),
-    href: '/room/corporateladder/',
-  },
-  {
-    id: 'cooked',
-    title: 'cooked.',
-    summary: '90s big beat song reviews.',
-    date: new Date('2026-04-30'),
-    href: '/room/cooked/',
-  },
-];
-
+// Interactive rooms live in src/data/rooms.mjs — the manifest also drives the
+// next-room circuit and og-gen validation. Markdown rooms merge in by date;
+// manifest position breaks date ties so the hall order is deterministic.
 const rooms = [
   ...markdownRooms.map(r => ({
     id: r.id,
@@ -61,14 +17,21 @@ const rooms = [
     summary: r.data.summary,
     date: r.data.date ? new Date(r.data.date) : null,
     href: `/room/${r.id}/`,
+    order: Number.MAX_SAFE_INTEGER,
   })),
-  ...interactiveRooms,
+  ...interactiveRooms.map((r, i) => ({
+    ...r,
+    date: new Date(r.date),
+    href: roomHref(r.id),
+    order: i,
+  })),
 ];
 
 rooms.sort((a, b) => {
   const da = a.date ? a.date.valueOf() : 0;
   const db = b.date ? b.date.valueOf() : 0;
-  return db - da;
+  if (db !== da) return db - da;
+  return a.order - b.order;
 });
 ---
 
@@ -110,8 +73,8 @@ rooms.sort((a, b) => {
 </Layout>
 
 <style>
-  /* Inverse of the landing page: cream surface, dark ink. */
-  html, body { background: #f0ece4; }
+  /* Inverse of the landing page: cream surface, dark ink.
+     (html/body background comes from Layout's --page-bg via themeColor.) */
 
   .inverse-page {
     min-height: 100vh;
@@ -240,7 +203,7 @@ rooms.sort((a, b) => {
     opacity: 0;
     pointer-events: none;
     z-index: 100;
-    transition: opacity 520ms cubic-bezier(.4, 0, .2, 1);
+    transition: opacity 340ms cubic-bezier(.4, 0, .2, 1);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -386,7 +349,7 @@ rooms.sort((a, b) => {
           const title = link.querySelector('.room-title')?.textContent?.trim() ?? '';
           if (veilText) veilText.textContent = title ? `stepping into ${title} …` : '…';
           veil.classList.add('active');
-          setTimeout(() => { window.location.href = link.href; }, reduceMotion ? 250 : 600);
+          setTimeout(() => { window.location.href = link.href; }, reduceMotion ? 200 : 380);
         }, { signal });
       }
     }

@@ -3,6 +3,8 @@
 // Modern training-coach dashboard with phases, today-awareness, daily metrics,
 // themed sources, and chat refine.
 import Layout from '../../../layouts/Layout.astro';
+import { nextRoom } from '../../../data/rooms.mjs';
+const next = nextRoom('domsday');
 ---
 
 <Layout
@@ -365,12 +367,12 @@ import Layout from '../../../layouts/Layout.astro';
       </div>
     </section>
 
-    <p class="dm-next-room"><a href="/room/mos/" data-veil-exit="#f2ecd6" data-astro-prefetch>next room — MOS. &rarr;</a></p>
+    <p class="dm-next-room"><a href={next.href} data-veil-exit={next.bg} data-astro-prefetch>next room — {next.title} &rarr;</a></p>
   </main>
 
   <style>
     /* ---- root ---- */
-    :global(html), :global(body) { background: #fafaf7; }
+    /* Background comes from Layout's --page-bg (via themeColor). */
 
     .dm-root {
       --bg: #fafaf7;
@@ -1383,6 +1385,33 @@ import Layout from '../../../layouts/Layout.astro';
       box-shadow: var(--shadow-1);
     }
     .dm-bookmark-callout[hidden] { display: none !important; }
+
+    /* Toast — created from JS, hence :global (no Astro scope attribute). */
+    :global(.dm-toast) {
+      position: fixed;
+      left: 50%;
+      bottom: 1.4rem;
+      transform: translate(-50%, 0.6rem);
+      max-width: min(28rem, calc(100vw - 2rem));
+      background: #1c1b18;
+      color: #fafaf7;
+      font-size: 0.85rem;
+      line-height: 1.45;
+      padding: 0.7rem 1rem;
+      border-radius: 10px;
+      box-shadow: 0 8px 28px rgba(20, 18, 12, 0.28);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 240;
+      transition: opacity 200ms ease, transform 200ms ease;
+    }
+    :global(.dm-toast.show) {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      :global(.dm-toast) { transition: opacity 120ms linear; transform: translate(-50%, 0); }
+    }
     @media (min-width: 720px) {
       .dm-bookmark-callout { grid-template-columns: 1fr auto; align-items: end; }
     }
@@ -1735,7 +1764,7 @@ import Layout from '../../../layouts/Layout.astro';
         $('[data-action="next"]')?.addEventListener('click', () => {
           if (app.intakeStep === 1) {
             if (!(app.intake.goalTags && app.intake.goalTags.length) && !app.intake.goalNarrative) {
-              alert('Pick at least one goal tag, or write a sentence about what you\'re after.');
+              toast('Pick at least one goal tag, or write a sentence about what you\'re after.');
               return;
             }
           }
@@ -1778,6 +1807,25 @@ import Layout from '../../../layouts/Layout.astro';
         sig.addEventListener('abort', () => { if (genTimer) clearInterval(genTimer); }, { once: true });
       };
 
+      // In-design toast for non-fatal failures — replaces raw alert(), which
+      // clashed with the room's look. Created lazily; styled via :global()
+      // because JS-created nodes miss Astro's scoping attribute.
+      let toastTimer: number | null = null;
+      const toast = (msg: string) => {
+        let el = document.querySelector<HTMLElement>('.dm-toast');
+        if (!el) {
+          el = document.createElement('div');
+          el.className = 'dm-toast';
+          el.setAttribute('role', 'status');
+          el.setAttribute('aria-live', 'polite');
+          document.body.appendChild(el);
+        }
+        el.textContent = msg;
+        el.classList.add('show');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = window.setTimeout(() => el?.classList.remove('show'), 4200);
+      };
+
       const submitIntake = async () => {
         setView('generating');
         rotateGeneratingStatus();
@@ -1787,6 +1835,9 @@ import Layout from '../../../layouts/Layout.astro';
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: app.userId, intake: app.intake }),
+            // Server caps at 60s (maxDuration) — fail the spinner shortly after
+            // instead of hanging forever on a stalled connection.
+            signal: AbortSignal.timeout(65_000),
           });
           if (!r.ok) {
             const err = await r.json().catch(() => ({}));
@@ -2395,13 +2446,14 @@ import Layout from '../../../layouts/Layout.astro';
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
+            signal: AbortSignal.timeout(20_000),
           });
-          if (!r.ok) { alert('log failed'); return; }
+          if (!r.ok) { toast('Log didn\'t save — try again.'); return; }
           const data = await r.json();
           if (data?.state) app.state = data.state as State;
           app.selectedDay = null;
           renderDashboard();
-        } catch { alert('log failed (network)'); }
+        } catch { toast('Log didn\'t save — network hiccup. Try again.'); }
       };
 
       // ---- METRICS ----
@@ -2540,21 +2592,22 @@ import Layout from '../../../layouts/Layout.astro';
         const m = app.metricDraft;
         // require at least ONE field
         const hasData = m.sleepHours !== null || m.weightKg !== null || m.energy !== null || m.mood !== null || m.proteinHit !== null || m.waterLiters !== null || m.notes.trim() !== '';
-        if (!hasData) { alert('Log at least one metric.'); return; }
+        if (!hasData) { toast('Log at least one metric first.'); return; }
         try {
           const r = await fetch('/api/domsday?action=metric', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: app.userId, metric: m }),
+            signal: AbortSignal.timeout(20_000),
           });
-          if (!r.ok) { alert('save failed'); return; }
+          if (!r.ok) { toast('Metrics didn\'t save — try again.'); return; }
           const data = await r.json();
           if (data?.state) app.state = data.state as State;
           // briefly show "Saved"
           const saved = $('[data-bind="metric-saved"]') as HTMLElement | null;
           if (saved) { saved.hidden = false; setTimeout(() => { if (saved) saved.hidden = true; }, 2000); }
           renderDashboard();
-        } catch { alert('save failed (network)'); }
+        } catch { toast('Metrics didn\'t save — network hiccup. Try again.'); }
       };
 
       // ---- SOURCES (themes with click-to-expand citation lists) ----
@@ -2651,10 +2704,11 @@ import Layout from '../../../layouts/Layout.astro';
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ userId: app.userId, message }),
+              signal: AbortSignal.timeout(45_000),
             });
             if (!r.ok) {
               const err = await r.json().catch(() => ({}));
-              alert(`coach failed: ${(err as any).error || r.status}`);
+              toast(`Coach didn't answer: ${(err as any).error || r.status}. Try again.`);
               return;
             }
             const data = await r.json();
@@ -2663,7 +2717,7 @@ import Layout from '../../../layouts/Layout.astro';
               renderDashboard();
             }
           } catch {
-            alert('coach failed (network)');
+            toast('Coach didn\'t answer — network hiccup. Try again.');
           } finally {
             form.dataset.thinking = 'false';
             ta.disabled = false;
@@ -2710,6 +2764,7 @@ import Layout from '../../../layouts/Layout.astro';
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ userId: app.userId }),
+              signal: AbortSignal.timeout(20_000),
             });
           } catch { /* ignore */ }
           try {
@@ -2763,8 +2818,9 @@ import Layout from '../../../layouts/Layout.astro';
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ userId: app.userId }),
+              signal: AbortSignal.timeout(20_000),
             });
-            if (!r.ok) { const err = await r.json().catch(() => ({})); alert(`Restore failed: ${(err as any).error || r.status}`); return; }
+            if (!r.ok) { const err = await r.json().catch(() => ({})); toast(`Restore failed: ${(err as any).error || r.status}.`); return; }
             const data = await r.json();
             if (data?.state) {
               app.state = data.state as State;
@@ -2772,7 +2828,7 @@ import Layout from '../../../layouts/Layout.astro';
               app.selectedDay = null;
               renderDashboard();
             }
-          } catch { alert('Restore failed (network).'); }
+          } catch { toast('Restore failed — network hiccup. Try again.'); }
         }, { signal: sig });
 
         $('[data-action="jump-today"]')?.addEventListener('click', () => {
@@ -2814,6 +2870,7 @@ import Layout from '../../../layouts/Layout.astro';
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: app.userId }),
+            signal: AbortSignal.timeout(15_000),
           });
           if (r.ok) {
             const data = await r.json();

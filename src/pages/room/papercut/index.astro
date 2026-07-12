@@ -1,5 +1,7 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
+import { nextRoom } from '../../../data/rooms.mjs';
+const next = nextRoom('papercut');
 ---
 
 <Layout
@@ -76,7 +78,7 @@ import Layout from '../../../layouts/Layout.astro';
       </div>
      </div>
 
-     <p class="next-room"><a href="/room/corporateladder/" data-veil-exit="#0a0e23" data-astro-prefetch>next room — corporatelardder. &rarr;</a></p>
+     <p class="next-room"><a href={next.href} data-veil-exit={next.bg} data-astro-prefetch>next room — {next.title} &rarr;</a></p>
     </section>
 
     {/* Quit-attempt modal — the boss bribes you to stay every time you try to leave. */}
@@ -181,8 +183,8 @@ import Layout from '../../../layouts/Layout.astro';
     --pc-ink-soft:    #4a4a4a;
   }
 
+  /* Background comes from Layout's --page-bg (via themeColor). */
   html, body {
-    background: var(--pc-cyan);
     color: var(--pc-ink);
     font-family: 'Quicksand', system-ui, -apple-system, 'Segoe UI', sans-serif;
     overflow-x: hidden;

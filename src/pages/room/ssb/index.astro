@@ -1,5 +1,7 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
+import { nextRoom } from '../../../data/rooms.mjs';
+const next = nextRoom('ssb');
 ---
 
 <Layout
@@ -108,11 +110,12 @@ Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
       <p>SSB mechanics modelled per MAS: 6-month coupons on the 1st of issue month and issue-month + 6; payout = (year-of-holding rate) × principal ÷ 2; principal returned with the final coupon at month 120. hold-to-maturity only — no early redemption modelling.</p>
     </footer>
 
-    <p class="next-room"><a href="/room/domsday/" data-veil-exit="#fafaf7" data-astro-prefetch>next room — domsday machine. &rarr;</a></p>
+    <p class="next-room"><a href={next.href} data-veil-exit={next.bg} data-astro-prefetch>next room — {next.title} &rarr;</a></p>
   </main>
 
   <style is:global>
-    html:has(main.ssb), html:has(main.ssb) body { background: #f7f7f8; color: #18181b; color-scheme: light; }
+    /* Background comes from Layout's --page-bg (via themeColor). */
+    html:has(main.ssb), html:has(main.ssb) body { color: #18181b; color-scheme: light; }
 
     .ssb {
       min-height: 100vh;
@@ -1256,7 +1259,7 @@ Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
         const y = padT + (plotH * i) / yTicks;
         const v = yMax * (1 - i / yTicks);
         svg += `<line x1="${padL}" y1="${y}" x2="${chartW - padR}" y2="${y}" stroke="rgba(24,24,27,0.12)" stroke-width="1"/>`;
-        svg += `<text x="${padL - 6}" y="${y + 4}" text-anchor="end" font-size="10" fill="rgba(24,24,27,0.6)" font-family="Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif">${fmtMoneyRound(v)}</text>`;
+        svg += `<text x="${padL - 6}" y="${y + 4}" text-anchor="end" font-size="10" fill="rgba(24,24,27,0.6)" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif">${fmtMoneyRound(v)}</text>`;
       }
 
       // x-axis year markers (Jan of each year)
@@ -1269,7 +1272,7 @@ Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
         const x = padL + i * (plotW / months);
         if (x > chartW - padR) continue;
         svg += `<line x1="${x}" y1="${padT}" x2="${x}" y2="${chartH - padB}" stroke="rgba(24,24,27,0.18)" stroke-width="1" stroke-dasharray="2,3"/>`;
-        svg += `<text x="${x + 2}" y="${chartH - padB + 14}" font-size="10" fill="rgba(24,24,27,0.65)" font-family="Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif">${y}</text>`;
+        svg += `<text x="${x + 2}" y="${chartH - padB + 14}" font-size="10" fill="rgba(24,24,27,0.65)" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif">${y}</text>`;
       }
 
       // "today" line
@@ -1277,7 +1280,7 @@ Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
         const i = t.idx - minIdx;
         const x = padL + (i + 0.5) * (plotW / months);
         svg += `<line x1="${x}" y1="${padT}" x2="${x}" y2="${chartH - padB}" stroke="#2563eb" stroke-width="1.2"/>`;
-        svg += `<text x="${x + 4}" y="${padT + 12}" font-size="10" fill="#1d4ed8" font-family="Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif">today</text>`;
+        svg += `<text x="${x + 4}" y="${padT + 12}" font-size="10" fill="#1d4ed8" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif">today</text>`;
       }
 
       // bars
@@ -1305,9 +1308,9 @@ Average p.a. return, %  3.08% 3.11% 3.14% ... 3.21%
       // legend
       const legY = chartH - 6;
       svg += `<rect x="${padL}" y="${legY - 8}" width="10" height="10" fill="#18181b"/>`;
-      svg += `<text x="${padL + 16}" y="${legY}" font-size="10" fill="rgba(24,24,27,0.7)" font-family="Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif">interest</text>`;
+      svg += `<text x="${padL + 16}" y="${legY}" font-size="10" fill="rgba(24,24,27,0.7)" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif">interest</text>`;
       svg += `<rect x="${padL + 80}" y="${legY - 8}" width="10" height="10" fill="#2563eb"/>`;
-      svg += `<text x="${padL + 96}" y="${legY}" font-size="10" fill="rgba(24,24,27,0.7)" font-family="Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif">principal</text>`;
+      svg += `<text x="${padL + 96}" y="${legY}" font-size="10" fill="rgba(24,24,27,0.7)" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif">principal</text>`;
 
       svg += `</svg>`;
       wrap.innerHTML = svg;

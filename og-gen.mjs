@@ -1,5 +1,6 @@
 import sharp from 'sharp';
 import { mkdirSync } from 'node:fs';
+import { interactiveRooms } from './src/data/rooms.mjs';
 
 const W = 1200, H = 630;
 
@@ -169,6 +170,18 @@ const jobs = [
   ['public/og/domsday.png', domsdayCard()],
   ['public/og/ssb.png', ssbCard()],
 ];
+
+// Coverage check against the room manifest: every shipped room needs a card.
+const covered = new Set(jobs.map(([file]) => file));
+const missing = interactiveRooms.filter((r) => !covered.has(`public/og/${r.id}.png`));
+if (missing.length) {
+  console.error(
+    `MISSING OG CARDS for: ${missing.map((r) => r.id).join(', ')}\n` +
+    'Add a card function + jobs[] entry above for each, then rerun.'
+  );
+  process.exit(1);
+}
+
 for (const [file, svg] of jobs) {
   await sharp(Buffer.from(svg)).png().toFile(file);
   console.log('wrote', file);

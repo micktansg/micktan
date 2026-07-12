@@ -1,8 +1,10 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
+import { nextRoom } from '../../../data/rooms.mjs';
 import data from './songs.json';
 
 const { songs, personas } = data;
+const next = nextRoom('cooked');
 ---
 
 <Layout
@@ -103,7 +105,7 @@ const { songs, personas } = data;
       <p class="req-status" id="reqStatus" aria-live="polite"></p>
     </section>
 
-    <p class="next-room"><a href="/room/ssb/" data-veil-exit="#f7f7f8" data-astro-prefetch>next room — SSB calculator. &rarr;</a></p>
+    <p class="next-room"><a href={next.href} data-veil-exit={next.bg} data-astro-prefetch>next room — {next.title} &rarr;</a></p>
   </main>
 </Layout>
 
@@ -121,8 +123,8 @@ const { songs, personas } = data;
     --card-shadow-hover: 0 10px 30px rgba(255, 94, 126, 0.18);
   }
 
+  /* Background comes from Layout's --page-bg (via themeColor). */
   html, body {
-    background: var(--paper-cooked);
     color: var(--ink-cooked);
     font-family: 'Quicksand', system-ui, -apple-system, 'Segoe UI', sans-serif;
     overflow-x: hidden;
@@ -658,11 +660,13 @@ const { songs, personas } = data;
 
     const localGrade = (actual: string, guess: string) => {
       const lower = guess.toLowerCase();
+      // Keep in sync with KEYWORDS in src/pages/api/judge.ts — this is the
+      // offline mirror of the server's own fallback grader.
       const map: Record<string, string[]> = {
         foodie: ['food', 'tiktok', 'chef', 'cook', 'eat', 'foodie', 'restaurant', 'noodle', 'shiok', 'singapore'],
         agent: ['property', 'real estate', 'agent', 'realtor', 'house', 'home', 'broker', 'listing', 'leasehold', 'freehold'],
-        guru: ['wealth', 'finance', 'guru', 'invest', 'stock', 'crypto', 'money', 'rich', 'broker', 'asset', 'portfolio'],
-        founder: ['linkedin', 'founder', 'startup', 'tech', 'hustle', 'entrepreneur', 'ceo', 'build in public', 'productivity']
+        guru: ['wealth', 'finance', 'guru', 'invest', 'stock', 'crypto', 'money', 'rich', 'asset', 'portfolio', 'compound'],
+        founder: ['linkedin', 'founder', 'startup', 'tech', 'hustle', 'entrepreneur', 'ceo', 'build in public', 'product', 'shipping']
       };
       const matched = map[actual]?.some(k => lower.includes(k));
       return {

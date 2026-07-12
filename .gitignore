@@ -29,3 +29,7 @@ pnpm-debug.log*
 # vscode workspace
 .vscode/
 .vercel
+
+# local working art / scratch assets (raw PSD slices etc. — not shipped)
+00. * Assets/
+public/room/mos.local-backup/
