@@ -298,6 +298,11 @@
       convo.forEach((m) => addBubble(m));
     };
 
+    // On touch devices, focusing the input summons the on-screen keyboard —
+    // doing that on open buried the panel before anyone read the greeting.
+    // There, let the visitor tap the input themselves.
+    const coarsePointer = matchMedia('(pointer: coarse)').matches;
+
     const openPanel = () => {
       if (convo.length === 0) {
         convo.push({ role: 'bob', text: GREETS[Math.floor(Math.random() * GREETS.length)] });
@@ -306,14 +311,37 @@
       renderConvo();
       panel.hidden = false;
       summon.setAttribute('aria-expanded', 'true');
-      input.focus();
+      if (!coarsePointer) input.focus();
+      adjustForKeyboard();
     };
 
     const closePanel = () => {
       panel.hidden = true;
+      panel.style.bottom = '';
+      panel.style.maxHeight = '';
       summon.setAttribute('aria-expanded', 'false');
       summon.focus();
     };
+
+    // Keep the panel above the on-screen keyboard. Mobile keyboards shrink
+    // the VISUAL viewport but not the layout viewport, so position:fixed
+    // elements stay put — hidden behind the keys. Ride the visual viewport:
+    // lift the panel by the keyboard's height and cap it to what remains.
+    const vv = window.visualViewport;
+    const adjustForKeyboard = () => {
+      if (!vv || panel.hidden) return;
+      const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      if (kb > 0) {
+        panel.style.bottom = `${kb}px`;
+        panel.style.maxHeight = `${Math.round(vv.height * 0.94)}px`;
+      } else {
+        panel.style.bottom = '';
+        panel.style.maxHeight = '';
+      }
+      log.scrollTop = log.scrollHeight;
+    };
+    vv?.addEventListener('resize', adjustForKeyboard, { signal });
+    vv?.addEventListener('scroll', adjustForKeyboard, { signal });
 
     summon.addEventListener('click', openPanel, { signal });
     closeBtn.addEventListener('click', closePanel, { signal });
