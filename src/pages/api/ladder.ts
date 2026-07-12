@@ -11,6 +11,7 @@
 
 import type { APIRoute } from 'astro';
 import { Redis } from '@upstash/redis';
+import { env, clientIp, rateLimit, rateLimitWithBudget, json429 } from '../../lib/api-util';
 import data from '../room/corporateladder/data.json';
 
 export const prerender = false;
@@ -34,10 +35,10 @@ type Team = {
   currentBossHp: number;
   members: Member[];
   log: LogEntry[];
+  // Optimistic-concurrency version, embedded IN the blob so a single GET is
+  // atomic (blob + version used to be two separate reads — a TOCTOU window).
+  v?: number;
 };
-
-const env = (k: string): string | undefined =>
-  ((import.meta as any).env?.[k] || (globalThis as any).process?.env?.[k]) as string | undefined;
 
 const redisClient = (() => {
   const url = env('UPSTASH_REDIS_REST_URL');
@@ -55,14 +56,18 @@ const TTL_SECONDS = 60 * 60 * 24 * 60; // 60-day expiry — abandoned teams clea
 
 const loadTeam = async (id: string): Promise<{ team: Team; version: number } | null> => {
   if (redisClient) {
-    const [raw, v] = await Promise.all([
+    // Version lives INSIDE the blob (team.v) so this single GET is atomic.
+    // The legacy version key is only consulted for old blobs that predate
+    // the embedded field; after their next successful write they carry v too.
+    const [raw, legacyV] = await Promise.all([
       redisClient.get(teamKey(id)),
       redisClient.get(versionKey(id)),
     ]);
     if (!raw) return null;
     try {
       const team = typeof raw === 'string' ? JSON.parse(raw) : (raw as Team);
-      return { team, version: Number(v) || 0 };
+      const version = Number(team.v) || Number(legacyV) || 0;
+      return { team, version };
     } catch (err) {
       console.error('[ladder] corrupt team blob for', id, err);
       return null;
@@ -75,6 +80,7 @@ const loadTeam = async (id: string): Promise<{ team: Team; version: number } | n
 // Unconditional write — used only for freshly created teams (no concurrent
 // writer can exist before the id has been shared).
 const saveTeam = async (team: Team): Promise<void> => {
+  team.v = 1;
   if (redisClient) {
     await redisClient.set(teamKey(team.id), JSON.stringify(team), { ex: TTL_SECONDS });
     await redisClient.set(versionKey(team.id), '1', { ex: TTL_SECONDS });
@@ -87,7 +93,15 @@ const saveTeam = async (team: Team): Promise<void> => {
 // Two members logging in the same instant used to be a lost update (last
 // write wins); now the loser reloads and re-applies its mutation.
 const CAS_SCRIPT = `
-local cur = tonumber(redis.call('GET', KEYS[2]) or '0')
+local cur = 0
+local raw = redis.call('GET', KEYS[1])
+if raw then
+  local ok, obj = pcall(cjson.decode, raw)
+  if ok and type(obj) == 'table' and obj.v then cur = tonumber(obj.v) or 0 end
+end
+if cur == 0 then
+  cur = tonumber(redis.call('GET', KEYS[2]) or '0')
+end
 if cur == tonumber(ARGV[2]) then
   redis.call('SET', KEYS[1], ARGV[1], 'EX', tonumber(ARGV[3]))
   redis.call('SET', KEYS[2], tostring(cur + 1), 'EX', tonumber(ARGV[3]))
@@ -97,6 +111,7 @@ return 0
 `;
 
 const trySaveTeam = async (team: Team, expectedVersion: number): Promise<boolean> => {
+  team.v = expectedVersion + 1; // embedded version the NEXT load will read atomically
   if (redisClient) {
     try {
       const ok = await redisClient.eval(
@@ -222,18 +237,31 @@ const withTeam = async (
   return json({ error: 'the ladder is busy — try again' }, 409);
 };
 
-export const POST: APIRoute = async ({ request, url }) => {
+export const POST: APIRoute = async ({ request, url, clientAddress }) => {
   try {
     const action = url.searchParams.get('action') || '';
     let body: any = {};
     try { body = await request.json(); } catch { /* allow empty */ }
 
-    // CREATE
+    const ip = clientIp(request, clientAddress);
+
+    // CREATE — each call writes two Redis keys, so cap it hard (per-IP and
+    // per-day) to keep an unauthenticated loop from inflating storage.
     if (action === 'create') {
+      const rl = await rateLimitWithBudget({
+        scope: 'ladder:create', ip, perIp: 5, windowSeconds: 3600, dailyBudget: 100,
+      });
+      if (!rl.allowed) return json429('HR says one org chart at a time. try later.', rl.retryAfterSeconds);
       const t = newTeam();
       await saveTeam(t);
       return json({ teamId: t.id, team: t });
     }
+
+    // Reads (the client polls every 8s) get a generous cap; writes a tighter one.
+    const rl = action === 'get'
+      ? await rateLimit(`ladder:get:${ip}`, 120, 60)
+      : await rateLimit(`ladder:write:${ip}`, 30, 60);
+    if (!rl.allowed) return json429('the ladder is rate-limited by middle management. breathe.', rl.retryAfterSeconds);
 
     // All other actions need a teamId
     const teamId = String(body?.teamId || '').trim();
