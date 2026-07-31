@@ -160,9 +160,32 @@ const ssbCard = () => {
 </svg>`;
 };
 
+// ---------- ctrl-s: warm cream, isometric floor tile, one candle ----------
+const ctrlSCard = () => {
+  // a few floating "pixels" drifting off the tile, like an autosave in progress
+  const px = [[1020, 180, 14, 0.5], [1080, 240, 10, 0.35], [960, 140, 8, 0.25], [1120, 320, 12, 0.2]]
+    .map(([x, y, s, o]) => `<rect x="${x}" y="${y}" width="${s}" height="${s}" fill="#c4a377" opacity="${o}"/>`).join('');
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+  <rect width="${W}" height="${H}" fill="#efe7d8"/>
+  <!-- isometric floor tile -->
+  <polygon points="950,290 1130,380 950,470 770,380" fill="#e2c795"/>
+  <polygon points="770,380 950,470 950,492 770,402" fill="#c4a377"/>
+  <polygon points="1130,380 950,470 950,492 1130,402" fill="#b3936a"/>
+  <!-- one candle -->
+  <rect x="938" y="330" width="24" height="52" fill="#f6b8c4"/>
+  <ellipse cx="950" cy="318" rx="9" ry="14" fill="#f4a563"/>
+  <ellipse cx="950" cy="314" rx="4" ry="7" fill="#ffe9d4"/>
+  ${px}
+  <text x="100" y="300" font-family="'Courier New', Courier, monospace" font-weight="700" font-size="104" fill="#4a4234">ctrl-s.</text>
+  <text x="104" y="366" font-family="Georgia, serif" font-style="italic" font-size="34" fill="#4a4234" fill-opacity="0.62">save points you can't load.</text>
+  ${url('ctrl-s', '#4a4234', 0.5)}
+</svg>`;
+};
+
 mkdirSync('public/og', { recursive: true });
 const jobs = [
   ['public/og.png', homeCard()],
+  ['public/og/ctrl-s.png', ctrlSCard()],
   ['public/og/cooked.png', cookedCard()],
   ['public/og/corporateladder.png', ladderCard()],
   ['public/og/papercut.png', papercutCard()],

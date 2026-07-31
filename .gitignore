@@ -23,8 +23,10 @@ pnpm-debug.log*
 # jetbrains setting folder
 .idea/
 
-# Claude Code local config (project-scoped settings & dev launcher)
-.claude/
+# Claude Code local config (project-scoped settings & dev launcher) — but
+# skills are part of the project (e.g. /saveari) and travel with the repo.
+.claude/*
+!.claude/skills/
 
 # vscode workspace
 .vscode/
@@ -33,3 +35,13 @@ pnpm-debug.log*
 # local working art / scratch assets (raw PSD slices etc. — not shipped)
 00. * Assets/
 public/room/mos.local-backup/
+
+.vercel
+.env*
+
+# ctrl-s. (Ari's room) — "00. * Assets/" above already keeps the whole folder
+# local, but style.md is the room's committed style law, so re-include the
+# folder and explicitly ignore the private parts (source photos + candidates).
+!00. Ctrl-S Assets/
+00. Ctrl-S Assets/sources/
+00. Ctrl-S Assets/out/

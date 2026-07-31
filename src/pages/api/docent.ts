@@ -21,6 +21,8 @@ type HistoryEntry = { role: 'user' | 'bob'; text: string };
 // ---------- where is the visitor standing ----------
 
 const ROOM_NOTES: Record<string, string> = {
+  'ctrl-s':
+    'ctrl-s. — a slowly growing isometric pixel world of saved family memories: small animated vignettes on floor tiles, each one a moment (first birthday, and more over the years). click a memory for its date and story; the photographs are locked behind a family passphrase bob does not know and will not guess. pressing actual ctrl+s in the room does something small. BOB\'S TAKE (dry, offhand, secretly moved): "management named a room after the one shortcut he never trusts autosave to do. it\'s the sappy one. i don\'t go in there. dust in my eye. anyway."',
   cooked:
     'cooked. — a "guess the reviewer" game. 90s big beat songs reviewed by four fake personas (a singapore tiktok food influencer, a property agent, a wealth guru, a linkedin build-in-public founder); an AI judge grades your guess. visitors can request songs. BOB\'S TAKE (dry, offhand): "the judge is harsher than me. i respect it."',
   corporateladder:

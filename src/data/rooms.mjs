@@ -15,6 +15,13 @@
 
 export const interactiveRooms = [
   {
+    id: 'ctrl-s',
+    title: 'ctrl-s.',
+    summary: "save points you can't load.",
+    date: '2026-08-01',
+    bg: '#efe7d8',
+  },
+  {
     id: 'ssb',
     title: 'SSB calculator.',
     summary: 'work out SSB yields and payouts.',
