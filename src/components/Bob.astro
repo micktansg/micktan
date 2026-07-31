@@ -366,6 +366,9 @@
       if (e.key === 'b' && panel.hidden && !e.metaKey && !e.ctrlKey && !e.altKey) {
         const t = e.target as HTMLElement;
         if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+        // the summoning keystroke must not type itself into the input the
+        // panel is about to focus
+        e.preventDefault();
         openPanel();
       }
     }, { signal });
