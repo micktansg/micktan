@@ -65,10 +65,28 @@ import Layout from '../../layouts/Layout.astro';
             <button id="pdfBtn" class="primary">&darr; LinkedIn PDF</button>
           </div>
         </div>
-        <p class="hint">Click any text below a slide to edit it. Previews update as you type.
-        Post the PNGs as an Instagram carousel; upload the PDF to LinkedIn as a document post.</p>
+        <p class="hint">Click any text below a slide to edit it; previews update as you type.
+        Drag a photo onto any slide (or use <em>+ photo</em>) for an image slide, and toggle
+        between full-bleed and split layouts. Post the PNGs as an Instagram carousel; upload
+        the PDF to LinkedIn as a document post.</p>
 
         <div id="slides" class="slideGrid"></div>
+
+        <div class="captionBox revisePanel">
+          <div class="captionHead">
+            <h3>Revise with AI</h3>
+          </div>
+          <p class="hint" style="margin:8px 0 10px">Tell the robot what to change, in plain English.
+          It keeps your manual edits unless the instruction says otherwise. One revision = one
+          generation against the daily budget.</p>
+          <div class="reviseRow">
+            <select id="reviseScope"></select>
+            <input id="reviseInstruction" type="text" maxlength="400"
+              placeholder="e.g. punchier · lead with the cost angle · shorter titles" />
+            <button id="reviseBtn" class="primary">Revise</button>
+          </div>
+          <div id="reviseStatus" class="status" hidden></div>
+        </div>
 
         <div class="captions">
           <div class="captionBox">
@@ -222,6 +240,23 @@ import Layout from '../../layouts/Layout.astro';
   }
   .wc .slideCard textarea { font-size: 13.5px; padding: 7px 9px; border-width: 1.5px; }
   .wc .slideCard textarea.slideTitle { font-weight: 700; }
+  .wc .slideCard canvas.dropTarget { outline: 3px dashed var(--wc-black); outline-offset: -3px; }
+
+  .wc .slideTools { display: flex; gap: 6px; flex-wrap: wrap; }
+  .wc .slideTools button {
+    padding: 4px 10px;
+    font-size: 11.5px;
+    border-width: 1.5px;
+    background: transparent;
+  }
+  .wc .slideTools button:hover { background: var(--wc-yellow); }
+
+  .wc .revisePanel { margin-bottom: 26px; }
+  .wc .reviseRow { display: flex; gap: 10px; flex-wrap: wrap; }
+  .wc .reviseRow select { width: 170px; flex: 0 0 auto; }
+  .wc .reviseRow input { flex: 1 1 240px; }
+  .wc .reviseRow button { flex: 0 0 auto; }
+  .wc .revisePanel .status { margin-top: 12px; }
 
   .wc .captions { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; margin-bottom: 26px; }
   @media (max-width: 800px) { .wc .captions { grid-template-columns: 1fr; } }
@@ -323,24 +358,66 @@ import Layout from '../../layouts/Layout.astro';
 
   // ---------- slide renderer ----------
 
+  // Cover-crop an image into the given rect (like CSS object-fit: cover).
+  function drawImageCover(
+    ctx: CanvasRenderingContext2D, img: any, x: number, y: number, w: number, h: number
+  ) {
+    const iw = img.width, ih = img.height;
+    if (!iw || !ih) return;
+    const scale = Math.max(w / iw, h / ih);
+    const sw = w / scale, sh = h / scale;
+    ctx.drawImage(img, (iw - sw) / 2, (ih - sh) / 2, sw, sh, x, y, w, h);
+  }
+
   function drawSlide(canvas: HTMLCanvasElement, slide: any, index: number, total: number) {
     const t = THEMES[state.theme];
     const ctx = canvas.getContext('2d')!;
     const isHook = slide.kind === 'hook';
     const isCta = slide.kind === 'cta';
+    // photo layouts: 'full' = full-bleed with dark gradient, 'split' = image top, text bottom
+    const layout = slide.image ? (slide.imageLayout || 'full') : 'none';
+    const SPLIT_H = Math.round(H * 0.52);
 
     const bg = isHook ? t.hookBg : isCta ? t.ctaBg : t.bg;
-    const ink = isHook ? t.hookInk : isCta ? t.ctaInk : t.ink;
-    const sub = isCta && t.ctaSub ? t.ctaSub : isHook || isCta ? ink : t.sub;
+    let ink = isHook ? t.hookInk : isCta ? t.ctaInk : t.ink;
+    let sub = isCta && t.ctaSub ? t.ctaSub : isHook || isCta ? ink : t.sub;
+    let faint = isHook || isCta ? ink : t.faint;
     const maxWidth = W - MARGIN * 2;
 
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
+
+    if (layout === 'full') {
+      drawImageCover(ctx, slide.image, 0, 0, W, H);
+      // top scrim for the header, heavy bottom gradient so text stays readable
+      let g = ctx.createLinearGradient(0, 0, 0, H * 0.35);
+      g.addColorStop(0, 'rgba(13,13,13,0.55)');
+      g.addColorStop(1, 'rgba(13,13,13,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H * 0.35);
+      g = ctx.createLinearGradient(0, H * 0.3, 0, H);
+      g.addColorStop(0, 'rgba(13,13,13,0)');
+      g.addColorStop(1, 'rgba(13,13,13,0.9)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, H * 0.3, W, H * 0.7);
+      ink = '#ffffff';
+      sub = '#e9e9e9';
+      faint = '#e9e9e9';
+    } else if (layout === 'split') {
+      drawImageCover(ctx, slide.image, 0, 0, W, SPLIT_H);
+      // slim top scrim so the header reads over any photo
+      const g = ctx.createLinearGradient(0, 0, 0, 280);
+      g.addColorStop(0, 'rgba(13,13,13,0.55)');
+      g.addColorStop(1, 'rgba(13,13,13,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, 280);
+    }
     ctx.textBaseline = 'alphabetic';
 
-    // header: wordmark on hook/cta, big index number on content slides
-    ctx.fillStyle = ink;
+    // header: wordmark on hook/cta, big index number on content slides.
+    // Over a photo the wordmark goes white; the number keeps the brand yellow.
+    ctx.fillStyle = layout === 'none' ? ink : '#ffffff';
     if (isHook || isCta) {
       ctx.font = '900 54px Chivo, sans-serif';
       ctx.fillText('WEAVE.', MARGIN, MARGIN + 44);
@@ -353,32 +430,45 @@ import Layout from '../../layouts/Layout.astro';
 
     // title + body: measured first, then anchored so the block can never
     // run into the footer (or the source credit on the CTA slide)
+    const tight = layout === 'split'; // less vertical room below the photo
     const titleSpec = isHook
-      ? { weight: 900, maxSize: 112, minSize: 60, maxWidth, maxLines: 5 }
+      ? { weight: 900, maxSize: 112, minSize: 60, maxWidth, maxLines: tight ? 3 : 5 }
       : isCta
-        ? { weight: 900, maxSize: 92, minSize: 54, maxWidth, maxLines: 4 }
-        : { weight: 900, maxSize: 76, minSize: 46, maxWidth, maxLines: 4 };
+        ? { weight: 900, maxSize: 92, minSize: 54, maxWidth, maxLines: tight ? 3 : 4 }
+        : { weight: 900, maxSize: 76, minSize: 46, maxWidth, maxLines: tight ? 3 : 4 };
     const title = fitText(ctx, slide.title || '', titleSpec);
-    const body = slide.body
-      ? fitText(ctx, slide.body, {
-          weight: 400, maxSize: isHook || isCta ? 44 : 42, minSize: 32, maxWidth, maxLines: 6,
-        })
-      : null;
     const src = isCta && state.source
       ? fitText(ctx, 'Source: ' + state.source, {
           weight: 400, maxSize: 28, minSize: 22, maxWidth, maxLines: 2,
         })
       : null;
 
-    // exact height the drawing below will consume, from `top` to the last
-    // body baseline plus descender room
-    const blockH =
-      title.size + title.lines.length * title.size * 1.12 +
-      (body ? 56 + (body.lines.length - 1) * body.size * 1.45 + body.size * 0.3 : 0);
     const srcH = src ? 40 + src.lines.length * src.size * 1.35 : 0;
     const bottomLimit = H - MARGIN - 60 - srcH; // keep clear of footer + source
-    const desiredTop = isHook ? H * 0.36 : isCta ? H * 0.32 : 420;
-    const top = Math.max(240, Math.min(desiredTop, bottomLimit - blockH));
+    const minTop = layout === 'split' ? SPLIT_H + 40 : 240;
+
+    // body: shrink its line budget until the whole block fits above the
+    // footer even at the highest allowed starting position (matters most in
+    // split layout, where the photo eats half the canvas)
+    const titleH = title.size + title.lines.length * title.size * 1.12;
+    let body = null;
+    if (slide.body) {
+      for (let ml = tight ? 4 : 6; ml >= 2; ml--) {
+        body = fitText(ctx, slide.body, {
+          weight: 400, maxSize: isHook || isCta ? 44 : 42, minSize: 32, maxWidth, maxLines: ml,
+        });
+        const bodyH = 56 + (body.lines.length - 1) * body.size * 1.45 + body.size * 0.3;
+        if (minTop + titleH + bodyH <= bottomLimit) break;
+      }
+    }
+
+    const blockH =
+      titleH + (body ? 56 + (body.lines.length - 1) * body.size * 1.45 + body.size * 0.3 : 0);
+    const desiredTop =
+      layout === 'split' ? SPLIT_H + 80
+      : layout === 'full' ? Math.max(H * 0.52, isHook ? H * 0.36 : isCta ? H * 0.32 : 420)
+      : isHook ? H * 0.36 : isCta ? H * 0.32 : 420;
+    const top = Math.max(minTop, Math.min(desiredTop, bottomLimit - blockH));
 
     ctx.fillStyle = ink;
     ctx.font = `900 ${title.size}px Chivo, sans-serif`;
@@ -401,7 +491,7 @@ import Layout from '../../layouts/Layout.astro';
 
     // footer
     ctx.font = '700 30px Chivo, sans-serif';
-    ctx.fillStyle = isHook || isCta ? ink : t.faint;
+    ctx.fillStyle = isHook || isCta ? ink : faint;
     ctx.fillText('weave.com.sg', MARGIN, H - MARGIN + 10);
     if (isHook) {
       ctx.font = '900 36px Chivo, sans-serif';
@@ -437,6 +527,14 @@ import Layout from '../../layouts/Layout.astro';
     $('liCaption').value = data.caption_linkedin || '';
     $('hashtags').value = (data.hashtags || []).map((h: string) => '#' + h).join(' ');
 
+    // revise scope dropdown mirrors the slides
+    $('reviseScope').innerHTML =
+      '<option value="all">Whole carousel</option>' +
+      state.slides
+        .map((s: any, i: number) =>
+          `<option value="${i}">Slide ${i + 1}${s.kind !== 'content' ? ' (' + s.kind + ')' : ''}</option>`)
+        .join('');
+
     const grid = $('slides');
     grid.innerHTML = '';
     state.slides.forEach((slide: any, i: number) => {
@@ -446,10 +544,86 @@ import Layout from '../../layouts/Layout.astro';
       const canvas = document.createElement('canvas');
       canvas.width = W;
       canvas.height = H;
+      const redrawOne = () => drawSlide(canvas, slide, i, state.slides.length);
 
       const label = document.createElement('div');
       label.className = 'slideLabel';
       label.textContent = kindLabel(slide.kind, i);
+
+      // ---- per-slide tools: photo in/out, layout toggle, AI rewrite ----
+      const tools = document.createElement('div');
+      tools.className = 'slideTools';
+      const mkBtn = (text: string, onClick: () => void) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = text;
+        b.addEventListener('click', onClick);
+        tools.appendChild(b);
+        return b;
+      };
+
+      const fileIn = document.createElement('input');
+      fileIn.type = 'file';
+      fileIn.accept = 'image/*';
+      fileIn.style.display = 'none';
+
+      const btnPhoto = mkBtn('+ photo', () => fileIn.click());
+      const btnLayout = mkBtn('layout: full', () => {
+        slide.imageLayout = slide.imageLayout === 'split' ? 'full' : 'split';
+        btnLayout.textContent = 'layout: ' + slide.imageLayout;
+        redrawOne();
+      });
+      const btnClear = mkBtn('× photo', () => {
+        slide.image = null;
+        refreshTools();
+        redrawOne();
+      });
+      mkBtn('✎ ai rewrite', () => {
+        $('reviseScope').value = String(i);
+        $('reviseInstruction').focus();
+        $('reviseInstruction').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+
+      const refreshTools = () => {
+        const has = !!slide.image;
+        btnLayout.hidden = !has;
+        btnClear.hidden = !has;
+        btnPhoto.textContent = has ? '↺ photo' : '+ photo';
+        if (has) btnLayout.textContent = 'layout: ' + (slide.imageLayout || 'full');
+      };
+
+      const setImage = async (f: File) => {
+        try {
+          slide.image = await createImageBitmap(f, { imageOrientation: 'from-image' } as any);
+        } catch {
+          // older browsers: fall back to a plain <img>
+          const img = new Image();
+          const url = URL.createObjectURL(f);
+          await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+          slide.image = img;
+        }
+        slide.imageLayout = slide.imageLayout || 'full';
+        refreshTools();
+        redrawOne();
+      };
+
+      fileIn.addEventListener('change', () => {
+        const f = fileIn.files?.[0];
+        if (f) setImage(f).catch(() => alert('Could not read that image.'));
+        fileIn.value = '';
+      });
+
+      // drag a photo straight onto the slide preview
+      canvas.addEventListener('dragover', (e) => { e.preventDefault(); canvas.classList.add('dropTarget'); });
+      canvas.addEventListener('dragleave', () => canvas.classList.remove('dropTarget'));
+      canvas.addEventListener('drop', (e) => {
+        e.preventDefault();
+        canvas.classList.remove('dropTarget');
+        const f = e.dataTransfer?.files?.[0];
+        if (f && f.type.startsWith('image/')) setImage(f).catch(() => alert('Could not read that image.'));
+      });
+
+      refreshTools();
 
       const titleBox = document.createElement('textarea');
       titleBox.className = 'slideTitle';
@@ -457,7 +631,7 @@ import Layout from '../../layouts/Layout.astro';
       titleBox.value = slide.title;
       titleBox.addEventListener('input', () => {
         slide.title = titleBox.value;
-        drawSlide(canvas, slide, i, state.slides.length);
+        redrawOne();
       });
 
       const bodyBox = document.createElement('textarea');
@@ -465,17 +639,16 @@ import Layout from '../../layouts/Layout.astro';
       bodyBox.value = slide.body;
       bodyBox.addEventListener('input', () => {
         slide.body = bodyBox.value;
-        drawSlide(canvas, slide, i, state.slides.length);
+        redrawOne();
       });
 
-      card.append(canvas, label, titleBox, bodyBox);
+      card.append(canvas, label, tools, fileIn, titleBox, bodyBox);
       grid.appendChild(card);
     });
 
     redrawAll();
     $('inputPanel').hidden = true;
     $('editorPanel').hidden = false;
-    window.scrollTo({ top: 0 });
   }
 
   // ---------- generate ----------
@@ -529,8 +702,12 @@ import Layout from '../../layouts/Layout.astro';
       if (!r.ok) throw new Error(data.error || `Server said ${r.status}.`);
 
       sessionStorage.setItem('wcPw', password);
+      state.article = article; // kept for the revise loop
       $('status').hidden = true;
+      $('reviseStatus').hidden = true;
+      $('reviseInstruction').value = '';
       buildEditor(data);
+      window.scrollTo({ top: 0 });
     } catch (err: any) {
       showStatus(
         err?.name === 'TimeoutError' ? 'Timed out. Try again, it usually works second time.' : err.message,
@@ -539,6 +716,84 @@ import Layout from '../../layouts/Layout.astro';
     } finally {
       clearInterval(ticker);
       $('generateBtn').disabled = false;
+    }
+  }
+
+  // ---------- revise ----------
+
+  function showReviseStatus(msg: string, isError = false) {
+    const el = $('reviseStatus');
+    el.hidden = false;
+    el.textContent = msg;
+    el.className = 'status' + (isError ? ' error' : '');
+  }
+
+  function currentHashtags(): string[] {
+    return $('hashtags').value.split(/\s+/).map((h: string) => h.replace(/^#/, '')).filter(Boolean);
+  }
+
+  async function revise() {
+    const instruction = $('reviseInstruction').value.trim();
+    const scopeVal = $('reviseScope').value;
+    if (instruction.length < 3) return showReviseStatus('Tell the robot what to change first.', true);
+    const password = sessionStorage.getItem('wcPw') || $('password').value.trim();
+
+    $('reviseBtn').disabled = true;
+    showReviseStatus(scopeVal === 'all'
+      ? 'Revising the whole carousel…'
+      : `Rewriting slide ${Number(scopeVal) + 1}…`);
+
+    try {
+      const r = await fetch('/api/carousel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'revise',
+          password,
+          article: state.article,
+          title: state.title,
+          source: state.source,
+          slides: state.slides.map(({ kind, title, body }: any) => ({ kind, title, body })),
+          caption_instagram: $('igCaption').value,
+          caption_linkedin: $('liCaption').value,
+          hashtags: currentHashtags(),
+          instruction,
+          scope: scopeVal === 'all' ? 'all' : Number(scopeVal),
+        }),
+        signal: AbortSignal.timeout(70_000),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || `Server said ${r.status}.`);
+
+      if (scopeVal === 'all') {
+        // photos survive a full revise, matched by slide position
+        data.slides.forEach((s: any, i: number) => {
+          const old = state.slides[i];
+          if (old?.image) { s.image = old.image; s.imageLayout = old.imageLayout; }
+        });
+        buildEditor(data);
+        showReviseStatus('Done. Whole carousel revised.');
+      } else {
+        const idx = Number(data.scope);
+        state.slides[idx] = { ...state.slides[idx], ...data.slide };
+        buildEditor({
+          title: state.title,
+          source: state.source,
+          slides: state.slides,
+          caption_instagram: $('igCaption').value,
+          caption_linkedin: $('liCaption').value,
+          hashtags: currentHashtags(),
+        });
+        showReviseStatus(`Done. Slide ${idx + 1} rewritten.`);
+      }
+      $('reviseInstruction').value = '';
+    } catch (err: any) {
+      showReviseStatus(
+        err?.name === 'TimeoutError' ? 'Timed out. Try again, it usually works second time.' : err.message,
+        true
+      );
+    } finally {
+      $('reviseBtn').disabled = false;
     }
   }
 
@@ -587,6 +842,10 @@ import Layout from '../../layouts/Layout.astro';
   function init() {
     if (!document.getElementById('wcRoot')) return; // not on this page
     $('generateBtn').addEventListener('click', generate);
+    $('reviseBtn').addEventListener('click', revise);
+    $('reviseInstruction').addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter') revise();
+    });
     $('backBtn').addEventListener('click', () => {
       $('editorPanel').hidden = true;
       $('inputPanel').hidden = false;

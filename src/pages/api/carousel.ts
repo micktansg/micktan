@@ -1,6 +1,10 @@
 // Weave Carousel Engine — hidden team tool at /carousel.
-// POST /api/carousel  { password, article, slideTarget?: 'auto'|6|8|10 }
-// → { title, source, slides:[{kind,title,body}], caption_instagram, caption_linkedin, hashtags }
+// POST /api/carousel
+//   generate: { password, article, slideTarget?: 'auto'|6|8|10 }
+//     → { title, source, slides:[{kind,title,body}], caption_instagram, caption_linkedin, hashtags }
+//   revise:   { password, mode:'revise', article, slides, instruction, scope:'all'|number,
+//               caption_instagram, caption_linkedin, hashtags }
+//     → scope 'all': full carousel JSON (as above) | scope N: { kind, title, body }
 //
 // Protection layers, in order:
 //   1. per-IP rate limit (also throttles password brute-forcing)
@@ -57,6 +61,65 @@ const RESPONSE_SCHEMA = {
   required: ['title', 'source', 'slides', 'caption_instagram', 'caption_linkedin', 'hashtags'],
 };
 
+const SLIDE_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    kind: { type: 'STRING', enum: ['hook', 'content', 'cta'] },
+    title: { type: 'STRING' },
+    body: { type: 'STRING' },
+  },
+  required: ['kind', 'title', 'body'],
+};
+
+const VOICE_RULES = `VOICE (strict)
+- UK English. NEVER use em dashes or en dashes anywhere; use commas, full stops or colons instead.
+- Confident, specific, observational. Lead with the insight, never with credentials or throat-clearing.
+- No hype words (game-changer, revolutionary, unlock, elevate). No preachy closing morals.
+- Numbers beat adjectives. Keep any statistic exactly as the article states it; never invent or round beyond what is written.
+
+LENGTH LIMITS per slide kind
+- hook: title max 12 words, body max 15 words
+- content: title max 8 words, body max 30 words, ONE idea per slide
+- cta: title max 10 words, body max 25 words`;
+
+const buildRevisePrompt = (
+  article: string,
+  carousel: any,
+  instruction: string,
+  scope: 'all' | number
+): string => {
+  const common = `You are the content editor at Weave, a Singapore video production company (weave.com.sg). Earlier you turned the article below into a carousel for Instagram and LinkedIn. The team may have manually edited it since; treat the CURRENT CAROUSEL as the version to improve. Never undo their edits except where the instruction requires it.
+
+${VOICE_RULES}
+
+TEAM INSTRUCTION: "${instruction}"`;
+
+  if (scope === 'all') {
+    return `${common}
+
+Apply the instruction across the carousel. Only change what the instruction requires: keep the slide count, order and kinds, the captions and the hashtags unchanged unless the instruction clearly asks for them to change. Return the FULL carousel JSON matching the schema, with your changes applied and everything else passed through as-is.
+
+ARTICLE (context):
+"""
+${article}
+"""
+
+CURRENT CAROUSEL:
+${JSON.stringify(carousel, null, 1)}`;
+  }
+  return `${common}
+
+Rewrite ONLY slide ${scope + 1} (index ${scope}, shown in the carousel below) according to the instruction. Keep its "kind" the same. Return just that one slide as JSON matching the schema.
+
+ARTICLE (context):
+"""
+${article}
+"""
+
+CURRENT CAROUSEL:
+${JSON.stringify(carousel, null, 1)}`;
+};
+
 const buildPrompt = (article: string, slideTarget: number | 'auto'): string => {
   const target =
     slideTarget === 'auto'
@@ -98,10 +161,10 @@ ${article}
 
 // ---------- gemini ----------
 
-const generateCarousel = async (
+const callGemini = async (
   apiKey: string,
-  article: string,
-  slideTarget: number | 'auto'
+  prompt: string,
+  schema: object
 ): Promise<any | null> => {
   try {
     const r = await fetchWithTimeout(
@@ -110,12 +173,12 @@ const generateCarousel = async (
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: buildPrompt(article, slideTarget) }] }],
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
           generationConfig: {
             temperature: 0.5,
             maxOutputTokens: 8192,
             responseMimeType: 'application/json',
-            responseSchema: RESPONSE_SCHEMA,
+            responseSchema: schema,
           },
         }),
       },
@@ -169,33 +232,75 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   if (article.length < 300) {
     return json(400, { error: 'That looks too short to be an article. Paste the full text.' });
   }
+  const apiKey = env('GEMINI_API_KEY');
+  if (!apiKey) return json(500, { error: 'Server is missing GEMINI_API_KEY.' });
+
+  // Belt and braces: strip any dashes the model sneaks through.
+  const clean = (s: unknown) => String(s ?? '').replace(/\s*[–—]\s*/g, ', ').trim();
+  const cleanSlide = (s: any) => ({
+    kind: ['hook', 'content', 'cta'].includes(s?.kind) ? s.kind : 'content',
+    title: clean(s?.title).slice(0, 120),
+    body: clean(s?.body).slice(0, 300),
+  });
+  const cleanCarousel = (result: any) => {
+    result.slides = result.slides.slice(0, 12).map(cleanSlide);
+    result.title = clean(result.title).slice(0, 120);
+    result.source = clean(result.source).slice(0, 200);
+    result.caption_instagram = clean(result.caption_instagram).slice(0, 2200);
+    result.caption_linkedin = clean(result.caption_linkedin).slice(0, 3000);
+    result.hashtags = (Array.isArray(result.hashtags) ? result.hashtags : [])
+      .slice(0, 8)
+      .map((h: unknown) => String(h).replace(/[^a-z0-9]/gi, '').toLowerCase())
+      .filter(Boolean);
+    return result;
+  };
+
+  // ----- revise mode: fine-tune the current carousel per team instruction -----
+  if (body?.mode === 'revise') {
+    const instruction = String(body?.instruction || '').trim().slice(0, 400);
+    if (instruction.length < 3) {
+      return json(400, { error: 'Tell the robot what to change first.' });
+    }
+    const slides = (Array.isArray(body?.slides) ? body.slides : []).slice(0, 12).map(cleanSlide);
+    if (slides.length < 3) return json(400, { error: 'No carousel to revise. Generate one first.' });
+
+    const carousel = {
+      title: clean(body?.title).slice(0, 120),
+      source: clean(body?.source).slice(0, 200),
+      slides,
+      caption_instagram: clean(body?.caption_instagram).slice(0, 2200),
+      caption_linkedin: clean(body?.caption_linkedin).slice(0, 3000),
+      hashtags: (Array.isArray(body?.hashtags) ? body.hashtags : []).slice(0, 8).map(clean),
+    };
+
+    const scopeNum = Number(body?.scope);
+    const scope: 'all' | number =
+      Number.isInteger(scopeNum) && scopeNum >= 0 && scopeNum < slides.length ? scopeNum : 'all';
+
+    if (scope === 'all') {
+      const result = await callGemini(apiKey, buildRevisePrompt(article, carousel, instruction, 'all'), RESPONSE_SCHEMA);
+      if (!result || !Array.isArray(result.slides) || result.slides.length < 3) {
+        return json(502, { error: 'The model choked on that one. Try again in a moment.' });
+      }
+      return json(200, cleanCarousel(result));
+    }
+    const slide = await callGemini(apiKey, buildRevisePrompt(article, carousel, instruction, scope), SLIDE_SCHEMA);
+    if (!slide || !slide.title) {
+      return json(502, { error: 'The model choked on that one. Try again in a moment.' });
+    }
+    const out = cleanSlide(slide);
+    out.kind = slides[scope].kind; // never let a revision change the slide's role
+    return json(200, { slide: out, scope });
+  }
+
+  // ----- generate mode -----
   const slideTarget: number | 'auto' = [6, 8, 10].includes(Number(body?.slideTarget))
     ? Number(body?.slideTarget)
     : 'auto';
 
-  const apiKey = env('GEMINI_API_KEY');
-  if (!apiKey) return json(500, { error: 'Server is missing GEMINI_API_KEY.' });
-
-  const result = await generateCarousel(apiKey, article, slideTarget);
+  const result = await callGemini(apiKey, buildPrompt(article, slideTarget), RESPONSE_SCHEMA);
   if (!result || !Array.isArray(result.slides) || result.slides.length < 3) {
     return json(502, { error: 'The model choked on that one. Try again in a moment.' });
   }
-
-  // Belt and braces: strip any dashes the model sneaks through, cap slide count.
-  const clean = (s: unknown) => String(s ?? '').replace(/\s*[–—]\s*/g, ', ').trim();
-  result.slides = result.slides.slice(0, 12).map((s: any) => ({
-    kind: ['hook', 'content', 'cta'].includes(s?.kind) ? s.kind : 'content',
-    title: clean(s?.title).slice(0, 120),
-    body: clean(s?.body).slice(0, 300),
-  }));
-  result.title = clean(result.title).slice(0, 120);
-  result.source = clean(result.source).slice(0, 200);
-  result.caption_instagram = clean(result.caption_instagram).slice(0, 2200);
-  result.caption_linkedin = clean(result.caption_linkedin).slice(0, 3000);
-  result.hashtags = (Array.isArray(result.hashtags) ? result.hashtags : [])
-    .slice(0, 8)
-    .map((h: unknown) => String(h).replace(/[^a-z0-9]/gi, '').toLowerCase())
-    .filter(Boolean);
-
-  return json(200, result);
+  return json(200, cleanCarousel(result));
 };
