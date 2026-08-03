@@ -201,7 +201,7 @@ const carouselCard = () => `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${
   </g>
   <text x="100" y="300" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="96" fill="#0d0d0d">carousel</text>
   <text x="100" y="398" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="96" fill="#0d0d0d">engine.</text>
-  <text x="104" y="466" font-family="Arial, Helvetica, sans-serif" font-size="32" fill="#0d0d0d" fill-opacity="0.66">articles in. carousels out. swipe &#8594;</text>
+  <text x="104" y="466" font-family="Arial, Helvetica, sans-serif" font-size="32" fill="#0d0d0d" fill-opacity="0.66">worksite. no entry without permit.</text>
   ${url('carousel', '#0d0d0d', 0.55)}
 </svg>`;
 
