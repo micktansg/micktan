@@ -1,0 +1,608 @@
+---
+// Weave Carousel Engine — hidden team tool, deliberately NOT in the room
+// manifest: no hall listing, no circuit door, noindex. Paste an article,
+// get Weave-branded Instagram PNGs + a LinkedIn PDF + captions.
+// Backend: /api/carousel (password-gated Gemini).
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout
+  title="carousel engine — weave"
+  description="internal tool"
+  themeColor="#f7b412"
+  noindex={true}
+>
+  <div class="wc">
+    <header class="wcHeader">
+      <div class="wordmark">WEAVE<span class="dot">.</span></div>
+      <div class="subtitle">carousel engine</div>
+    </header>
+
+    <main class="wcMain" id="wcRoot">
+      <!-- ============ STEP 1: INPUT ============ -->
+      <section id="inputPanel" class="panel">
+        <h1>Article in. Carousel out.</h1>
+        <p class="hint">Paste the full text of a journal or industry article. You get an Instagram
+        carousel (1080&times;1350 PNGs), a LinkedIn document post (PDF) and captions for both,
+        in Weave's house style.</p>
+
+        <label for="password">Team password</label>
+        <input id="password" type="password" autocomplete="current-password" placeholder="ask Mick" />
+
+        <label for="article">Article text</label>
+        <textarea id="article" rows="14" placeholder="Paste the whole article here (300+ characters)..."></textarea>
+
+        <div class="optionsRow">
+          <div>
+            <label for="slideTarget">Slides</label>
+            <select id="slideTarget">
+              <option value="auto" selected>Auto (7&ndash;10)</option>
+              <option value="6">6</option>
+              <option value="8">8</option>
+              <option value="10">10</option>
+            </select>
+          </div>
+          <div>
+            <label for="theme">Look</label>
+            <select id="theme">
+              <option value="bold" selected>Bold (black + yellow)</option>
+              <option value="clean">Clean (white + yellow)</option>
+            </select>
+          </div>
+          <button id="generateBtn" class="primary">Generate carousel</button>
+        </div>
+
+        <div id="status" class="status" hidden></div>
+      </section>
+
+      <!-- ============ STEP 2: EDIT + EXPORT ============ -->
+      <section id="editorPanel" class="panel" hidden>
+        <div class="editorHead">
+          <h2 id="carouselTitle"></h2>
+          <div class="editorActions">
+            <button id="backBtn" class="ghost">&larr; New article</button>
+            <button id="zipBtn" class="primary">&darr; Instagram PNGs (zip)</button>
+            <button id="pdfBtn" class="primary">&darr; LinkedIn PDF</button>
+          </div>
+        </div>
+        <p class="hint">Click any text below a slide to edit it. Previews update as you type.
+        Post the PNGs as an Instagram carousel; upload the PDF to LinkedIn as a document post.</p>
+
+        <div id="slides" class="slideGrid"></div>
+
+        <div class="captions">
+          <div class="captionBox">
+            <div class="captionHead">
+              <h3>Instagram caption</h3>
+              <button class="ghost" data-copy="igCaption">Copy</button>
+            </div>
+            <textarea id="igCaption" rows="9"></textarea>
+          </div>
+          <div class="captionBox">
+            <div class="captionHead">
+              <h3>LinkedIn caption</h3>
+              <button class="ghost" data-copy="liCaption">Copy</button>
+            </div>
+            <textarea id="liCaption" rows="9"></textarea>
+          </div>
+        </div>
+
+        <div class="captionBox">
+          <div class="captionHead">
+            <h3>Hashtags</h3>
+            <button class="ghost" data-copy="hashtags">Copy</button>
+          </div>
+          <textarea id="hashtags" rows="2"></textarea>
+        </div>
+      </section>
+    </main>
+
+    <footer class="wcFooter">weave.com.sg &middot; internal tool &middot; be nice to the robot</footer>
+  </div>
+</Layout>
+
+{/* Chivo just for this page — the canvases need it before first draw, so a
+    plain blocking load is the right call here (hidden tool, not a room). */}
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;700;900&display=swap"
+  rel="stylesheet"
+/>
+
+{/* Dynamic slide cards are built by JS, so scoped styles can't reach them —
+    everything is namespaced under .wc instead. */}
+<style is:global>
+  .wc {
+    --wc-yellow: #f7b412;
+    --wc-black: #0d0d0d;
+    --wc-ink: #1a1a1a;
+    --wc-paper: #ffffff;
+    --wc-grey: #6b6b6b;
+    font-family: 'Chivo', Helvetica, Arial, sans-serif;
+    background: var(--wc-yellow);
+    color: var(--wc-black);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .wc *, .wc *::before, .wc *::after { box-sizing: border-box; }
+
+  .wcHeader { display: flex; align-items: baseline; gap: 14px; padding: 28px 40px 10px; }
+  .wc .wordmark { font-weight: 900; font-size: 34px; letter-spacing: -0.5px; }
+  .wc .wordmark .dot { color: var(--wc-paper); }
+  .wc .subtitle { font-weight: 700; font-size: 15px; text-transform: uppercase; letter-spacing: 2px; opacity: 0.75; }
+
+  .wcMain { flex: 1; padding: 18px 40px 60px; max-width: 1180px; width: 100%; margin: 0 auto; }
+
+  .wc .panel {
+    background: var(--wc-paper);
+    border: 3px solid var(--wc-black);
+    box-shadow: 8px 8px 0 var(--wc-black);
+    padding: 34px 38px;
+    margin-top: 14px;
+  }
+
+  .wc h1 { font-weight: 900; font-size: 34px; letter-spacing: -0.5px; margin: 0 0 8px; }
+  .wc h2 { font-weight: 900; font-size: 24px; margin: 0; }
+  .wc h3 { font-weight: 700; font-size: 15px; text-transform: uppercase; letter-spacing: 1px; margin: 0; }
+  .wc .hint { color: var(--wc-grey); font-size: 14.5px; line-height: 1.5; margin: 0 0 24px; max-width: 640px; }
+
+  .wc label {
+    display: block;
+    font-weight: 700;
+    font-size: 12.5px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin: 18px 0 6px;
+  }
+
+  .wc input, .wc textarea, .wc select {
+    font-family: inherit;
+    font-size: 15px;
+    width: 100%;
+    border: 2px solid var(--wc-black);
+    padding: 10px 12px;
+    background: #fffdf6;
+    color: var(--wc-ink);
+  }
+  .wc input:focus, .wc textarea:focus, .wc select:focus { outline: 3px solid var(--wc-yellow); }
+  .wc textarea { resize: vertical; line-height: 1.5; }
+  .wc input#password { max-width: 280px; }
+
+  .wc .optionsRow { display: flex; gap: 22px; align-items: flex-end; margin-top: 6px; flex-wrap: wrap; }
+  .wc .optionsRow > div { width: 200px; }
+  .wc .optionsRow label { margin-top: 12px; }
+
+  .wc button {
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    border: 2px solid var(--wc-black);
+    padding: 12px 22px;
+  }
+  .wc button.primary {
+    background: var(--wc-black);
+    color: var(--wc-yellow);
+    box-shadow: 4px 4px 0 rgba(13, 13, 13, 0.25);
+  }
+  .wc button.primary:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 rgba(13, 13, 13, 0.3); }
+  .wc button.primary:disabled { opacity: 0.5; cursor: wait; transform: none; }
+  .wc button.ghost { background: transparent; color: var(--wc-black); }
+  .wc button.ghost:hover { background: var(--wc-yellow); }
+
+  .wc .status {
+    margin-top: 22px;
+    font-weight: 700;
+    font-size: 15px;
+    padding: 14px 16px;
+    border: 2px dashed var(--wc-black);
+    background: #fff8e2;
+  }
+  .wc .status.error { background: #ffe2e2; border-color: #b40000; color: #b40000; }
+
+  .wc .editorHead { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; margin-bottom: 6px; }
+  .wc .editorActions { display: flex; gap: 12px; flex-wrap: wrap; }
+
+  .wc .slideGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 26px;
+    margin: 20px 0 36px;
+  }
+  .wc .slideCard { display: flex; flex-direction: column; gap: 8px; }
+  .wc .slideCard canvas { width: 100%; height: auto; border: 2px solid var(--wc-black); display: block; }
+  .wc .slideCard .slideLabel {
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--wc-grey);
+  }
+  .wc .slideCard textarea { font-size: 13.5px; padding: 7px 9px; border-width: 1.5px; }
+  .wc .slideCard textarea.slideTitle { font-weight: 700; }
+
+  .wc .captions { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; margin-bottom: 26px; }
+  @media (max-width: 800px) { .wc .captions { grid-template-columns: 1fr; } }
+  .wc .captionBox { border: 2px solid var(--wc-black); padding: 16px; background: #fffdf6; }
+  .wc .captionBox textarea { border: none; background: transparent; padding: 8px 0 0; }
+  .wc .captionBox textarea:focus { outline: none; }
+  .wc .captionHead { display: flex; justify-content: space-between; align-items: center; }
+  .wc .captionHead button { padding: 6px 14px; font-size: 12.5px; }
+
+  .wcFooter { text-align: center; font-size: 12.5px; font-weight: 700; padding: 18px; opacity: 0.65; }
+
+  @media (max-width: 640px) {
+    .wcHeader, .wcMain { padding-left: 18px; padding-right: 18px; }
+    .wc .panel { padding: 22px 18px; box-shadow: 5px 5px 0 var(--wc-black); }
+  }
+</style>
+
+<script>
+  // Weave Carousel Engine front end. Slides are drawn straight onto
+  // 1080x1350 canvases (the actual export resolution); previews are the same
+  // canvases scaled down by CSS, so what you see is exactly what downloads.
+  // JSZip / jsPDF load lazily from CDN on first export.
+
+  const W = 1080, H = 1350, MARGIN = 96;
+
+  const THEMES: Record<string, any> = {
+    bold: {
+      hookBg: '#f7b412', hookInk: '#0d0d0d',
+      bg: '#0d0d0d', ink: '#ffffff', sub: '#d9d9d9', accent: '#f7b412', faint: '#8a8a8a',
+      ctaBg: '#f7b412', ctaInk: '#0d0d0d',
+    },
+    clean: {
+      hookBg: '#f7b412', hookInk: '#0d0d0d',
+      bg: '#ffffff', ink: '#0d0d0d', sub: '#4a4a4a', accent: '#f7b412', faint: '#9a9a9a',
+      ctaBg: '#0d0d0d', ctaInk: '#f7b412', ctaSub: '#d9d9d9',
+    },
+  };
+
+  const state: any = { slides: [], theme: 'bold', source: '', title: '' };
+
+  const $ = (id: string) => document.getElementById(id) as any;
+
+  // ---------- lazy CDN libs ----------
+
+  const libCache: Record<string, Promise<void>> = {};
+  const ensureLib = (url: string, globalName: string): Promise<void> => {
+    if ((window as any)[globalName]) return Promise.resolve();
+    if (!libCache[url]) {
+      libCache[url] = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = url;
+        s.onload = () => resolve();
+        s.onerror = () => { delete libCache[url]; reject(new Error('Could not load ' + globalName)); };
+        document.head.appendChild(s);
+      });
+    }
+    return libCache[url];
+  };
+  const JSZIP_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+  const JSPDF_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+
+  // ---------- text layout helpers ----------
+
+  function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+    const words = String(text).split(/\s+/).filter(Boolean);
+    const lines: string[] = [];
+    let line = '';
+    for (const word of words) {
+      const test = line ? line + ' ' + word : word;
+      if (ctx.measureText(test).width <= maxWidth || !line) line = test;
+      else { lines.push(line); line = word; }
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  // Shrink the font until the text fits both the width and the line budget.
+  function fitText(
+    ctx: CanvasRenderingContext2D,
+    text: string,
+    opts: { weight: number; maxSize: number; minSize: number; maxWidth: number; maxLines: number }
+  ) {
+    for (let size = opts.maxSize; size >= opts.minSize; size -= 4) {
+      ctx.font = `${opts.weight} ${size}px Chivo, sans-serif`;
+      const lines = wrapLines(ctx, text, opts.maxWidth);
+      if (lines.length <= opts.maxLines) return { size, lines };
+    }
+    ctx.font = `${opts.weight} ${opts.minSize}px Chivo, sans-serif`;
+    return { size: opts.minSize, lines: wrapLines(ctx, text, opts.maxWidth).slice(0, opts.maxLines) };
+  }
+
+  function drawTextLines(
+    ctx: CanvasRenderingContext2D,
+    lines: string[], x: number, y: number, size: number, lineHeight: number
+  ): number {
+    lines.forEach((line, i) => ctx.fillText(line, x, y + i * size * lineHeight));
+    return y + lines.length * size * lineHeight;
+  }
+
+  // ---------- slide renderer ----------
+
+  function drawSlide(canvas: HTMLCanvasElement, slide: any, index: number, total: number) {
+    const t = THEMES[state.theme];
+    const ctx = canvas.getContext('2d')!;
+    const isHook = slide.kind === 'hook';
+    const isCta = slide.kind === 'cta';
+
+    const bg = isHook ? t.hookBg : isCta ? t.ctaBg : t.bg;
+    const ink = isHook ? t.hookInk : isCta ? t.ctaInk : t.ink;
+    const sub = isCta && t.ctaSub ? t.ctaSub : isHook || isCta ? ink : t.sub;
+    const maxWidth = W - MARGIN * 2;
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+    ctx.textBaseline = 'alphabetic';
+
+    // header: wordmark on hook/cta, big index number on content slides
+    ctx.fillStyle = ink;
+    if (isHook || isCta) {
+      ctx.font = '900 54px Chivo, sans-serif';
+      ctx.fillText('WEAVE.', MARGIN, MARGIN + 44);
+    } else {
+      ctx.fillStyle = t.accent;
+      ctx.font = '900 104px Chivo, sans-serif';
+      ctx.fillText(String(index).padStart(2, '0'), MARGIN, MARGIN + 86);
+      ctx.fillRect(MARGIN + 6, MARGIN + 122, 130, 12);
+    }
+
+    // title + body: measured first, then anchored so the block can never
+    // run into the footer (or the source credit on the CTA slide)
+    const titleSpec = isHook
+      ? { weight: 900, maxSize: 112, minSize: 60, maxWidth, maxLines: 5 }
+      : isCta
+        ? { weight: 900, maxSize: 92, minSize: 54, maxWidth, maxLines: 4 }
+        : { weight: 900, maxSize: 76, minSize: 46, maxWidth, maxLines: 4 };
+    const title = fitText(ctx, slide.title || '', titleSpec);
+    const body = slide.body
+      ? fitText(ctx, slide.body, {
+          weight: 400, maxSize: isHook || isCta ? 44 : 42, minSize: 32, maxWidth, maxLines: 6,
+        })
+      : null;
+    const src = isCta && state.source
+      ? fitText(ctx, 'Source: ' + state.source, {
+          weight: 400, maxSize: 28, minSize: 22, maxWidth, maxLines: 2,
+        })
+      : null;
+
+    // exact height the drawing below will consume, from `top` to the last
+    // body baseline plus descender room
+    const blockH =
+      title.size + title.lines.length * title.size * 1.12 +
+      (body ? 56 + (body.lines.length - 1) * body.size * 1.45 + body.size * 0.3 : 0);
+    const srcH = src ? 40 + src.lines.length * src.size * 1.35 : 0;
+    const bottomLimit = H - MARGIN - 60 - srcH; // keep clear of footer + source
+    const desiredTop = isHook ? H * 0.36 : isCta ? H * 0.32 : 420;
+    const top = Math.max(240, Math.min(desiredTop, bottomLimit - blockH));
+
+    ctx.fillStyle = ink;
+    ctx.font = `900 ${title.size}px Chivo, sans-serif`;
+    let y = drawTextLines(ctx, title.lines, MARGIN, top + title.size, title.size, 1.12);
+
+    if (body) {
+      ctx.fillStyle = sub;
+      ctx.font = `400 ${body.size}px Chivo, sans-serif`;
+      y = drawTextLines(ctx, body.lines, MARGIN, y + 56, body.size, 1.45);
+    }
+
+    if (src) {
+      ctx.fillStyle = ink;
+      ctx.globalAlpha = 0.65;
+      ctx.font = `400 ${src.size}px Chivo, sans-serif`;
+      const srcTop = H - MARGIN - 50 - (src.lines.length - 1) * src.size * 1.35;
+      drawTextLines(ctx, src.lines, MARGIN, srcTop, src.size, 1.35);
+      ctx.globalAlpha = 1;
+    }
+
+    // footer
+    ctx.font = '700 30px Chivo, sans-serif';
+    ctx.fillStyle = isHook || isCta ? ink : t.faint;
+    ctx.fillText('weave.com.sg', MARGIN, H - MARGIN + 10);
+    if (isHook) {
+      ctx.font = '900 36px Chivo, sans-serif';
+      const tag = 'swipe →';
+      ctx.fillText(tag, W - MARGIN - ctx.measureText(tag).width, H - MARGIN + 10);
+    } else {
+      ctx.font = '700 30px Chivo, sans-serif';
+      const tag = `${index + 1} / ${total}`;
+      ctx.fillText(tag, W - MARGIN - ctx.measureText(tag).width, H - MARGIN + 10);
+    }
+  }
+
+  function redrawAll() {
+    const canvases = document.querySelectorAll<HTMLCanvasElement>('#slides canvas');
+    canvases.forEach((c, i) => drawSlide(c, state.slides[i], i, state.slides.length));
+  }
+
+  // ---------- editor ----------
+
+  function kindLabel(kind: string, i: number) {
+    if (kind === 'hook') return 'slide 1 · hook';
+    if (kind === 'cta') return `slide ${i + 1} · cta`;
+    return `slide ${i + 1}`;
+  }
+
+  function buildEditor(data: any) {
+    state.slides = data.slides;
+    state.source = data.source || '';
+    state.title = data.title || 'carousel';
+
+    $('carouselTitle').textContent = state.title;
+    $('igCaption').value = data.caption_instagram || '';
+    $('liCaption').value = data.caption_linkedin || '';
+    $('hashtags').value = (data.hashtags || []).map((h: string) => '#' + h).join(' ');
+
+    const grid = $('slides');
+    grid.innerHTML = '';
+    state.slides.forEach((slide: any, i: number) => {
+      const card = document.createElement('div');
+      card.className = 'slideCard';
+
+      const canvas = document.createElement('canvas');
+      canvas.width = W;
+      canvas.height = H;
+
+      const label = document.createElement('div');
+      label.className = 'slideLabel';
+      label.textContent = kindLabel(slide.kind, i);
+
+      const titleBox = document.createElement('textarea');
+      titleBox.className = 'slideTitle';
+      titleBox.rows = 2;
+      titleBox.value = slide.title;
+      titleBox.addEventListener('input', () => {
+        slide.title = titleBox.value;
+        drawSlide(canvas, slide, i, state.slides.length);
+      });
+
+      const bodyBox = document.createElement('textarea');
+      bodyBox.rows = 3;
+      bodyBox.value = slide.body;
+      bodyBox.addEventListener('input', () => {
+        slide.body = bodyBox.value;
+        drawSlide(canvas, slide, i, state.slides.length);
+      });
+
+      card.append(canvas, label, titleBox, bodyBox);
+      grid.appendChild(card);
+    });
+
+    redrawAll();
+    $('inputPanel').hidden = true;
+    $('editorPanel').hidden = false;
+    window.scrollTo({ top: 0 });
+  }
+
+  // ---------- generate ----------
+
+  const THINKING = [
+    'Reading the article…',
+    'Finding the hook…',
+    'Cutting it down to one idea per slide…',
+    'Writing the captions…',
+    'Nearly there…',
+  ];
+
+  function showStatus(msg: string, isError = false) {
+    const status = $('status');
+    status.hidden = false;
+    status.textContent = msg;
+    status.className = 'status' + (isError ? ' error' : '');
+  }
+
+  async function generate() {
+    const password = $('password').value.trim();
+    const article = $('article').value.trim();
+
+    if (!password) return showStatus('Password first. Ask Mick if you don’t have it.', true);
+    if (article.length < 300) return showStatus('That’s too short to be an article. Paste the full text.', true);
+
+    state.theme = $('theme').value;
+    $('generateBtn').disabled = true;
+    let tick = 0;
+    showStatus(THINKING[0]);
+    const ticker = setInterval(() => {
+      tick = Math.min(tick + 1, THINKING.length - 1);
+      showStatus(THINKING[tick]);
+    }, 6000);
+
+    try {
+      // Make sure Chivo's canvas weights are in before we ever draw.
+      await Promise.all([
+        document.fonts.load('900 100px Chivo'),
+        document.fonts.load('700 30px Chivo'),
+        document.fonts.load('400 42px Chivo'),
+      ]);
+
+      const r = await fetch('/api/carousel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password, article, slideTarget: $('slideTarget').value }),
+        signal: AbortSignal.timeout(70_000),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || `Server said ${r.status}.`);
+
+      sessionStorage.setItem('wcPw', password);
+      $('status').hidden = true;
+      buildEditor(data);
+    } catch (err: any) {
+      showStatus(
+        err?.name === 'TimeoutError' ? 'Timed out. Try again, it usually works second time.' : err.message,
+        true
+      );
+    } finally {
+      clearInterval(ticker);
+      $('generateBtn').disabled = false;
+    }
+  }
+
+  // ---------- exports ----------
+
+  function slugify(s: string) {
+    return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'carousel';
+  }
+
+  function downloadBlob(blob: Blob, filename: string) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
+  }
+
+  async function exportZip() {
+    await ensureLib(JSZIP_URL, 'JSZip');
+    redrawAll();
+    const zip = new (window as any).JSZip();
+    const canvases = [...document.querySelectorAll<HTMLCanvasElement>('#slides canvas')];
+    for (let i = 0; i < canvases.length; i++) {
+      const blob = await new Promise<Blob | null>((res) => canvases[i].toBlob(res, 'image/png'));
+      zip.file(`${String(i + 1).padStart(2, '0')}.png`, blob);
+    }
+    const out = await zip.generateAsync({ type: 'blob' });
+    downloadBlob(out, `${slugify(state.title)}-instagram.zip`);
+  }
+
+  async function exportPdf() {
+    await ensureLib(JSPDF_URL, 'jspdf');
+    redrawAll();
+    const { jsPDF } = (window as any).jspdf;
+    const doc = new jsPDF({ unit: 'px', format: [W, H], hotfixes: ['px_scaling'] });
+    const canvases = [...document.querySelectorAll<HTMLCanvasElement>('#slides canvas')];
+    canvases.forEach((c, i) => {
+      if (i > 0) doc.addPage([W, H]);
+      doc.addImage(c.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, W, H);
+    });
+    doc.save(`${slugify(state.title)}-linkedin.pdf`);
+  }
+
+  // ---------- wiring (per-visit: elements are replaced on view transitions) ----------
+
+  function init() {
+    if (!document.getElementById('wcRoot')) return; // not on this page
+    $('generateBtn').addEventListener('click', generate);
+    $('backBtn').addEventListener('click', () => {
+      $('editorPanel').hidden = true;
+      $('inputPanel').hidden = false;
+    });
+    $('zipBtn').addEventListener('click', () => exportZip().catch((e) => alert(e.message)));
+    $('pdfBtn').addEventListener('click', () => exportPdf().catch((e) => alert(e.message)));
+    document.querySelectorAll<HTMLButtonElement>('.wc [data-copy]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        await navigator.clipboard.writeText($(btn.dataset.copy!).value);
+        const old = btn.textContent;
+        btn.textContent = 'Copied';
+        setTimeout(() => (btn.textContent = old), 1200);
+      });
+    });
+    $('password').value = sessionStorage.getItem('wcPw') || '';
+  }
+
+  document.addEventListener('astro:page-load', init);
+</script>

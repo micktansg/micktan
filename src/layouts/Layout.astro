@@ -10,6 +10,7 @@ interface Props {
   bg?: string;
   ogImage?: string;
   ogAlt?: string;
+  noindex?: boolean;
 }
 
 const {
@@ -22,6 +23,7 @@ const {
   bg = undefined,
   ogImage = '/og.png',
   ogAlt = 'A dark field with a cream lens revealing the word Observing.',
+  noindex = false,
 } = Astro.props;
 
 const pageBg = bg || themeColor;
@@ -43,6 +45,7 @@ const showBob = Astro.url.pathname !== '/';
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
     <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
     <meta name="theme-color" content={themeColor} />
     <link rel="canonical" href={canonicalUrl} />
     <meta property="og:type" content="website" />
