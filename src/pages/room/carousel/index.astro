@@ -1,18 +1,25 @@
 ---
-// Weave Carousel Engine — hidden team tool, deliberately NOT in the room
-// manifest: no hall listing, no circuit door, noindex. Paste an article,
-// get Weave-branded Instagram PNGs + a LinkedIn PDF + captions.
-// Backend: /api/carousel (password-gated Gemini).
-import Layout from '../../layouts/Layout.astro';
+// Weave Carousel Engine — a room that is also an actual work tool. Paste an
+// article, get Weave-branded Instagram PNGs + a LinkedIn PDF + captions.
+// Generation is password-gated (team only); the room itself is public.
+// Backend: /api/carousel (password-gated Gemini). Old hidden URL /carousel
+// redirects here (see astro.config.mjs).
+import Layout from '../../../layouts/Layout.astro';
+import { nextRoom } from '../../../data/rooms.mjs';
+const next = nextRoom('carousel');
 ---
 
 <Layout
-  title="carousel engine — weave"
-  description="internal tool"
+  title="carousel engine. — Mick Tan"
+  description="turns articles into instagram + linkedin carousels. password required."
   themeColor="#f7b412"
-  noindex={true}
+  ogImage="/og/carousel.png"
+  ogAlt="carousel engine. — three swipeable slides fanned on a weave-yellow field."
 >
   <div class="wc">
+    <div class="wcTopbar">
+      <a class="wcBack" href="/room/" data-astro-prefetch data-veil-exit>&larr; the room</a>
+    </div>
     <header class="wcHeader">
       <div class="wordmark">WEAVE<span class="dot">.</span></div>
       <div class="subtitle">carousel engine</div>
@@ -115,7 +122,10 @@ import Layout from '../../layouts/Layout.astro';
       </section>
     </main>
 
-    <footer class="wcFooter">weave.com.sg &middot; internal tool &middot; be nice to the robot</footer>
+    <footer class="wcFooter">
+      weave.com.sg &middot; team tool &middot; be nice to the robot
+      <p class="wcNext"><a href={next.href} data-veil-exit={next.bg} data-astro-prefetch>next room &mdash; {next.title} &rarr;</a></p>
+    </footer>
   </div>
 </Layout>
 
@@ -146,7 +156,17 @@ import Layout from '../../layouts/Layout.astro';
   }
   .wc *, .wc *::before, .wc *::after { box-sizing: border-box; }
 
-  .wcHeader { display: flex; align-items: baseline; gap: 14px; padding: 28px 40px 10px; }
+  .wcTopbar { padding: 18px 40px 0; }
+  .wc .wcBack {
+    color: var(--wc-black);
+    font-size: 13.5px;
+    font-weight: 700;
+    text-decoration: none;
+    opacity: 0.7;
+  }
+  .wc .wcBack:hover { opacity: 1; text-decoration: underline; }
+
+  .wcHeader { display: flex; align-items: baseline; gap: 14px; padding: 14px 40px 10px; }
   .wc .wordmark { font-weight: 900; font-size: 34px; letter-spacing: -0.5px; }
   .wc .wordmark .dot { color: var(--wc-paper); }
   .wc .subtitle { font-weight: 700; font-size: 15px; text-transform: uppercase; letter-spacing: 2px; opacity: 0.75; }
@@ -267,9 +287,11 @@ import Layout from '../../layouts/Layout.astro';
   .wc .captionHead button { padding: 6px 14px; font-size: 12.5px; }
 
   .wcFooter { text-align: center; font-size: 12.5px; font-weight: 700; padding: 18px; opacity: 0.65; }
+  .wc .wcNext { margin-top: 10px; }
+  .wc .wcNext a { color: var(--wc-black); font-weight: 700; }
 
   @media (max-width: 640px) {
-    .wcHeader, .wcMain { padding-left: 18px; padding-right: 18px; }
+    .wcTopbar, .wcHeader, .wcMain { padding-left: 18px; padding-right: 18px; }
     .wc .panel { padding: 22px 18px; box-shadow: 5px 5px 0 var(--wc-black); }
   }
 </style>

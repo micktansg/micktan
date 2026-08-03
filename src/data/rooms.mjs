@@ -15,6 +15,13 @@
 
 export const interactiveRooms = [
   {
+    id: 'carousel',
+    title: 'carousel engine.',
+    summary: 'turns articles into instagram + linkedin carousels. password required.',
+    date: '2026-08-04',
+    bg: '#f7b412',
+  },
+  {
     id: 'ctrl-s',
     title: 'ctrl-s.',
     summary: "save points you can't load.",

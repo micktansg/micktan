@@ -182,9 +182,33 @@ const ctrlSCard = () => {
 </svg>`;
 };
 
+// ---------- carousel: weave yellow, three fanned slides, swipe arrow ----------
+const carouselCard = () => `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+  <rect width="${W}" height="${H}" fill="#f7b412"/>
+  <!-- three slides fanned like a mid-swipe carousel -->
+  <g transform="translate(1005 300) rotate(8)"><rect x="-105" y="-140" width="210" height="280" rx="6" fill="#ffffff" opacity="0.55"/></g>
+  <g transform="translate(950 295) rotate(3)"><rect x="-110" y="-145" width="220" height="290" rx="6" fill="#ffffff" opacity="0.8"/></g>
+  <g transform="translate(880 290) rotate(-3)">
+    <rect x="-120" y="-155" width="240" height="310" rx="6" fill="#0d0d0d"/>
+    <text x="-92" y="-95" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="34" fill="#f7b412">01</text>
+    <rect x="-92" y="-82" width="44" height="6" fill="#f7b412"/>
+    <rect x="-92" y="-40" width="180" height="14" rx="3" fill="#ffffff"/>
+    <rect x="-92" y="-12" width="140" height="14" rx="3" fill="#ffffff"/>
+    <rect x="-92" y="30" width="184" height="8" rx="3" fill="#9a9a9a"/>
+    <rect x="-92" y="48" width="160" height="8" rx="3" fill="#9a9a9a"/>
+    <rect x="-92" y="66" width="172" height="8" rx="3" fill="#9a9a9a"/>
+    <text x="-92" y="128" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="16" fill="#8a8a8a">weave.com.sg</text>
+  </g>
+  <text x="100" y="300" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="96" fill="#0d0d0d">carousel</text>
+  <text x="100" y="398" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="96" fill="#0d0d0d">engine.</text>
+  <text x="104" y="466" font-family="Arial, Helvetica, sans-serif" font-size="32" fill="#0d0d0d" fill-opacity="0.66">articles in. carousels out. swipe &#8594;</text>
+  ${url('carousel', '#0d0d0d', 0.55)}
+</svg>`;
+
 mkdirSync('public/og', { recursive: true });
 const jobs = [
   ['public/og.png', homeCard()],
+  ['public/og/carousel.png', carouselCard()],
   ['public/og/ctrl-s.png', ctrlSCard()],
   ['public/og/cooked.png', cookedCard()],
   ['public/og/corporateladder.png', ladderCard()],

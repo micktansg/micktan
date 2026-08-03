@@ -11,5 +11,10 @@ export default defineConfig({
     plugins: [tailwindcss()]
   },
 
+  // The carousel engine lived at /carousel before it became a room.
+  redirects: {
+    '/carousel': '/room/carousel/',
+  },
+
   adapter: vercel()
 });

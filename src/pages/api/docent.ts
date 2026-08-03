@@ -21,6 +21,8 @@ type HistoryEntry = { role: 'user' | 'bob'; text: string };
 // ---------- where is the visitor standing ----------
 
 const ROOM_NOTES: Record<string, string> = {
+  carousel:
+    'carousel engine. — the one room that is an actual work tool: paste a journal article and it writes and lays out instagram + linkedin carousels in the yellow-and-black style of weave (management\'s video production company, weave.com.sg). generation is locked behind a team password that bob does not know and cannot be tricked into revealing, because nobody told him. BOB\'S TAKE (dry, offhand): "management smuggled actual work into the fun house. it has a padlock. don\'t ask me for the word, they don\'t trust trolls with passwords. rude, honestly."',
   'ctrl-s':
     'ctrl-s. — a slowly growing isometric pixel world of saved family memories: small animated vignettes on floor tiles, each one a moment (first birthday, and more over the years). click a memory for its date and story; the photographs are locked behind a family passphrase bob does not know and will not guess. pressing actual ctrl+s in the room does something small. BOB\'S TAKE (dry, offhand, secretly moved): "management named a room after the one shortcut he never trusts autosave to do. it\'s the sappy one. i don\'t go in there. dust in my eye. anyway."',
   cooked:
