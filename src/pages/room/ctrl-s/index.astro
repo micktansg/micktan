@@ -581,7 +581,13 @@ const next = nextRoom('ctrl-s');
         const key = await deriveKey(pass, b64ToBytes(meta.salt));
         const urls: string[] = [];
         for (const f of meta.files) {
-          const buf = await fetch(`/room/ctrl-s/album/${m.id}/${f.src}`).then((r) => r.arrayBuffer());
+          // Check r.ok: a 404 body would otherwise be fed to decrypt, fail, and
+          // be reported as a wrong passphrase — sending you hunting for the
+          // words when the real problem is a missing file.
+          const buf = await fetch(`/room/ctrl-s/album/${m.id}/${f.src}`).then((r) => {
+            if (!r.ok) throw new Error(`album file ${f.src} missing (${r.status})`);
+            return r.arrayBuffer();
+          });
           const plain = await crypto.subtle.decrypt(
             { name: 'AES-GCM', iv: b64ToBytes(f.iv) as BufferSource }, key, buf
           );
@@ -600,7 +606,11 @@ const next = nextRoom('ctrl-s');
         });
         albumLocked.hidden = true;
         albumGrid.hidden = false;
-      } catch {
+      } catch (err) {
+        // A wrong passphrase and a broken album look identical to the visitor.
+        // Leave the message as-is (the door stays shut either way) but say which
+        // it was in the console, so a missing file is diagnosable.
+        console.warn('[ctrl-s] album unlock failed:', err);
         if (!silent) {
           unlockErr.hidden = false;
           unlockInput.select();
