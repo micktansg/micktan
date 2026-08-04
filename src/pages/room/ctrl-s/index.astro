@@ -329,18 +329,47 @@ const next = nextRoom('ctrl-s');
     );
 
     // ---------- sprite loading (lazy-ready: loads when near the viewport) ----------
-    type Loaded = { img: HTMLImageElement; ready: boolean };
+    type Loaded = { img: HTMLImageElement; ready: boolean; alpha?: Uint8Array };
     const sheets = new Map<string, Loaded>();
     const ensureSheet = (m: (typeof memories)[number]) => {
       let s = sheets.get(m.id);
       if (!s) {
         const img = new Image();
         s = { img, ready: false };
-        img.onload = () => { s!.ready = true; };
+        img.onload = () => {
+          s!.ready = true;
+          // Cache frame 0's alpha channel for hit-testing. Tiles sit edge to
+          // edge, so their bounding boxes overlap and a rectangle test would
+          // hand clicks to whichever memory draws last — you'd tap one baby
+          // and open her neighbour's card. Shape-testing is the only honest way.
+          try {
+            const off = document.createElement('canvas');
+            off.width = m.w; off.height = m.h;
+            const octx = off.getContext('2d', { willReadFrequently: true })!;
+            octx.drawImage(img, 0, 0, m.w, m.h, 0, 0, m.w, m.h);
+            const px = octx.getImageData(0, 0, m.w, m.h).data;
+            const a = new Uint8Array(m.w * m.h);
+            for (let i = 0; i < a.length; i++) a[i] = px[i * 4 + 3];
+            s!.alpha = a;
+          } catch { /* no alpha cache -> falls back to the bounding box */ }
+        };
         img.src = m.sheet;
         sheets.set(m.id, s);
       }
       return s;
+    };
+
+    // Topmost memory whose artwork actually covers this world point. Walks the
+    // draw order backwards, so the nearest tile answers first.
+    const memoryAt = (wx: number, wy: number) => {
+      for (let i = memories.length - 1; i >= 0; i--) {
+        const m = memories[i];
+        const lx = Math.floor(wx - m.x), ly = Math.floor(wy - m.y);
+        if (lx < 0 || ly < 0 || lx >= m.w || ly >= m.h) continue;
+        const a = sheets.get(m.id)?.alpha;
+        if (!a || a[ly * m.w + lx] > 8) return m;
+      }
+      return undefined;
     };
 
     // ---------- camera ----------
@@ -387,6 +416,10 @@ const next = nextRoom('ctrl-s');
         canvas.width / 2 - cam.x * cam.z * d,
         canvas.height / 2 - cam.y * cam.z * d
       );
+      // Smooth when shrinking (stops the fine outlines shimmering as you zoom
+      // out), crisp when magnifying past 1:1 — pixel art wants hard pixels, not
+      // a blur, once you're closer than the sheet's own resolution.
+      ctx.imageSmoothingEnabled = cam.z * d < 1;
       const frameIdx = reduceMotion ? 0 : Math.floor(now / FRAME_MS);
       for (const m of memories) {
         const s = ensureSheet(m);
@@ -422,10 +455,7 @@ const next = nextRoom('ctrl-s');
       if (!prev) {
         // hover cursor
         const w = toWorld(e.clientX, e.clientY);
-        const over = memories.some(
-          (m) => w.x >= m.x && w.x <= m.x + m.w && w.y >= m.y && w.y <= m.y + m.h
-        );
-        canvas.classList.toggle('pointing', over);
+        canvas.classList.toggle('pointing', !!memoryAt(w.x, w.y));
         return;
       }
       const dx = e.clientX - prev.x;
@@ -455,9 +485,7 @@ const next = nextRoom('ctrl-s');
       if (pointers.size === 0) canvas.classList.remove('dragging');
       if (wasTap) {
         const w = toWorld(e.clientX, e.clientY);
-        const hit = [...memories].reverse().find(
-          (m) => w.x >= m.x && w.x <= m.x + m.w && w.y >= m.y && w.y <= m.y + m.h
-        );
+        const hit = memoryAt(w.x, w.y);
         if (hit) openCard(hit);
         else closeCard();
       }

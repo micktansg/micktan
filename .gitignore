@@ -40,8 +40,8 @@ public/room/mos.local-backup/
 .env*
 
 # ctrl-s. (Ari's room) — "00. * Assets/" above already keeps the whole folder
-# local, but style.md is the room's committed style law, so re-include the
-# folder and explicitly ignore the private parts (source photos + candidates).
+# local, but style.md (the style law) and README.md (the folder convention) are
+# committed, so re-include the folder and ignore the private part: memories/,
+# which holds every family photo and every raw Gemini frame.
 !00. Ctrl-S Assets/
-00. Ctrl-S Assets/sources/
-00. Ctrl-S Assets/out/
+00. Ctrl-S Assets/memories/

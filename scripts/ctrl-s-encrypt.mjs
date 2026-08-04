@@ -3,7 +3,12 @@
 // The passphrase is never stored anywhere; wrong passphrase = decrypt fails.
 //
 // Usage:
-//   node scripts/ctrl-s-encrypt.mjs --id ari-turns-one --src "00. Ctrl-S Assets/sources/Ari Turns One" --pass "the family words"
+//   node scripts/ctrl-s-encrypt.mjs --id ari-turns-one \
+//     --src "00. Ctrl-S Assets/memories/2021-07-03-ari-turns-one/photos" --pass "the family words"
+//
+// EVERY image in --src is encrypted into the album, in filename order — which
+// is why photos are named NN-<original>. Keep that folder free of anything
+// that isn't a family photo.
 //
 // Output: public/room/ctrl-s/album/<id>/  ->  album.json + <n>.enc files.
 // Photos are resized to max 1400px and recompressed before encryption, so the

@@ -7,13 +7,14 @@
 //         default model id ever rots — pinned Gemini ids have died before)
 //
 //   node scripts/ctrl-s-generate.mjs \
-//     --ref "00. Ctrl-S Assets/sources/ari-bday-1.jpg" --ref "00. Ctrl-S Assets/sources/ari-bday-2.jpg" \
+//     --ref "<memory folder>/photos/01-MICK1563.JPG" --ref "<memory folder>/photos/03-MICK1699.JPG" \
 //     --brief "One-year-old girl beside a white cake with one lit pink candle, arms outstretched, big smile, gold foil number 1 balloon behind her." \
-//     --count 2
-//       → generates candidates into "00. Ctrl-S Assets/out/", style law prepended
+//     --count 2 --out "<memory folder>/candidates"
+//       → generates candidates with the style law prepended. Without --out they
+//         land in "00. Ctrl-S Assets/memories/_api-scratch/".
 //
 //   node scripts/ctrl-s-generate.mjs \
-//     --base "00. Ctrl-S Assets/out/approved-frame1.png" --no-style \
+//     --base "<memory folder>/frames/f1.png" --no-style \
 //     --brief "Exactly the same image. Only change: her arms slightly lower, candle flame bends left, balloon 3 pixels higher. Everything else identical, pixel for pixel."
 //       → animation-frame edit mode (base sprite as the reference)
 
@@ -21,7 +22,12 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { resolve, extname, join } from 'node:path';
 
 const ROOT = resolve(import.meta.dirname, '..');
-const OUT_DIR = join(ROOT, '00. Ctrl-S Assets', 'out');
+// Defaults to a scratch bin so a stray run can't litter the memories/ tree;
+// pass --out "<memory folder>/candidates" to drop straight into a memory.
+const outArg = process.argv[process.argv.indexOf('--out') + 1];
+const OUT_DIR = process.argv.includes('--out')
+  ? resolve(ROOT, outArg)
+  : join(ROOT, '00. Ctrl-S Assets', 'memories', '_api-scratch');
 const STYLE_FILE = join(ROOT, '00. Ctrl-S Assets', 'style.md');
 // Rolling caution: if this 404s, run --list-models and swap the id here.
 const DEFAULT_MODEL = 'gemini-2.5-flash-image';
