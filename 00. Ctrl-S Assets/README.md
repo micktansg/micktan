@@ -68,6 +68,12 @@ size — that discount is what pays for a full-resolution tile.
 original resolution is the one thing you cannot get back; `candidates/` is the
 safety net that has already saved one frame from exactly that mistake.
 
+**`photos-omitted/` — photos kept but deliberately not shown.** Same originals,
+out of the album. This folder only appears when Mick decides against a shot;
+moving it here rather than deleting it means the decision is reversible and the
+photo is still his. Renumber what's left in `photos/` so the album order stays
+contiguous, then re-encrypt.
+
 **`scratch/` — anything goes.** Nothing here is load-bearing; it can all be
 deleted without consequence.
 
