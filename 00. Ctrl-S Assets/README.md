@@ -4,6 +4,11 @@ Working folder for the **ctrl-s.** room. Everything here is local: `memories/`
 is gitignored, so no family photo and no raw Gemini frame ever reaches GitHub.
 Only `style.md` (the style law) and this file are committed.
 
+`floor-template.png` is also committed: the canonical empty tile at the house's
+exact geometry, attached to every generation so Gemini copies the tile shape
+instead of being told about it in words. Regenerate it with
+`node scripts/ctrl-s-floor-template.mjs` if `TILE` changes.
+
 The shipped output lives elsewhere and IS committed:
 `public/room/ctrl-s/<slug>.png` (the sprite sheet) and
 `public/room/ctrl-s/album/<slug>/` (the encrypted photos).

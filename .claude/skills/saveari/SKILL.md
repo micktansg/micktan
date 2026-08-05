@@ -53,10 +53,29 @@ spins above it. A tile with no people in it is the one entry that isn't a memory
 Read the photos (Read tool) and pick 1–3 references: clearest face, plus whichever
 carries the scene's props and outfit. Then hand him a packet:
 
-- **Attach:** the exact filenames you chose.
-- **Paste:** the FULL locked prompt block from style.md, verbatim, then a blank
-  line, then the scene brief. Write the brief concrete and visual — name the
-  clothes, the props, their positions, the colours.
+- **Attach, always and first:** `00. Ctrl-S Assets/floor-template.png` — the
+  canonical empty tile at the house's exact geometry. Gemini does not follow
+  verbal descriptions of the tile's proportions ("true 2:1 isometric diamond"
+  was ignored across many generations, producing a 1.55:1 tile against a 1.91:1
+  house), but it copies geometry from an image reliably. Hand it the shape
+  rather than describing it. Regenerate the template with
+  `node scripts/ctrl-s-floor-template.mjs` if TILE ever changes.
+- **Attach:** the photo references you chose.
+- **Paste:** the FULL locked prompt block from style.md, verbatim, then the
+  two-reference clause below, then the scene brief. Write the brief concrete and
+  visual — name the clothes, the props, their positions, the colours.
+
+The two-reference clause, which must appear whenever the template is attached:
+
+> TWO KINDS OF REFERENCE ARE ATTACHED, WITH DIFFERENT JOBS. The wooden floor tile
+> image is the TILE MASTER: reproduce its floor tile exactly — same diamond
+> proportions, same camera angle and elevation, same slab thickness, same wood
+> treatment. The new scene must sit on a tile interchangeable with it on the same
+> isometric grid. The photograph(s) are for IDENTITY ONLY: face, hair and
+> likeness. Do not collage any photographic texture into the output.
+
+If a candidate still comes back off-geometry, check the processor's "tile
+geometry" line before rerolling — the template should make this rare.
 - **Save as:** `<memory folder>\candidates\c1.png` (c2, c3 for rerolls) —
   **PNG, not JPEG/JFIF.** The Gemini share button gives .jfif; the download
   button gives PNG, and JPEG noise fuzzes the cutout.
