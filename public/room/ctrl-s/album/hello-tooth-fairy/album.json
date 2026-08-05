@@ -1,0 +1,13 @@
+{
+  "salt": "7ExFLAmS3bB0xfeZ5WXIMA==",
+  "files": [
+    {
+      "src": "1.enc",
+      "iv": "OBLj3BKdsbWbrFVu"
+    },
+    {
+      "src": "2.enc",
+      "iv": "APHpRxr8gVPOmRJx"
+    }
+  ]
+}

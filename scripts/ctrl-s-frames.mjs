@@ -45,6 +45,14 @@ const THR = 232; // near-white threshold (tolerates JPEG-ish noise)
 // and update TILE in ctrl-s-memories.mjs to match, or the floor tears apart.
 // --tile <px> overrides it for experiments.
 const TILE_W = Number(opt('tile')) || 756;
+// Gemini will not hold a precise diamond ratio no matter how the prompt is
+// worded — the same brief reproduces the same camera, and measured top faces
+// have ranged 388..488. --fit-height squashes the sprite vertically so the top
+// face lands on TILE_H, making the memory sit flush on the lattice. It is
+// anisotropic: the art gets slightly shorter. Small corrections are invisible;
+// a big one makes the people squat, so check the printed squash before shipping.
+const TILE_H = Number(opt('tile-h')) || 396;
+const fitHeight = args.includes('--fit-height');
 
 const cutout = async (path) => {
   const { data, info } = await sharp(resolve(ROOT, path))
@@ -133,14 +141,15 @@ const measure = ({ data, w, h }) => {
 
 const m0 = measure(frames[0]);
 // scale straight to final size: fit the diamond to TILE_W, one resize not two
-const scale = TILE_W / m0.diamondW;
-const outFrameW = Math.max(1, Math.round(fw * scale));
-const outH = Math.max(1, Math.round(fh * scale));
+const scaleX = TILE_W / m0.diamondW;
+const scaleY = fitHeight ? TILE_H / m0.topFaceH : scaleX;
+const outFrameW = Math.max(1, Math.round(fw * scaleX));
+const outH = Math.max(1, Math.round(fh * scaleY));
 
 const scaled = [];
 for (const f of frames) {
   scaled.push(await sharp(f.data, { raw: { width: fw, height: fh, channels: 4 } })
-    .resize(outFrameW, outH)
+    .resize(outFrameW, outH, { fit: 'fill' })
     .raw()
     .toBuffer());
 }
@@ -163,12 +172,17 @@ await sharp(sheet, { raw: { width: sheetW, height: outH, channels: 4 } })
 
 // anchor = the tile centre in the finished sprite's own pixels, so the manifest
 // can hang the sprite off a lattice cell regardless of how much sky it carries
-const anchor = { x: Math.round(m0.cx * scale), y: Math.round(m0.cy * scale) };
+const anchor = { x: Math.round(m0.cx * scaleX), y: Math.round(m0.cy * scaleY) };
 // measure frame 0 alone — measuring the stitched sheet would span every frame
 const check = measure({ data: scaled[0], w: outFrameW, h: outH });
 
 console.log(`sheet: ${outPath} (${sheetW}x${outH}, ${frames.length} frame${frames.length > 1 ? 's' : ''})`);
-console.log(`tile fit: diamond ${m0.diamondW}px -> ${check.diamondW}px (target ${TILE_W}), scale ${scale.toFixed(3)}`);
+console.log(`tile fit: diamond ${m0.diamondW}px -> ${check.diamondW}px (target ${TILE_W}), scale ${scaleX.toFixed(3)}`);
+if (fitHeight) {
+  const squash = (1 - scaleY / scaleX) * 100;
+  console.log(`height fit: top face ${m0.topFaceH}px -> ${check.topFaceH}px (target ${TILE_H}), ` +
+    `art ${squash >= 0 ? 'squashed' : 'stretched'} ${Math.abs(squash).toFixed(1)}% vertically`);
+}
 console.log(`tile geometry: top face ${check.diamondW} x ${check.topFaceH}, slab thickness ${check.thickness}px`);
 console.log(`  -> compare that height against TILE.h in ctrl-s-memories.mjs; if it drifts far from`);
 console.log(`     the others, this memory will sit off the ground plane by half the difference.`);

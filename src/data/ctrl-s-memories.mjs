@@ -68,6 +68,25 @@ const entries = [
     row: -1, // up-right of the birthday: one step back along the row axis
     album: true,
   },
+  {
+    id: 'hello-tooth-fairy',
+    title: 'hello tooth fairy.',
+    date: '2026-07-31',
+    blurb:
+      'she gnawed a rusk at six months waiting for these. at six years she sealed the first one in a bag and wrote the label herself.',
+    // Processed WITH --fit-height: Gemini drew this tile's top face at 932px
+    // against a 396 house tile, and no prompt wording moved its camera, so the
+    // sprite is squashed 18.8% vertically to sit flush. Reprocess it with that
+    // flag or it will float half the difference above its neighbours.
+    sheet: '/room/ctrl-s/hello-tooth-fairy.png',
+    frames: 2,
+    w: 804,
+    h: 1160,
+    anchor: { x: 402, y: 619 },
+    col: 0,
+    row: -2,
+    album: true,
+  },
 ];
 
 // cell -> world position of that tile's centre

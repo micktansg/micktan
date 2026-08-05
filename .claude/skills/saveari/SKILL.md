@@ -28,11 +28,14 @@ Ask only for what's missing, and derive everything you can rather than asking:
    usually the answer, and they outrank memory. Sanity-check against Ari's age in
    the shots (born ~3 Jul 2020) and raise the discrepancy before building
    anything — a stated date has already been wrong by five years.
-4. **Album** — "Should the photos ride along in the passphrase-locked album?"
-   (default yes). **Settle exactly which photos are IN before the first push**:
-   the repo is PUBLIC and pushed ciphertext is permanent, so pulling a photo
-   later removes it from the site but not from git history. A photo he wants kept
-   but not shown goes in `photos-omitted/`, not `photos/`.
+4. **Album** — don't ask. Every photo he supplies goes into the passphrase-locked
+   album; the only exception is one supplied purely as art direction for the
+   generation (a style reference, or an old shot included so Gemini can see an
+   outfit), which stays out. Ask only if it's genuinely unclear which a photo is.
+   **Settle it before the first push** either way: the repo is PUBLIC and pushed
+   ciphertext is permanent, so pulling a photo later removes it from the site but
+   not from git history. A photo he wants kept but not shown goes in
+   `photos-omitted/`, not `photos/`.
 5. **Animation** — "Should it move? If yes, what are the 2–3 tiny motions?"
    (arms bounce, flame flickers, balloon drifts — small is charming, big is chaos.)
 
@@ -201,6 +204,15 @@ confirm that rather than assuming.
 - Gemini stamps a near-invisible sparkle watermark in a corner. Its pixels sit
   around 234 against a 232 cutout threshold, so it erases itself — check the value
   before rejecting a candidate over it.
+- GLOW IS THE CUTOUT'S ENEMY, but near-white is not. The fill is a connectivity
+  flood from the border through pixels where all three channels are >=232, so
+  anything sealed inside a 1px outline survives even at rgb(255,255,254) — 32k
+  such pixels came through on the balcony sheet. What dies is a soft, unoutlined
+  glow: it gets eaten inward to wherever it first drops below threshold, leaving
+  a clipped halo, and at worst gives the fill a channel to tunnel into the scene.
+  So any luminous subject (a fairy, a flame, a lamp) needs a rendering clause in
+  the brief: light drawn as discrete outlined pixel shapes — four-point sparkles,
+  dots, stars — never blur, bloom, gradients or feathered edges.
 - Never preview animation with stacked transparent PNGs + CSS opacity, and never
   background-position animation — canvas loop only.
 - The room page never needs touching to add a memory — manifest + sheet only.
