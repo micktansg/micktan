@@ -46,7 +46,7 @@ import Layout from '../../layouts/Layout.astro';
         <span>humidity <strong id="hum">--</strong>%</span>
       </p>
 
-      <ol class="hours" id="hours" aria-label="next 12 hours"></ol>
+      <ol class="hours" id="hours" aria-label="next 6 hours"></ol>
       <p class="links">
         <a href="https://www.weather.gov.sg/weather-rain-area-50km/" target="_blank" rel="noopener">rain map ↗</a>
         <a href="https://www.weather.gov.sg/weather-forecast-24hrforecast/" target="_blank" rel="noopener">24h forecast ↗</a>
@@ -199,14 +199,14 @@ import Layout from '../../layouts/Layout.astro';
     }
     .feels strong { color: var(--ink); font-weight: 400; }
 
-    /* 12-hour strip: one column per hour, glyph / temp / rain chance. */
+    /* 6-hour strip: one column per hour, glyph / temp / rain chance. */
     .hours {
       list-style: none; margin-top: 3.5vh;
-      display: grid; grid-template-columns: repeat(12, 1fr); gap: 0.2rem;
-      font-size: clamp(0.85rem, 2.3vmin, 1.5rem); font-weight: 300; color: var(--mute);
+      display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.6rem;
+      font-size: clamp(1rem, 3vmin, 2rem); font-weight: 300; color: var(--mute);
       text-align: center; font-variant-numeric: tabular-nums;
     }
-    :global(.hours li) { display: grid; gap: 0.15em; min-width: 0; }
+    :global(.hours li) { display: grid; gap: 0.2em; min-width: 0; }
     :global(.hours .h-t) { font-size: 0.85em; letter-spacing: 0.02em; }
     :global(.hours .h-g) { font-size: 1.5em; line-height: 1.2; }
     :global(.hours .h-c) { color: var(--ink); font-weight: 400; }

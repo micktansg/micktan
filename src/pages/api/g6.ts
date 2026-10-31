@@ -120,7 +120,7 @@ export const GET: APIRoute = async ({ request, clientAddress }) => {
   // Open-Meteo is keyed by a 2-decimal grid (~1km) so a moving car doesn't
   // bust the cache every refresh.
   const grid = `${at.lat.toFixed(2)},${at.lon.toFixed(2)}`;
-  const meteoUrl = `${OPEN_METEO}?latitude=${at.lat.toFixed(3)}&longitude=${at.lon.toFixed(3)}&current=apparent_temperature,is_day&hourly=temperature_2m,precipitation_probability,weather_code,is_day&forecast_hours=13&timezone=Asia%2FSingapore`;
+  const meteoUrl = `${OPEN_METEO}?latitude=${at.lat.toFixed(3)}&longitude=${at.lon.toFixed(3)}&current=apparent_temperature,is_day&hourly=temperature_2m,precipitation_probability,weather_code,is_day&forecast_hours=7&timezone=Asia%2FSingapore`;
 
   const [temp, hum, fc, psi, pm25, meteo] = await Promise.all([
     remembered(neaCache, 'air-temperature', NEA_TTL, `${NEA}/air-temperature`),
@@ -154,11 +154,11 @@ export const GET: APIRoute = async ({ request, clientAddress }) => {
   const pm = pm25.value?.data?.items?.[0]?.readings?.pm25_one_hourly?.[region];
 
   const cur = meteo.value?.current;
-  // Next 12 hours from Open-Meteo. forecast_hours=13 starts at the current
+  // Next 6 hours from Open-Meteo. forecast_hours=7 starts at the current
   // hour, so drop the first entry (it's "now", already on screen).
   const hz = meteo.value?.hourly;
   const hours = Array.isArray(hz?.time)
-    ? hz.time.slice(1, 13).map((t: string, i: number) => ({
+    ? hz.time.slice(1, 7).map((t: string, i: number) => ({
         t,
         temp: hz.temperature_2m?.[i + 1] ?? null,
         pop: hz.precipitation_probability?.[i + 1] ?? null,
