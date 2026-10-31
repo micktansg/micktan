@@ -67,10 +67,10 @@ import Layout from '../../layouts/Layout.astro';
 
     <div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-label="Checkpoint cameras">
       <div class="sheet-bar">
+        <p class="sheet-title">checkpoint cams <span class="sheet-ts" id="camTs"></span></p>
         <button class="back" id="closeCauseway" type="button" aria-label="back">
           <span aria-hidden="true">←</span>
         </button>
-        <p class="sheet-title">checkpoint cams <span class="sheet-ts" id="camTs"></span></p>
       </div>
       <div class="cams" id="cams"></div>
       <p class="sheet-more">
@@ -129,8 +129,8 @@ import Layout from '../../layouts/Layout.astro';
     .blob {
       position: absolute; display: block; border-radius: 50%;
       width: 90vmax; height: 90vmax;
-      will-change: transform;
-      animation: drift 46s ease-in-out infinite alternate;
+      will-change: transform, opacity;
+      animation: drift 22s ease-in-out infinite alternate, breathe 9s ease-in-out infinite;
     }
     .b1 {
       left: -35vmax; top: -30vmax;
@@ -139,18 +139,22 @@ import Layout from '../../layouts/Layout.astro';
     .b2 {
       right: -40vmax; top: 10vmax;
       background: radial-gradient(circle at center, var(--violet) 0%, rgba(124, 108, 242, 0) 60%);
-      animation-duration: 58s; animation-delay: -20s;
+      animation-duration: 29s, 11s; animation-delay: -12s, -4s;
     }
     .b3 {
       left: -10vmax; bottom: -45vmax;
       background: radial-gradient(circle at center, var(--amber) 0%, rgba(232, 162, 74, 0) 60%);
-      animation-duration: 71s; animation-delay: -37s;
+      animation-duration: 37s, 13s; animation-delay: -23s, -7s;
     }
     @keyframes drift {
       0%   { transform: translate3d(0, 0, 0) scale(1); }
-      33%  { transform: translate3d(9vmax, 6vmax, 0) scale(1.12); }
-      66%  { transform: translate3d(-5vmax, 11vmax, 0) scale(0.94); }
-      100% { transform: translate3d(12vmax, -7vmax, 0) scale(1.08); }
+      33%  { transform: translate3d(18vmax, 10vmax, 0) scale(1.2); }
+      66%  { transform: translate3d(-10vmax, 20vmax, 0) scale(0.85); }
+      100% { transform: translate3d(22vmax, -12vmax, 0) scale(1.15); }
+    }
+    @keyframes breathe {
+      0%, 100% { opacity: 0.7; }
+      50%      { opacity: 1; }
     }
 
     .now { display: flex; flex-direction: column; justify-content: center; }
@@ -209,8 +213,9 @@ import Layout from '../../layouts/Layout.astro';
     .causeway {
       appearance: none; border: 1px solid var(--line); background: rgba(127, 127, 127, 0.06);
       color: var(--ink); font: inherit; cursor: pointer;
-      min-height: 64px; padding: 2.2vh 5vw; border-radius: 1.4rem;
-      display: flex; justify-content: space-between; align-items: center;
+      min-height: 64px; padding: 2.2vh 5vw; border-radius: 999px;
+      justify-self: end; max-width: 100%;
+      display: flex; gap: 1.2em; align-items: center;
       font-size: clamp(1.6rem, 5vmin, 3.6rem); font-weight: 400; letter-spacing: -0.01em;
       -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
       transition: background 160ms ease;
@@ -218,16 +223,17 @@ import Layout from '../../layouts/Layout.astro';
     .causeway:active { background: var(--line); }
     .arrow { opacity: 0.55; font-weight: 300; }
 
-    .foot { display: flex; flex-direction: column; gap: 0.6rem; }
+    .foot { display: flex; flex-direction: column; align-items: flex-end; gap: 0.6rem; }
     .diag-toggle {
       appearance: none; border: 0; background: transparent; color: var(--mute);
-      font: inherit; font-weight: 300; font-size: clamp(0.9rem, 2.4vmin, 1.4rem); text-align: left;
+      font: inherit; font-weight: 300; font-size: clamp(0.9rem, 2.4vmin, 1.4rem); text-align: right;
       min-height: 44px; padding: 0.4rem 0; cursor: pointer;
     }
     .diag {
       font: 0.85rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
       color: var(--mute); white-space: pre-wrap; word-break: break-all;
       padding: 0.8rem; border: 1px solid var(--line); border-radius: 0.6rem;
+      width: 100%; text-align: left;
     }
 
     .sheet {
@@ -237,7 +243,7 @@ import Layout from '../../layouts/Layout.astro';
       padding: 2vh 4vw 3vh; overflow-y: auto;
     }
     .sheet[hidden] { display: none !important; }
-    .sheet-bar { display: flex; align-items: center; gap: 1.2rem; margin-bottom: 1.5vh; }
+    .sheet-bar { display: flex; align-items: center; justify-content: space-between; gap: 1.2rem; margin-bottom: 1.5vh; }
     .sheet-title { font-size: clamp(1.4rem, 4vmin, 2.6rem); font-weight: 400; letter-spacing: -0.01em; }
     .sheet-ts { font-size: 0.6em; color: var(--mute); margin-left: 0.6em; font-weight: 300; }
     .back {
@@ -262,7 +268,8 @@ import Layout from '../../layouts/Layout.astro';
     button:focus-visible, a:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; border-radius: 0.4rem; }
     @media (prefers-reduced-motion: reduce) {
       .g6, .causeway, .sky { transition: none; }
-      .blob { animation: none; }
+      /* Slow, not still — the brief is a breathing background. */
+      .blob { animation-duration: 60s, 20s; }
     }
   </style>
 
