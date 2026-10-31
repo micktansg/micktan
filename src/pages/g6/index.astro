@@ -202,7 +202,10 @@ import Layout from '../../layouts/Layout.astro';
     /* 6-hour strip: one column per hour, glyph / temp / rain chance. */
     .hours {
       list-style: none; margin-top: 3.5vh;
-      display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.6rem;
+      /* Columns size to their content and huddle left, instead of being
+         spread across the full width. */
+      display: grid; grid-template-columns: repeat(6, minmax(0, 4.2em)); gap: 0.35em;
+      justify-content: start;
       font-size: clamp(1rem, 3vmin, 2rem); font-weight: 300; color: var(--mute);
       text-align: center; font-variant-numeric: tabular-nums;
     }
