@@ -98,7 +98,7 @@ const STUB = {
   area: 'Bishan', forecast: 'Partly Cloudy (Night)',
   tempC: 27.3, feelsC: 31.0, humidity: 86, station: 'Ang Mo Kio Avenue 5',
   psi: 62, psiBand: 'moderate', pm25: 29, pm25Band: 'normal', region: 'central',
-  isDay: false, stale: false,
+  isDay: false, stale: false, hours: [] as any[],
 };
 
 export const GET: APIRoute = async ({ request, clientAddress }) => {
@@ -120,7 +120,7 @@ export const GET: APIRoute = async ({ request, clientAddress }) => {
   // Open-Meteo is keyed by a 2-decimal grid (~1km) so a moving car doesn't
   // bust the cache every refresh.
   const grid = `${at.lat.toFixed(2)},${at.lon.toFixed(2)}`;
-  const meteoUrl = `${OPEN_METEO}?latitude=${at.lat.toFixed(3)}&longitude=${at.lon.toFixed(3)}&current=apparent_temperature,is_day&timezone=Asia%2FSingapore`;
+  const meteoUrl = `${OPEN_METEO}?latitude=${at.lat.toFixed(3)}&longitude=${at.lon.toFixed(3)}&current=apparent_temperature,is_day&hourly=temperature_2m,precipitation_probability,weather_code,is_day&forecast_hours=13&timezone=Asia%2FSingapore`;
 
   const [temp, hum, fc, psi, pm25, meteo] = await Promise.all([
     remembered(neaCache, 'air-temperature', NEA_TTL, `${NEA}/air-temperature`),
@@ -154,6 +154,18 @@ export const GET: APIRoute = async ({ request, clientAddress }) => {
   const pm = pm25.value?.data?.items?.[0]?.readings?.pm25_one_hourly?.[region];
 
   const cur = meteo.value?.current;
+  // Next 12 hours from Open-Meteo. forecast_hours=13 starts at the current
+  // hour, so drop the first entry (it's "now", already on screen).
+  const hz = meteo.value?.hourly;
+  const hours = Array.isArray(hz?.time)
+    ? hz.time.slice(1, 13).map((t: string, i: number) => ({
+        t,
+        temp: hz.temperature_2m?.[i + 1] ?? null,
+        pop: hz.precipitation_probability?.[i + 1] ?? null,
+        code: hz.weather_code?.[i + 1] ?? null,
+        day: hz.is_day?.[i + 1] === 1,
+      }))
+    : [];
   const hour = Number(new Date().toLocaleString('en-SG', { timeZone: 'Asia/Singapore', hour: 'numeric', hour12: false }));
   const isDay = typeof cur?.is_day === 'number' ? cur.is_day === 1 : hour >= 7 && hour < 19;
 
@@ -173,6 +185,7 @@ export const GET: APIRoute = async ({ request, clientAddress }) => {
     pm25Band: typeof pm === 'number' ? pm25Band(pm) : null,
     region,
     isDay,
+    hours,
     updated: t?.ts || new Date().toISOString(),
     stale: [temp, hum, fc, psi, pm25].some((c) => c.stale),
   };

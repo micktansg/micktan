@@ -46,6 +46,13 @@ import Layout from '../../layouts/Layout.astro';
         <span>humidity <strong id="hum">--</strong>%</span>
       </p>
 
+      <ol class="hours" id="hours" aria-label="next 12 hours"></ol>
+      <p class="links">
+        <a href="https://www.weather.gov.sg/weather-rain-area-50km/" target="_blank" rel="noopener">rain map ↗</a>
+        <a href="https://www.weather.gov.sg/weather-forecast-24hrforecast/" target="_blank" rel="noopener">24h forecast ↗</a>
+        <a href="https://www.weather.gov.sg/weather-forecast-4dayoutlook/" target="_blank" rel="noopener">4 days ↗</a>
+      </p>
+
       <div class="air" id="air" data-band="">
         <p class="air-num"><strong id="psi">--</strong> <span class="air-lbl">PSI</span></p>
         <p class="air-band" id="psiband">&nbsp;</p>
@@ -192,6 +199,31 @@ import Layout from '../../layouts/Layout.astro';
     }
     .feels strong { color: var(--ink); font-weight: 400; }
 
+    /* 12-hour strip: one column per hour, glyph / temp / rain chance. */
+    .hours {
+      list-style: none; margin-top: 3.5vh;
+      display: grid; grid-template-columns: repeat(12, 1fr); gap: 0.2rem;
+      font-size: clamp(0.85rem, 2.3vmin, 1.5rem); font-weight: 300; color: var(--mute);
+      text-align: center; font-variant-numeric: tabular-nums;
+    }
+    :global(.hours li) { display: grid; gap: 0.15em; min-width: 0; }
+    :global(.hours .h-t) { font-size: 0.85em; letter-spacing: 0.02em; }
+    :global(.hours .h-g) { font-size: 1.5em; line-height: 1.2; }
+    :global(.hours .h-c) { color: var(--ink); font-weight: 400; }
+    :global(.hours .h-p) { font-size: 0.85em; opacity: 0.6; }
+    :global(.hours .h-p.wet) { color: #6aa9ef; opacity: 1; }
+    :global(.hours li.now-ish .h-t) { color: var(--ink); }
+    .links {
+      margin-top: 2vh; display: flex; flex-wrap: wrap; gap: 0.6rem;
+    }
+    .links a {
+      color: var(--ink); text-decoration: none; font-weight: 300;
+      font-size: clamp(0.95rem, 2.6vmin, 1.5rem);
+      border: 1px solid var(--line); border-radius: 999px;
+      padding: 0.5em 1.1em; min-height: 44px; display: inline-flex; align-items: center;
+    }
+    .links a:active { background: var(--line); }
+
     .air {
       margin-top: 4vh; padding-top: 3vh;
       border-top: 1px solid var(--line);
@@ -298,6 +330,20 @@ import Layout from '../../layouts/Layout.astro';
       ['4712', 'Tuas Ave 1 / Tuas West Road — approach'],
     ];
 
+    // WMO weather codes → a glyph. Night variants for clear / partly cloudy.
+    const glyph = (code: number | null, day: boolean) => {
+      if (code === null) return '·';
+      // ︎ = text presentation, so the car doesn't swap in colour emoji.
+      if (code === 0) return day ? '☀︎' : '☾︎';
+      if (code <= 2) return day ? '⛅︎' : '☁︎';
+      if (code === 3) return '☁︎';
+      if (code === 45 || code === 48) return '≡';
+      if (code <= 57) return '☂︎';
+      if (code <= 67 || (code >= 80 && code <= 82)) return '☔︎';
+      if (code >= 95) return '⚡︎';
+      return '☂︎';
+    };
+
     const NIGHT_BG = '#0a0e17';
     const DAY_BG = '#f3f4f7';
 
@@ -375,6 +421,18 @@ import Layout from '../../layouts/Layout.astro';
         $('pm25').textContent = fmt(d.pm25);
         $('pm25band').textContent = d.pm25Band || '';
         $('region').textContent = d.region ? `${d.region} region` : '';
+        const hours: any[] = Array.isArray(d.hours) ? d.hours : [];
+        $('hours').innerHTML = hours.map((h, i) => {
+          const t = new Date(h.t);
+          const hh = t.toLocaleTimeString('en-SG', { hour: '2-digit', hour12: false }).replace(/^24/, '00');
+          const wet = typeof h.pop === 'number' && h.pop >= 40;
+          return `<li${i === 0 ? ' class="now-ish"' : ''}>
+            <span class="h-t">${hh}</span>
+            <span class="h-g" aria-hidden="true">${glyph(h.code, !!h.day)}</span>
+            <span class="h-c">${fmt(h.temp)}°</span>
+            <span class="h-p${wet ? ' wet' : ''}">${typeof h.pop === 'number' ? h.pop + '%' : ''}</span>
+          </li>`;
+        }).join('');
         setTheme(!!d.isDay);
         const src = d.locSource === 'gps' ? 'car gps' : d.locSource === 'ip' ? 'rough fix (no gps)' : 'no location — showing central';
         const flag = d.source === 'stub' ? ' · OFFLINE STUB' : d.stale ? ' · nea slow, showing last' : '';
