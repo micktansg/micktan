@@ -271,6 +271,8 @@ import Layout from '../../layouts/Layout.astro';
     }
     :global(.cam figcaption) { margin-top: 0.5rem; font-size: clamp(1rem, 3vmin, 1.8rem); font-weight: 300; color: var(--mute); }
     :global(.cam figcaption b) { color: var(--ink); font-weight: 400; }
+    :global(.cam-off img) { opacity: 0.55; filter: saturate(0.4); }
+    :global(.cam-off figcaption) { color: var(--amber); }
     .sheet-more { margin-top: 2vh; font-size: clamp(0.95rem, 2.6vmin, 1.5rem); font-weight: 300; color: var(--mute); }
     .sheet-more a { color: var(--ink); }
 
@@ -412,6 +414,18 @@ import Layout from '../../layouts/Layout.astro';
       const sheet = $('sheet');
       const cams = $('cams');
       const refreshBtn = $('refreshCams');
+      let lastSeen: Record<string, { image: string; ts: string }> = {};
+      try { lastSeen = JSON.parse(localStorage.getItem('g6:cams') || '{}') || {}; } catch {}
+      // "21:30" if today, "yesterday 21:30" / "28 Oct 21:30" if older.
+      const when = (iso: string) => {
+        const t = new Date(iso);
+        const now = new Date();
+        const sameDay = t.toDateString() === now.toDateString();
+        if (sameDay) return hhmm(t);
+        const y = new Date(now); y.setDate(now.getDate() - 1);
+        if (t.toDateString() === y.toDateString()) return `yesterday ${hhmm(t)}`;
+        return `${t.toLocaleDateString('en-SG', { day: 'numeric', month: 'short' })} ${hhmm(t)}`;
+      };
       const loadCams = async () => {
         cams.classList.add('busy');
         refreshBtn.classList.add('busy');
@@ -421,11 +435,22 @@ import Layout from '../../layouts/Layout.astro';
           const d = await res.json();
           const list: any[] = d.items?.[0]?.cameras || [];
           const byId = new Map(list.map((c) => [String(c.camera_id), c]));
+          // LTA drops cameras from the list when they stall. Remember the
+          // last frame each one gave us so a dropped camera still shows
+          // something useful, clearly labelled with how old it is.
+          for (const [id] of CAMS) {
+            const c = byId.get(id);
+            if (c?.image) lastSeen[id] = { image: c.image, ts: c.timestamp };
+          }
+          try { localStorage.setItem('g6:cams', JSON.stringify(lastSeen)); } catch {}
           cams.innerHTML = CAMS.map(([id, label]) => {
             const c = byId.get(id);
-            if (!c) return `<figure class="cam"><figcaption><b>${label}</b> · no image</figcaption></figure>`;
-            const t = new Date(c.timestamp);
-            return `<figure class="cam"><img src="${c.image}" alt="${label}" loading="lazy" decoding="async"><figcaption><b>${label}</b> · ${hhmm(t)}</figcaption></figure>`;
+            if (c) {
+              return `<figure class="cam"><img src="${c.image}" alt="${label}" loading="lazy" decoding="async"><figcaption><b>${label}</b> · ${hhmm(new Date(c.timestamp))}</figcaption></figure>`;
+            }
+            const old = lastSeen[id];
+            if (!old) return `<figure class="cam cam-off"><figcaption><b>${label}</b> · camera offline, no photo yet</figcaption></figure>`;
+            return `<figure class="cam cam-off"><img src="${old.image}" alt="${label}, older photo" loading="lazy" decoding="async"><figcaption><b>${label}</b> · offline · last seen ${when(old.ts)}</figcaption></figure>`;
           }).join('');
           $('camTs').textContent = hhmm();
         } catch (err) {
