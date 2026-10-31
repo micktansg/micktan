@@ -213,9 +213,8 @@ import Layout from '../../layouts/Layout.astro';
     .causeway {
       appearance: none; border: 1px solid var(--line); background: rgba(127, 127, 127, 0.06);
       color: var(--ink); font: inherit; cursor: pointer;
-      min-height: 64px; padding: 2.2vh 5vw; border-radius: 999px;
-      justify-self: end; max-width: 100%;
-      display: flex; gap: 1.2em; align-items: center;
+      min-height: 64px; padding: 2.2vh 5vw; border-radius: 1.4rem;
+      display: flex; justify-content: space-between; align-items: center;
       font-size: clamp(1.6rem, 5vmin, 3.6rem); font-weight: 400; letter-spacing: -0.01em;
       -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
       transition: background 160ms ease;
@@ -223,17 +222,16 @@ import Layout from '../../layouts/Layout.astro';
     .causeway:active { background: var(--line); }
     .arrow { opacity: 0.55; font-weight: 300; }
 
-    .foot { display: flex; flex-direction: column; align-items: flex-end; gap: 0.6rem; }
+    .foot { display: flex; flex-direction: column; gap: 0.6rem; }
     .diag-toggle {
       appearance: none; border: 0; background: transparent; color: var(--mute);
-      font: inherit; font-weight: 300; font-size: clamp(0.9rem, 2.4vmin, 1.4rem); text-align: right;
+      font: inherit; font-weight: 300; font-size: clamp(0.9rem, 2.4vmin, 1.4rem); text-align: left;
       min-height: 44px; padding: 0.4rem 0; cursor: pointer;
     }
     .diag {
       font: 0.85rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
       color: var(--mute); white-space: pre-wrap; word-break: break-all;
       padding: 0.8rem; border: 1px solid var(--line); border-radius: 0.6rem;
-      width: 100%; text-align: left;
     }
 
     .sheet {
