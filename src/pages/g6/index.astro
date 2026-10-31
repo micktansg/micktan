@@ -68,9 +68,14 @@ import Layout from '../../layouts/Layout.astro';
     <div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-label="Checkpoint cameras">
       <div class="sheet-bar">
         <p class="sheet-title">checkpoint cams <span class="sheet-ts" id="camTs"></span></p>
-        <button class="back" id="closeCauseway" type="button" aria-label="back">
-          <span aria-hidden="true">←</span>
-        </button>
+        <div class="sheet-actions">
+          <button class="back refresh" id="refreshCams" type="button" aria-label="refresh cameras">
+            <span aria-hidden="true">↻</span>
+          </button>
+          <button class="back" id="closeCauseway" type="button" aria-label="back">
+            <span aria-hidden="true">←</span>
+          </button>
+        </div>
       </div>
       <div class="cams" id="cams"></div>
       <p class="sheet-more">
@@ -251,6 +256,12 @@ import Layout from '../../layouts/Layout.astro';
       display: inline-flex; align-items: center; justify-content: center;
     }
     .back:active { background: var(--line); }
+    .sheet-actions { display: flex; gap: 0.8rem; flex-shrink: 0; }
+    .refresh span { display: inline-block; }
+    .refresh.busy span { animation: spin 900ms linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .cams.busy { opacity: 0.45; transition: opacity 200ms ease; }
+    .cams { transition: opacity 300ms ease; }
     .cams { display: grid; gap: 2vh; }
     /* Cam figures are created by JS → need :global (see project gotchas). */
     :global(.cam) { display: block; }
@@ -268,6 +279,7 @@ import Layout from '../../layouts/Layout.astro';
       .g6, .causeway, .sky { transition: none; }
       /* Slow, not still — the brief is a breathing background. */
       .blob { animation-duration: 60s, 20s; }
+      .refresh.busy span { animation: none; opacity: 0.5; }
     }
   </style>
 
@@ -399,7 +411,10 @@ import Layout from '../../layouts/Layout.astro';
       // Checkpoint cams sheet.
       const sheet = $('sheet');
       const cams = $('cams');
+      const refreshBtn = $('refreshCams');
       const loadCams = async () => {
+        cams.classList.add('busy');
+        refreshBtn.classList.add('busy');
         try {
           const res = await fetch('https://api.data.gov.sg/v1/transport/traffic-images', { signal, cache: 'no-store' });
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -416,13 +431,20 @@ import Layout from '../../layouts/Layout.astro';
         } catch (err) {
           if ((err as Error).name === 'AbortError') return;
           cams.innerHTML = `<p>cameras unavailable right now — <a href="https://www.checkpoint.sg/" target="_blank" rel="noopener">checkpoint.sg</a></p>`;
+        } finally {
+          // Hold the dim for a beat so a fast refresh still visibly happened.
+          window.setTimeout(() => { cams.classList.remove('busy'); refreshBtn.classList.remove('busy'); }, 350);
         }
+      };
+      const startCamTick = () => {
+        if (camTick) clearInterval(camTick);
+        camTick = window.setInterval(loadCams, 60_000);
       };
       const openSheet = () => {
         sheet.removeAttribute('hidden');
         sheet.scrollTop = 0;
         loadCams();
-        camTick = window.setInterval(loadCams, 60_000);
+        startCamTick();
         $('closeCauseway').focus();
       };
       const closeSheet = () => {
@@ -434,6 +456,7 @@ import Layout from '../../layouts/Layout.astro';
       };
       $('openCauseway').addEventListener('click', openSheet, { signal });
       $('closeCauseway').addEventListener('click', closeSheet, { signal });
+      refreshBtn.addEventListener('click', () => { loadCams(); startCamTick(); }, { signal });
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !sheet.hasAttribute('hidden')) closeSheet(); }, { signal });
       // bfcache can restore the page with the sheet open and timers dead.
       window.addEventListener('pageshow', (e) => { if ((e as PageTransitionEvent).persisted) closeSheet(); }, { signal });
