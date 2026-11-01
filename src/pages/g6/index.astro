@@ -714,23 +714,9 @@ import Layout from '../../layouts/Layout.astro';
         }
         throw new Error('no joke');
       };
-      const liveQuote = async (): Promise<Shown> => {
-        for (let tries = 0; tries < 2; tries++) {
-          const d = await fetchJSON('https://dummyjson.com/quotes/random', { Accept: 'application/json' });
-          let q = String(d?.quote || '').trim();
-          if (!q || q.length > 150) continue;
-          if (remember('g6:seenQuotes', `q:${d.id}`, 300) && tries === 0) continue;
-          // Some entries are Title Cased ("Believe You Can And You'Re…").
-          // If most words start with a capital, drop to sentence case.
-          const words = q.split(/\s+/);
-          const caps = words.filter((w) => /^[A-Z]/.test(w)).length;
-          if (words.length >= 4 && caps / words.length > 0.7) {
-            q = q.toLowerCase().replace(/(^|[.!?]\s+)([a-z])/g, (_, p, c) => p + c.toUpperCase()).replace(/\bi\b/g, 'I').replace(/\bi'(m|ve|ll|d)\b/g, "I'$1");
-          }
-          return { k: 'quote', q, by: String(d.author || 'unknown').replace(/\s*\(R\.A\)\s*$/i, '') };
-        }
-        throw new Error('no quote');
-      };
+      // Quotes are local only: the live archive (DummyJSON) was heavy on
+      // scripture and contentious names, which a blocklist can't fix
+      // (Mick, 1 Nov). The curated list in g6-deck.ts is ~145 strong.
       const show = (c: Shown, live: boolean) => {
         $('card').dataset.kind = c.k;
         $('card').dataset.live = String(live);
@@ -765,18 +751,18 @@ import Layout from '../../layouts/Layout.astro';
         const kind: Shown['k'] = r < 0.4 ? 'joke' : r < 0.75 ? 'quote' : 'word';
         let c: Shown;
         let live = false;
-        if (kind === 'word') {
-          c = fromDeck('word');
-          diag.card = `word @${hhmm()}`;
+        if (kind !== 'joke') {
+          c = fromDeck(kind);
+          diag.card = `${kind} @${hhmm()}`;
         } else {
           try {
-            c = await (kind === 'joke' ? liveJoke() : liveQuote());
+            c = await liveJoke();
             live = true;
-            diag.card = `live ${kind} @${hhmm()}`;
+            diag.card = `live joke @${hhmm()}`;
           } catch (err) {
             if ((err as Error).name === 'AbortError' && signal.aborted) return;
-            c = fromDeck(kind);
-            diag.card = `local ${kind} @${hhmm()} (live failed: ${(err as Error).message})`;
+            c = fromDeck('joke');
+            diag.card = `local joke @${hhmm()} (live failed: ${(err as Error).message})`;
           }
         }
         if (my !== dealing) return; // a newer deal won
