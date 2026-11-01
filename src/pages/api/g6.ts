@@ -183,6 +183,7 @@ export const GET: APIRoute = async ({ request, clientAddress }) => {
   const day24 = g
     ? {
         text: g.forecast?.text ?? null,
+        code: g.forecast?.code ?? null,
         tempLo: g.temperature?.low ?? null, tempHi: g.temperature?.high ?? null,
         humLo: g.relativeHumidity?.low ?? null, humHi: g.relativeHumidity?.high ?? null,
         windDir: g.wind?.direction ?? null, windLo: g.wind?.speed?.low ?? null, windHi: g.wind?.speed?.high ?? null,
@@ -190,7 +191,10 @@ export const GET: APIRoute = async ({ request, clientAddress }) => {
         updated: rec24.updatedTimestamp ?? null,
         periods: (rec24.periods || []).map((p: any) => ({
           when: p.timePeriod?.text ?? '',
+          start: p.timePeriod?.start ?? null,
+          end: p.timePeriod?.end ?? null,
           text: p.regions?.[region]?.text ?? p.regions?.central?.text ?? null,
+          code: p.regions?.[region]?.code ?? p.regions?.central?.code ?? null,
         })),
       }
     : null;
@@ -199,6 +203,7 @@ export const GET: APIRoute = async ({ request, clientAddress }) => {
     day: f.day ?? null,
     date: f.timestamp ?? null,
     text: f.forecast?.text ?? null,
+    code: f.forecast?.code ?? null,
     summary: f.forecast?.summary ?? null,
     lo: f.temperature?.low ?? null, hi: f.temperature?.high ?? null,
     windDir: f.wind?.direction ?? null, windLo: f.wind?.speed?.low ?? null, windHi: f.wind?.speed?.high ?? null,

@@ -114,10 +114,14 @@ import Layout from '../../layouts/Layout.astro';
         </figure>
         <div class="fc-text">
           <section class="fc-24">
-            <h2>next 24 hours</h2>
-            <p class="fc-big" id="fc24Text">—</p>
-            <p class="fc-sub" id="fc24Sub">&nbsp;</p>
-            <ol class="fc-periods" id="fcPeriods"></ol>
+            <h2 id="fc24Head">next 24 hours</h2>
+            <div class="fc-head">
+              <span class="fc-glyph" id="fc24Glyph" aria-hidden="true"></span>
+              <p class="fc-big" id="fc24Text">—</p>
+              <p class="fc-range" id="fc24Range"></p>
+            </div>
+            <ol class="fc-tiles" id="fcPeriods" aria-label="forecast by period"></ol>
+            <dl class="fc-chips" id="fcChips"></dl>
           </section>
           <section class="fc-4">
             <h2>next 4 days</h2>
@@ -320,7 +324,11 @@ import Layout from '../../layouts/Layout.astro';
       margin-top: 3vh; padding-top: 2.5vh; border-top: 1px solid var(--line);
       font-size: clamp(1.05rem, 3vmin, 1.9rem); font-weight: 300; line-height: 1.35;
       max-width: 34em;
+      /* Swaps every 15 min on the clock behind a slow cross-fade — nothing
+         that would pull a glance. */
+      transition: opacity 1500ms ease;
     }
+    .card.fading { opacity: 0; }
     .card-kind { font-size: 0.7em; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mute); margin-bottom: 0.5em; }
     .card-body { color: var(--ink); }
     :global(.card-body .w) { font-weight: 500; }
@@ -391,29 +399,26 @@ import Layout from '../../layouts/Layout.astro';
     .radar-box img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
     .radar-rain { opacity: 0.7; }
     .g6[data-theme='night'] .radar-base { filter: brightness(0.82); }
-    /* "You are here": violet (not a radar colour — light rain is teal/blue),
-       white ring, dark halo, pulsing, labelled. Sized against the map so it
-       stays visible on the car's big screen. */
+    /* "You are here": hot pink — the one colour neither the radar (blue →
+       red) nor the grey base map uses — white ring, dark halo, radiating
+       rings. No label (Mick, 1 Nov: the rings say it). Sized against the
+       map so it stays visible on the car's big screen. */
     .radar-you {
-      position: absolute; width: 3.2%; aspect-ratio: 1; min-width: 18px;
+      --pin: #ff2d95;
+      position: absolute; width: 2.2%; aspect-ratio: 1; min-width: 14px;
       transform: translate(-50%, -50%); border-radius: 50%;
-      background: var(--violet); border: 3px solid #fff;
-      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.45), 0 2px 10px rgba(0, 0, 0, 0.5);
+      background: var(--pin); border: 2px solid #fff;
+      box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.45);
     }
-    .radar-you::before {
-      content: ''; position: absolute; inset: -3px; border-radius: 50%;
-      border: 3px solid var(--violet); opacity: 0;
-      animation: ping 2.2s ease-out infinite;
+    .radar-you::before, .radar-you::after {
+      content: ''; position: absolute; inset: -2px; border-radius: 50%;
+      border: 2.5px solid var(--pin); opacity: 0;
+      animation: ping 2.6s ease-out infinite;
     }
-    .radar-you::after {
-      content: 'you'; position: absolute; left: 50%; top: 100%; transform: translate(-50%, 6px);
-      font-size: clamp(0.8rem, 2.2vmin, 1.3rem); font-weight: 500; color: #fff; line-height: 1;
-      padding: 0.15em 0.5em; border-radius: 999px; background: var(--violet);
-      box-shadow: 0 1px 6px rgba(0, 0, 0, 0.45); white-space: nowrap;
-    }
+    .radar-you::after { animation-delay: -1.3s; }
     @keyframes ping {
       0%   { transform: scale(1); opacity: 0.9; }
-      100% { transform: scale(3.2); opacity: 0; }
+      100% { transform: scale(4); opacity: 0; }
     }
     .radar figcaption { margin-top: 0.6rem; font-size: clamp(0.95rem, 2.6vmin, 1.5rem); font-weight: 300; color: var(--mute); }
     .legend i { display: inline-block; width: 1em; height: 0.6em; margin: 0 1px; vertical-align: middle; border-radius: 2px; }
@@ -421,20 +426,52 @@ import Layout from '../../layouts/Layout.astro';
 
     .fc-text { display: grid; gap: 3vh; align-content: start; }
     .fc h2 { font-size: clamp(0.95rem, 2.6vmin, 1.5rem); font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mute); margin-bottom: 0.6em; }
-    .fc-big { font-size: clamp(1.8rem, 6vmin, 4rem); font-weight: 300; letter-spacing: -0.02em; line-height: 1.1; }
-    .fc-sub { margin-top: 0.4em; font-size: clamp(1.1rem, 3.2vmin, 2rem); font-weight: 300; color: var(--mute); }
-    :global(.fc-sub b) { color: var(--ink); font-weight: 400; }
-    .fc-periods, .fc-days { list-style: none; margin-top: 1.2vh; }
-    :global(.fc-periods li), :global(.fc-days li) {
-      display: grid; grid-template-columns: 6.8em 1fr auto; gap: 1em; align-items: baseline;
-      padding: 0.55em 0; border-top: 1px solid var(--line);
+    /* Headline: glyph · forecast · temperature range — same grammar as the
+       main page (picture, then number, then word). */
+    .fc-head { display: flex; align-items: center; gap: 0.3em 0.6em; flex-wrap: wrap; }
+    .fc-glyph { font-size: clamp(2.2rem, 7vmin, 4.6rem); line-height: 1; color: var(--mute); }
+    .fc-big { flex: 1 1 auto; font-size: clamp(1.8rem, 6vmin, 4rem); font-weight: 300; letter-spacing: -0.02em; line-height: 1.1; }
+    .fc-range { font-size: clamp(1.8rem, 6vmin, 4rem); font-weight: 300; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+    /* Three period tiles (night / morning / afternoon), the current one lit. */
+    .fc-tiles {
+      list-style: none; margin-top: 1.5vh;
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.8rem;
+    }
+    :global(.fc-tiles li) {
+      border: 1px solid var(--line); border-radius: 1rem; padding: 1.2vh 0.5em;
+      text-align: center; color: var(--mute); font-weight: 300;
+      font-size: clamp(1rem, 2.8vmin, 1.7rem); min-width: 0;
+    }
+    :global(.fc-tiles li.on) { color: var(--ink); border-color: var(--ink); background: rgba(127, 127, 127, 0.07); }
+    :global(.fc-tiles .t-name) { display: block; font-weight: 500; font-size: 0.85em; }
+    :global(.fc-tiles .t-when) { display: block; font-size: 0.72em; opacity: 0.75; margin-top: 0.1em; }
+    :global(.fc-tiles .t-g) { display: block; font-size: 2.2em; line-height: 1.15; margin: 0.1em 0; }
+    :global(.fc-tiles .t-text) { display: block; line-height: 1.2; }
+    /* Small facts as label-over-number chips, like the PM2.5 line. */
+    .fc-chips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.8rem; margin-top: 1.5vh; }
+    :global(.fc-chips dt) { font-size: clamp(0.75rem, 2vmin, 1.1rem); letter-spacing: 0.12em; text-transform: uppercase; color: var(--mute); }
+    :global(.fc-chips dd) { font-size: clamp(1.1rem, 3.2vmin, 2rem); font-weight: 300; margin-top: 0.15em; white-space: nowrap; }
+    .fc-days { list-style: none; margin-top: 1.2vh; }
+    :global(.fc-days li) {
+      display: grid; grid-template-columns: 3.2em 1.6em 1fr auto; gap: 0.8em; align-items: center;
+      padding: 0.5em 0; border-top: 1px solid var(--line);
       font-size: clamp(1.1rem, 3.2vmin, 2rem); font-weight: 300;
     }
-    :global(.fc-periods .p-when), :global(.fc-days .d-day) { color: var(--mute); font-size: 0.85em; }
-    :global(.fc-periods .p-text), :global(.fc-days .d-text) { color: var(--ink); }
+    :global(.fc-days .d-day) { color: var(--mute); font-size: 0.85em; }
+    :global(.fc-days .d-g) { font-size: 1.4em; line-height: 1; color: var(--mute); text-align: center; }
+    :global(.fc-days .d-text) { color: var(--ink); }
     :global(.fc-days .d-t) { color: var(--mute); font-variant-numeric: tabular-nums; }
     @media (orientation: landscape) and (min-width: 900px) {
-      .fc { grid-template-columns: 1.1fr 1fr; column-gap: 4vw; }
+      /* radar + 4 days on the left, the 24-hour block on the right — one
+         screen, no scrolling. */
+      .fc { grid-template-columns: 1fr 1.1fr; grid-template-rows: auto 1fr; column-gap: 4vw; row-gap: 2vh; }
+      .fc-text { display: contents; }
+      .radar { grid-column: 1; grid-row: 1; }
+      .fc-4 { grid-column: 1; grid-row: 2; }
+      .fc-24 { grid-column: 2; grid-row: 1 / span 2; }
+      /* Cap the radar at 40% of the height so four day rows fit beneath. */
+      .radar { max-width: calc(40vh * 853 / 479); }
+      :global(.fc-days li) { padding: 0.35em 0; font-size: clamp(1rem, 2.7vmin, 1.7rem); }
     }
 
     /* cams sheet */
@@ -461,7 +498,8 @@ import Layout from '../../layouts/Layout.astro';
       /* Slow, not still — the brief is a breathing background. */
       .blob { animation-duration: 60s, 20s; }
       .refresh.busy span, .refresh-all.busy span { animation: none; opacity: 0.5; }
-      .radar-you::before { animation: none; opacity: 0.6; transform: scale(1.8); }
+      .radar-you::before, .radar-you::after { animation: none; opacity: 0.6; transform: scale(1.8); }
+      .card { transition: none; }
     }
   </style>
 
@@ -651,25 +689,52 @@ import Layout from '../../layouts/Layout.astro';
           $('cardBy').textContent = `— ${c.by}`;
         }
       };
+      // One card per 15-minute slot of the clock (:00 :15 :30 :45), swapped
+      // behind a 1.5s cross-fade. No buttons: the card is meant to feel
+      // settled, not skippable (Mick, 1 Nov).
+      const SLOT = 15 * 60_000;
+      const slotOf = (t = Date.now()) => Math.floor(t / SLOT);
       let dealing = 0;
+      let dealtSlot = -1;
+      let cardTimer: number | undefined;
+      const reduce = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
       const deal = async () => {
         const my = ++dealing;
+        dealtSlot = slotOf();
         // Weighting: jokes 40%, quotes 35%, words 25%.
         const r = Math.random();
         const kind: Shown['k'] = r < 0.4 ? 'joke' : r < 0.75 ? 'quote' : 'word';
-        if (kind === 'word') { show(fromDeck('word'), false); return; }
-        try {
-          const c = await (kind === 'joke' ? liveJoke() : liveQuote());
-          if (my !== dealing) return; // a newer deal won
-          show(c, true);
-          diag.card = `live ${kind} @${hhmm()}`;
-        } catch (err) {
-          if ((err as Error).name === 'AbortError' && signal.aborted) return;
-          if (my !== dealing) return;
-          show(fromDeck(kind), false);
-          diag.card = `local ${kind} @${hhmm()} (live failed: ${(err as Error).message})`;
+        let c: Shown;
+        let live = false;
+        if (kind === 'word') {
+          c = fromDeck('word');
+          diag.card = `word @${hhmm()}`;
+        } else {
+          try {
+            c = await (kind === 'joke' ? liveJoke() : liveQuote());
+            live = true;
+            diag.card = `live ${kind} @${hhmm()}`;
+          } catch (err) {
+            if ((err as Error).name === 'AbortError' && signal.aborted) return;
+            c = fromDeck(kind);
+            diag.card = `local ${kind} @${hhmm()} (live failed: ${(err as Error).message})`;
+          }
         }
+        if (my !== dealing) return; // a newer deal won
+        const card = $('card');
+        if (card.dataset.kind && !reduce()) {
+          card.classList.add('fading');
+          await new Promise((r) => setTimeout(r, 1500));
+          if (my !== dealing) return;
+        }
+        show(c, live);
+        card.classList.remove('fading');
         renderDiag();
+      };
+      const scheduleCard = () => {
+        if (cardTimer) clearTimeout(cardTimer);
+        const next = (slotOf() + 1) * SLOT;
+        cardTimer = window.setTimeout(async () => { await deal(); scheduleCard(); }, next - Date.now() + 250);
       };
 
       // ── forecast sheet rendering (from the same /api/g6 payload) ───────
@@ -679,19 +744,61 @@ import Layout from '../../layouts/Layout.astro';
         s.replace(/\s\d{1,2}\s[A-Za-z]{3}/g, '').replace(/\bMidday\b/g, 'midday').replace(/\s+to\s+/g, ' – ').trim();
       const range = (lo: any, hi: any, unit = '') =>
         typeof lo === 'number' && typeof hi === 'number' ? `${lo}–${hi}${unit}` : '--';
+      // NEA forecast code / text → the same glyph set the hour strip uses.
+      // Text is matched first (robust), the two-letter code as a backstop.
+      const neaGlyph = (code: string | null, text: string | null, night: boolean) => {
+        const c = String(code || '').toUpperCase();
+        const t = String(text || '').toLowerCase();
+        if (/^(TL|HT|HG)$/.test(c) || t.includes('thunder')) return '⚡︎';
+        if (/^(HR|HS|RA|SR|WR|SK)$/.test(c) || /heavy|moderate rain/.test(t)) return '☔︎';
+        if (/^(DR|LR|LS|PS|SH|WS)$/.test(c) || /shower|rain|drizzle/.test(t)) return '☂︎';
+        if (/^(BR|FG|HZ|SL|MI)$/.test(c) || /haz|mist|fog/.test(t)) return '≡';
+        if (/^(PC|PN)$/.test(c) || t.includes('partly')) return night ? '☁︎' : '⛅︎';
+        if (/^(CL|OC|WC|WD)$/.test(c) || /cloud|overcast|windy/.test(t)) return '☁︎';
+        if (/^(FA|FW|SU|WF|FN)$/.test(c) || /fair|sunny/.test(t)) return night || c === 'FN' || t.includes('night') ? '☾︎' : '☀︎';
+        return '·';
+      };
+      // NEA's three periods always start at 06, 12 or 18 local.
+      const periodName = (startIso: string | null) => {
+        if (!startIso) return '';
+        const s = new Date(startIso);
+        const h = s.getHours();
+        if (h >= 6 && h < 12) return 'morning';
+        if (h >= 12 && h < 18) return 'afternoon';
+        return s.toDateString() === new Date().toDateString() ? 'tonight' : 'night';
+      };
+      const tidy = (s: string | null) => String(s || '—').toLowerCase().replace(/\s*\((day|night)\)/, '');
       const renderForecast = () => {
         const d = last;
         if (!d) return;
         const g = d.day24;
-        $('fc24Text').textContent = g?.text || 'not in yet — retries each minute';
-        $('fc24Sub').innerHTML = g
-          ? `<b>${range(g.tempLo, g.tempHi, '°')}</b> · humidity ${range(g.humLo, g.humHi, '%')} · wind ${esc(g.windDir || '')} ${range(g.windLo, g.windHi)} km/h<br>${esc(g.valid || '')}${d.region ? ` · periods below: ${esc(d.region)} region` : ''}`
-          : '&nbsp;';
-        $('fcPeriods').innerHTML = (g?.periods || []).map((p: any) =>
-          `<li><span class="p-when">${esc(shortWhen(p.when))}</span><span class="p-text">${esc(p.text || '—')}</span><span></span></li>`).join('');
+        const now = Date.now();
+        $('fc24Head').textContent = `next 24 hours${d.region ? ` · ${d.region}` : ''}`;
+        $('fc24Glyph').textContent = g ? neaGlyph(g.code, g.text, !d.isDay) : '';
+        $('fc24Text').textContent = g ? tidy(g.text) : 'not in yet — retries each minute';
+        $('fc24Range').textContent = g ? range(g.tempLo, g.tempHi, '°') : '';
+        $('fcPeriods').innerHTML = (g?.periods || []).map((p: any) => {
+          const s = p.start ? new Date(p.start).getTime() : 0;
+          const e = p.end ? new Date(p.end).getTime() : 0;
+          const on = s && e && now >= s && now < e;
+          const name = periodName(p.start);
+          const night = name !== 'morning' && name !== 'afternoon';
+          return `<li${on ? ' class="on"' : ''}>
+            <span class="t-name">${name}</span>
+            <span class="t-when">${esc(shortWhen(p.when))}</span>
+            <span class="t-g" aria-hidden="true">${neaGlyph(p.code, p.text, night)}</span>
+            <span class="t-text">${esc(tidy(p.text))}</span>
+          </li>`;
+        }).join('');
+        const dir = String(g?.windDir || '');
+        $('fcChips').innerHTML = g
+          ? `<div><dt>humidity</dt><dd>${range(g.humLo, g.humHi, '%')}</dd></div>
+             <div><dt>wind</dt><dd>${esc(dir.length > 3 ? dir.toLowerCase() : dir)} ${range(g.windLo, g.windHi)} km/h</dd></div>
+             <div><dt>issued</dt><dd>${g.updated ? hhmm(new Date(g.updated)) : '--'}</dd></div>`
+          : '';
         $('fcDays').innerHTML = (d.days || []).map((x: any) =>
-          `<li><span class="d-day">${esc(String(x.day || '').slice(0, 3))}</span><span class="d-text">${esc(x.summary || x.text || '—')}</span><span class="d-t">${range(x.lo, x.hi, '°')}</span></li>`).join('');
-        $('fcTs').textContent = g?.updated ? `issued ${hhmm(new Date(g.updated))}` : '';
+          `<li><span class="d-day">${esc(String(x.day || '').slice(0, 3))}</span><span class="d-g" aria-hidden="true">${neaGlyph(x.code, x.summary || x.text, false)}</span><span class="d-text">${esc(tidy(x.summary || x.text))}</span><span class="d-t">${range(x.lo, x.hi, '°')}</span></li>`).join('');
+        $('fcTs').textContent = g?.valid ? `to ${String(g.valid).split(' to ')[1] || ''}`.toLowerCase() : '';
       };
 
       // Radar: newest 5-minute slot, published ~5 min behind the clock.
@@ -795,17 +902,22 @@ import Layout from '../../layouts/Layout.astro';
 
       renderDiag();
       deal();
+      scheduleCard();
       refresh();
       startTick();
-      document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); }, { signal });
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) return;
+        refresh();
+        // Timers crawl while the tab is hidden; catch up on a missed slot.
+        if (slotOf() !== dealtSlot) { deal(); scheduleCard(); }
+      }, { signal });
 
-      // ↻ on the main page: new GPS fix, fresh data, new card.
+      // ↻ on the main page: new GPS fix + fresh data. Leaves the card alone.
       const refreshAll = $('refreshAll');
       refreshAll.addEventListener('click', async () => {
         if (refreshAll.classList.contains('busy')) return;
         refreshAll.classList.add('busy');
         $('status').textContent = 'refreshing — getting a new gps fix…';
-        deal();
         await refresh(true);
         startTick();
         window.setTimeout(() => refreshAll.classList.remove('busy'), 350);
@@ -926,8 +1038,9 @@ import Layout from '../../layouts/Layout.astro';
       }, { signal });
       // bfcache can restore the page with a sheet open and timers dead.
       window.addEventListener('pageshow', (e) => {
-        if ((e as PageTransitionEvent).persisted) { closeSheet(); closeForecast(); startTick(); }
+        if ((e as PageTransitionEvent).persisted) { closeSheet(); closeForecast(); startTick(); scheduleCard(); }
       }, { signal });
+      signal.addEventListener('abort', () => { if (cardTimer) clearTimeout(cardTimer); }, { once: true });
     };
 
     const teardown = () => {
