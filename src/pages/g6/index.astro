@@ -110,7 +110,7 @@ import Layout from '../../layouts/Layout.astro';
             <img class="radar-rain" id="radarImg" alt="rain radar overlay" width="853" height="479" decoding="async" />
             <span class="radar-you" id="radarYou" hidden aria-hidden="true"></span>
           </div>
-          <figcaption>rain radar <span id="radarTs">—</span> · 50 km · <span class="legend">light <i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i> heavy</span></figcaption>
+          <figcaption>rain radar <span id="radarTs">—</span> · 50 km · <span class="legend">light <i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i> heavy</span><span id="radarNote"></span></figcaption>
         </figure>
         <div class="fc-text">
           <section class="fc-24">
@@ -391,9 +391,29 @@ import Layout from '../../layouts/Layout.astro';
     .radar-box img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
     .radar-rain { opacity: 0.7; }
     .g6[data-theme='night'] .radar-base { filter: brightness(0.82); }
+    /* "You are here": violet (not a radar colour — light rain is teal/blue),
+       white ring, dark halo, pulsing, labelled. Sized against the map so it
+       stays visible on the car's big screen. */
     .radar-you {
-      position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%;
-      background: var(--teal); border: 2px solid #fff; box-shadow: 0 0 0 4px rgba(47, 211, 166, 0.35);
+      position: absolute; width: 3.2%; aspect-ratio: 1; min-width: 18px;
+      transform: translate(-50%, -50%); border-radius: 50%;
+      background: var(--violet); border: 3px solid #fff;
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.45), 0 2px 10px rgba(0, 0, 0, 0.5);
+    }
+    .radar-you::before {
+      content: ''; position: absolute; inset: -3px; border-radius: 50%;
+      border: 3px solid var(--violet); opacity: 0;
+      animation: ping 2.2s ease-out infinite;
+    }
+    .radar-you::after {
+      content: 'you'; position: absolute; left: 50%; top: 100%; transform: translate(-50%, 6px);
+      font-size: clamp(0.8rem, 2.2vmin, 1.3rem); font-weight: 500; color: #fff; line-height: 1;
+      padding: 0.15em 0.5em; border-radius: 999px; background: var(--violet);
+      box-shadow: 0 1px 6px rgba(0, 0, 0, 0.45); white-space: nowrap;
+    }
+    @keyframes ping {
+      0%   { transform: scale(1); opacity: 0.9; }
+      100% { transform: scale(3.2); opacity: 0; }
     }
     .radar figcaption { margin-top: 0.6rem; font-size: clamp(0.95rem, 2.6vmin, 1.5rem); font-weight: 300; color: var(--mute); }
     .legend i { display: inline-block; width: 1em; height: 0.6em; margin: 0 1px; vertical-align: middle; border-radius: 2px; }
@@ -441,6 +461,7 @@ import Layout from '../../layouts/Layout.astro';
       /* Slow, not still — the brief is a breathing background. */
       .blob { animation-duration: 60s, 20s; }
       .refresh.busy span, .refresh-all.busy span { animation: none; opacity: 0.5; }
+      .radar-you::before { animation: none; opacity: 0.6; transform: scale(1.8); }
     }
   </style>
 
@@ -514,6 +535,7 @@ import Layout from '../../layouts/Layout.astro';
         permission: 'unknown',
         lastFix: 'none yet',
         lastFetch: 'none yet',
+        radarDot: 'sheet not opened yet',
       };
       const renderDiag = () => { $('diag').textContent = Object.entries(diag).map(([k, v]) => `${k}: ${v}`).join('\n'); };
 
@@ -619,13 +641,27 @@ import Layout from '../../layouts/Layout.astro';
       };
       const placeYou = () => {
         const you = $('radarYou');
-        if (!fix) { you.setAttribute('hidden', ''); return; }
+        const note = $('radarNote');
+        if (!fix) {
+          you.setAttribute('hidden', '');
+          note.textContent = ' · no gps fix yet, so no car marker';
+          diag.radarDot = 'hidden: no fix';
+          return;
+        }
         const x = (fix.lon - RADAR_BOUNDS.left) / (RADAR_BOUNDS.right - RADAR_BOUNDS.left);
         const y = (RADAR_BOUNDS.top - fix.lat) / (RADAR_BOUNDS.top - RADAR_BOUNDS.bottom);
-        if (x < 0 || x > 1 || y < 0 || y > 1) { you.setAttribute('hidden', ''); return; }
+        if (x < 0 || x > 1 || y < 0 || y > 1) {
+          you.setAttribute('hidden', '');
+          note.textContent = ' · car is off this map';
+          diag.radarDot = `hidden: outside map (${fix.lat.toFixed(3)}, ${fix.lon.toFixed(3)})`;
+          return;
+        }
         you.style.left = `${(x * 100).toFixed(2)}%`;
         you.style.top = `${(y * 100).toFixed(2)}%`;
         you.removeAttribute('hidden');
+        note.textContent = '';
+        diag.radarDot = `at ${(x * 100).toFixed(0)}%, ${(y * 100).toFixed(0)}% of the map`;
+        renderDiag();
       };
 
       const paint = (d: any) => {
