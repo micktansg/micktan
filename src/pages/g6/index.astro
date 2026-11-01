@@ -536,6 +536,7 @@ import Layout from '../../layouts/Layout.astro';
         lastFix: 'none yet',
         lastFetch: 'none yet',
         radarDot: 'sheet not opened yet',
+        card: 'none yet',
       };
       const renderDiag = () => { $('diag').textContent = Object.entries(diag).map(([k, v]) => `${k}: ${v}`).join('\n'); };
 
@@ -571,20 +572,74 @@ import Layout from '../../layouts/Layout.astro';
       });
 
       // ── the card ──────────────────────────────────────────────────────
-      // Random, but never one of the last 40 shown (localStorage).
-      const deal = () => {
+      // Jokes and quotes come live from two free keyless archives
+      // (icanhazdadjoke: ~700 clean dad jokes; DummyJSON: ~1,450 quotes).
+      // Words, and anything when offline / slow, come from the local deck.
+      // Never repeats one of the last 40 local cards or last 300 live ids.
+      type Shown = { k: 'joke'; a: string; b: string } | { k: 'word'; w: string; p: string; d: string } | { k: 'quote'; q: string; by: string };
+      const remember = (key: string, id: string | number, keep: number) => {
+        let seen: (string | number)[] = [];
+        try { seen = JSON.parse(localStorage.getItem(key) || '[]') || []; } catch {}
+        const dup = seen.includes(id);
+        seen = [...seen.filter((x) => x !== id), id].slice(-keep);
+        try { localStorage.setItem(key, JSON.stringify(seen)); } catch {}
+        return dup;
+      };
+      const fromDeck = (kind?: Shown['k']): Shown => {
         let seen: number[] = [];
         try { seen = JSON.parse(localStorage.getItem('g6:seen') || '[]') || []; } catch {}
-        const pool = DECK.map((_, i) => i).filter((i) => !seen.includes(i));
-        const i = (pool.length ? pool : DECK.map((_, i) => i))[Math.floor(Math.random() * (pool.length || DECK.length))];
-        seen = [...seen.filter((x) => x !== i), i].slice(-40);
-        try { localStorage.setItem('g6:seen', JSON.stringify(seen)); } catch {}
-        const c = DECK[i];
-        const card = $('card');
-        card.dataset.kind = c.k;
+        const all = DECK.map((_, i) => i).filter((i) => !kind || DECK[i].k === kind);
+        const pool = all.filter((i) => !seen.includes(i));
+        const from = pool.length ? pool : all;
+        const i = from[Math.floor(Math.random() * from.length)];
+        remember('g6:seen', i, 40);
+        return DECK[i];
+      };
+      const fetchJSON = async (url: string, headers: Record<string, string>) => {
+        const ctl = new AbortController();
+        const t = window.setTimeout(() => ctl.abort(), 4000);
+        signal.addEventListener('abort', () => ctl.abort(), { once: true });
+        try {
+          const r = await fetch(url, { headers, signal: ctl.signal, cache: 'no-store' });
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return await r.json();
+        } finally { clearTimeout(t); }
+      };
+      const liveJoke = async (): Promise<Shown> => {
+        for (let tries = 0; tries < 2; tries++) {
+          const d = await fetchJSON('https://icanhazdadjoke.com/', { Accept: 'application/json' });
+          const text = String(d?.joke || '').trim();
+          if (!text || text.length > 220) continue;
+          if (remember('g6:seenJokes', `j:${d.id}`, 300) && tries === 0) continue;
+          // Most are "setup? punchline." — split at the first question mark.
+          const m = text.match(/^(.*?\?)\s+(.*)$/s);
+          return m ? { k: 'joke', a: m[1], b: m[2] } : { k: 'joke', a: text, b: '' };
+        }
+        throw new Error('no joke');
+      };
+      const liveQuote = async (): Promise<Shown> => {
+        for (let tries = 0; tries < 2; tries++) {
+          const d = await fetchJSON('https://dummyjson.com/quotes/random', { Accept: 'application/json' });
+          let q = String(d?.quote || '').trim();
+          if (!q || q.length > 150) continue;
+          if (remember('g6:seenQuotes', `q:${d.id}`, 300) && tries === 0) continue;
+          // Some entries are Title Cased ("Believe You Can And You'Re…").
+          // If most words start with a capital, drop to sentence case.
+          const words = q.split(/\s+/);
+          const caps = words.filter((w) => /^[A-Z]/.test(w)).length;
+          if (words.length >= 4 && caps / words.length > 0.7) {
+            q = q.toLowerCase().replace(/(^|[.!?]\s+)([a-z])/g, (_, p, c) => p + c.toUpperCase()).replace(/\bi\b/g, 'I').replace(/\bi'(m|ve|ll|d)\b/g, "I'$1");
+          }
+          return { k: 'quote', q, by: String(d.author || 'unknown').replace(/\s*\(R\.A\)\s*$/i, '') };
+        }
+        throw new Error('no quote');
+      };
+      const show = (c: Shown, live: boolean) => {
+        $('card').dataset.kind = c.k;
+        $('card').dataset.live = String(live);
         if (c.k === 'joke') {
           $('cardKind').textContent = 'joke';
-          $('cardBody').innerHTML = `${esc(c.a)}<span class="punch">${esc(c.b)}</span>`;
+          $('cardBody').innerHTML = c.b ? `${esc(c.a)}<span class="punch">${esc(c.b)}</span>` : esc(c.a);
           $('cardBy').textContent = '';
         } else if (c.k === 'word') {
           $('cardKind').textContent = 'word';
@@ -595,6 +650,26 @@ import Layout from '../../layouts/Layout.astro';
           $('cardBody').textContent = `“${c.q}”`;
           $('cardBy').textContent = `— ${c.by}`;
         }
+      };
+      let dealing = 0;
+      const deal = async () => {
+        const my = ++dealing;
+        // Weighting: jokes 40%, quotes 35%, words 25%.
+        const r = Math.random();
+        const kind: Shown['k'] = r < 0.4 ? 'joke' : r < 0.75 ? 'quote' : 'word';
+        if (kind === 'word') { show(fromDeck('word'), false); return; }
+        try {
+          const c = await (kind === 'joke' ? liveJoke() : liveQuote());
+          if (my !== dealing) return; // a newer deal won
+          show(c, true);
+          diag.card = `live ${kind} @${hhmm()}`;
+        } catch (err) {
+          if ((err as Error).name === 'AbortError' && signal.aborted) return;
+          if (my !== dealing) return;
+          show(fromDeck(kind), false);
+          diag.card = `local ${kind} @${hhmm()} (live failed: ${(err as Error).message})`;
+        }
+        renderDiag();
       };
 
       // ── forecast sheet rendering (from the same /api/g6 payload) ───────
