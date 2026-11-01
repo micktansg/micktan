@@ -18,8 +18,8 @@ import Layout from '../../layouts/Layout.astro';
 <Layout
   title="g6."
   description="private in-car panel."
-  themeColor="#0a0e17"
-  bg="#0a0e17"
+  themeColor="#0d0f14"
+  bg="#0d0f14"
   noindex
   noBob
 >
@@ -76,10 +76,12 @@ import Layout from '../../layouts/Layout.astro';
       <button class="big" id="openForecast" type="button">
         <span>forecast</span>
         <span class="arrow" aria-hidden="true">→</span>
+        <span class="big-sub" id="fcSub"></span>
       </button>
       <button class="big" id="openCauseway" type="button">
         <span>causeway cam</span>
         <span class="arrow" aria-hidden="true">→</span>
+        <span class="big-sub" id="camSub"></span>
       </button>
     </div>
 
@@ -160,16 +162,22 @@ import Layout from '../../layouts/Layout.astro';
 
   <style>
     .g6 {
-      /* night: XPeng's deep navy rather than flat black */
-      --bg: #0a0e17;
+      /* night: neutral charcoal, a shade cool — this page sits beside the
+         CarPlay panel on the XPeng screen, which is near-black with grey
+         surfaces, so the navy-teal glow of v1 was pulled right back
+         (Mick, 1 Nov). The colour fields stay, at a third of the strength. */
+      --bg: #0d0f14;
       --ink: #eef1f6;
-      --mute: rgba(238, 241, 246, 0.55);
+      --mute: rgba(238, 241, 246, 0.7);   /* anything meant to be read */
+      --faint: rgba(238, 241, 246, 0.45); /* status, eyebrows */
       --line: rgba(238, 241, 246, 0.14);
+      --surf: rgba(255, 255, 255, 0.05);  /* buttons, pills */
+      --surf2: rgba(255, 255, 255, 0.09); /* the lit tile */
       --band: var(--mute);
-      --sky: 0.55;
-      --teal: #2fd3a6;
-      --violet: #7c6cf2;
-      --amber: #e8a24a;
+      --sky: 0.32;
+      --teal: #35b8b0;
+      --violet: #6f6ae0;
+      --amber: #d9a35a;
 
       position: relative;
       isolation: isolate;
@@ -188,11 +196,14 @@ import Layout from '../../layouts/Layout.astro';
       transition: background 600ms ease, color 600ms ease;
     }
     .g6[data-theme='day'] {
-      --bg: #f3f4f7;
+      --bg: #f3f4f7; /* CarPlay's daytime grey, near enough */
       --ink: #121722;
-      --mute: rgba(18, 23, 34, 0.55);
-      --line: rgba(18, 23, 34, 0.12);
-      --sky: 0.42;
+      --mute: rgba(18, 23, 34, 0.68);
+      --faint: rgba(18, 23, 34, 0.45);
+      --line: rgba(18, 23, 34, 0.16);
+      --surf: rgba(18, 23, 34, 0.05);
+      --surf2: rgba(18, 23, 34, 0.09);
+      --sky: 0.26;
     }
 
     /* Breathing background: three soft colour fields drifting on long,
@@ -237,14 +248,15 @@ import Layout from '../../layouts/Layout.astro';
 
     /* Round pill buttons (refresh / back) — 72px tall, car-finger sized. */
     .pill, .back {
-      appearance: none; border: 1px solid var(--line); background: rgba(127, 127, 127, 0.06); color: var(--ink);
+      appearance: none; border: 1px solid var(--line); background: var(--surf); color: var(--ink);
       min-width: 88px; height: 72px; padding: 0 1.4rem; border-radius: 999px;
       font: inherit; font-size: 2.2rem; font-weight: 300; line-height: 1; cursor: pointer;
       display: inline-flex; align-items: center; justify-content: center;
       -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
     }
-    .pill:active, .back:active { background: var(--line); }
-    .refresh-all { position: absolute; top: 3vh; right: 5vw; z-index: 2; }
+    .pill:active, .back:active { background: var(--surf2); }
+    /* A quiet 64px circle — rarely pressed, shouldn't draw the eye. */
+    .refresh-all { position: absolute; top: 3vh; right: 5vw; z-index: 2; min-width: 64px; width: 64px; height: 64px; padding: 0; font-size: 1.8rem; }
     .refresh span, .refresh-all span { display: inline-block; }
     .refresh.busy span, .refresh-all.busy span { animation: spin 900ms linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -281,25 +293,37 @@ import Layout from '../../layouts/Layout.astro';
     }
     .feels strong { color: var(--ink); font-weight: 400; }
 
-    /* 6-hour strip: one column per hour, glyph / temp / rain chance. */
+    /* 6-hour strip: one column per hour, icon / temp / rain chance. */
     .hours {
       list-style: none; margin-top: 2.5vh;
       /* Columns size to their content and huddle left, instead of being
          spread across the full width. */
       display: grid; grid-template-columns: repeat(6, minmax(0, 4.2em)); gap: 0.35em;
       justify-content: start;
-      font-size: clamp(0.95rem, 2.6vmin, 1.6rem); font-weight: 300; color: var(--mute);
+      font-size: clamp(1.05rem, 3vmin, 1.9rem); font-weight: 300; color: var(--mute);
       text-align: center; font-variant-numeric: tabular-nums;
     }
     :global(.hours li) { display: grid; gap: 0.2em; min-width: 0; }
     :global(.hours .h-t) { font-size: 0.85em; letter-spacing: 0.02em; }
-    :global(.hours .h-g) { font-size: 1.5em; line-height: 1.2; }
+    :global(.hours .h-g) { font-size: 1.7em; line-height: 1; padding: 0.1em 0; }
     :global(.hours .h-c) { color: var(--ink); font-weight: 400; }
-    :global(.hours .h-p) { font-size: 0.85em; opacity: 0.6; }
-    :global(.hours .h-p.wet) { color: #6aa9ef; opacity: 1; }
+    :global(.hours .h-p) { font-size: 0.85em; min-height: 1.2em; }
+    :global(.hours .h-p.wet) { color: #6aa9ef; }
     :global(.hours li.now-ish .h-t) { color: var(--ink); }
 
-    .air { padding-top: 2.5vh; border-top: 1px solid var(--line); }
+    /* Drawn weather icons: monoline, 1.5px stroke, currentColor — the same
+       eight on every device, no font roulette. Sized by the parent's font. */
+    :global(.wx) { display: block; width: 1em; height: 1em; margin: 0 auto; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    .air { padding-top: 2.5vh; }
+    /* Quiet until it matters: on good/moderate days PSI is one modest line;
+       from 'unhealthy' it takes the big number and its colour. */
+    .air.quiet { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 0.6em; }
+    .air.quiet .air-num { font-size: clamp(1.15rem, 3.3vmin, 2.2rem); letter-spacing: -0.01em; }
+    .air.quiet .air-num strong { font-weight: 400; }
+    .air.quiet .air-lbl { font-size: 0.75em; letter-spacing: 0.1em; }
+    .air.quiet .air-band { font-size: clamp(1.15rem, 3.3vmin, 2.2rem); margin: 0; }
+    .air.quiet .air-sub { flex-basis: 100%; margin-top: 0.25em; }
     .air-num {
       font-size: clamp(2.6rem, 9vmin, 6rem);
       line-height: 1; font-weight: 300; letter-spacing: -0.04em;
@@ -312,24 +336,31 @@ import Layout from '../../layouts/Layout.astro';
     }
     .air-sub { margin-top: 0.5em; font-size: clamp(1rem, 2.7vmin, 1.6rem); font-weight: 300; color: var(--mute); }
     .air-sub strong { color: var(--ink); font-weight: 400; }
-    /* NEA colour language, tuned to the palette. */
+    /* NEA colour language, tuned to the palette; darker set for daylight so
+       the band text clears 4.5:1 on the pale background. */
     .air[data-band='good'] { --band: var(--teal); }
     .air[data-band='moderate'] { --band: #6aa9ef; }
     .air[data-band='unhealthy'] { --band: var(--amber); }
     .air[data-band='very unhealthy'] { --band: #ef7a52; }
     .air[data-band='hazardous'] { --band: #e04a4a; }
+    .g6[data-theme='day'] .air[data-band='good'] { --band: #0f8f6e; }
+    .g6[data-theme='day'] .air[data-band='moderate'] { --band: #2f6fc1; }
+    .g6[data-theme='day'] .air[data-band='unhealthy'] { --band: #b8731f; }
+    .g6[data-theme='day'] .air[data-band='very unhealthy'] { --band: #c4552f; }
+    .g6[data-theme='day'] .air[data-band='hazardous'] { --band: #c43a3a; }
+    .g6[data-theme='day'] :global(.hours .h-p.wet) { color: #2f6fc1; }
 
     /* The card: one joke / word / quote per load or manual refresh. */
     .card {
-      margin-top: 3vh; padding-top: 2.5vh; border-top: 1px solid var(--line);
-      font-size: clamp(1.05rem, 3vmin, 1.9rem); font-weight: 300; line-height: 1.35;
-      max-width: 34em;
+      margin-top: 4vh;
+      font-size: clamp(1.2rem, 3.6vmin, 2.3rem); font-weight: 300; line-height: 1.35;
+      max-width: 30em;
       /* Swaps every 15 min on the clock behind a slow cross-fade — nothing
          that would pull a glance. */
       transition: opacity 1500ms ease;
     }
     .card.fading { opacity: 0; }
-    .card-kind { font-size: 0.7em; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mute); margin-bottom: 0.5em; }
+    .card-kind { font-size: 0.62em; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); margin-bottom: 0.5em; }
     .card-body { color: var(--ink); }
     :global(.card-body .w) { font-weight: 500; }
     :global(.card-body .pos) { color: var(--mute); font-style: italic; margin: 0 0.3em; }
@@ -338,37 +369,43 @@ import Layout from '../../layouts/Layout.astro';
     .card-by:empty { display: none; }
 
     /* ── the two big buttons ─────────────────────────────────────────── */
+    /* Two live tiles: label + arrow on the first line, a line of live data
+       under it, so most days you never need to open them. */
     .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
     .big {
-      appearance: none; border: 1px solid var(--line); background: rgba(127, 127, 127, 0.06);
-      color: var(--ink); font: inherit; cursor: pointer;
-      min-height: 64px; padding: 1.8vh 4vw; border-radius: 1.4rem;
-      display: flex; justify-content: space-between; align-items: center; gap: 0.5em;
+      appearance: none; border: 1px solid var(--line); background: var(--surf);
+      color: var(--ink); font: inherit; cursor: pointer; text-align: left;
+      min-height: 64px; padding: 1.6vh 1.2em; border-radius: 16px;
+      display: grid; grid-template-columns: 1fr auto; column-gap: 0.5em; align-items: center;
       font-size: clamp(1.25rem, 3.8vmin, 2.6rem); font-weight: 400; letter-spacing: -0.01em;
       -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
       transition: background 160ms ease;
     }
-    .big:active { background: var(--line); }
-    .arrow { opacity: 0.55; font-weight: 300; }
+    .big:active { background: var(--surf2); }
+    .big > span:first-child { grid-column: 1; grid-row: 1; }
+    .arrow { opacity: 0.55; font-weight: 300; grid-column: 2; grid-row: 1 / span 2; }
+    .big-sub { grid-column: 1; grid-row: 2; font-size: 0.68em; font-weight: 300; color: var(--mute); margin-top: 0.15em; min-height: 1.3em; }
+    .big-sub:empty { display: none; }
 
     .foot { display: flex; flex-direction: column; gap: 0.6rem; }
     .diag-toggle {
-      appearance: none; border: 0; background: transparent; color: var(--mute);
+      appearance: none; border: 0; background: transparent; color: var(--faint);
       font: inherit; font-weight: 300; font-size: clamp(0.9rem, 2.2vmin, 1.3rem); text-align: left;
       min-height: 44px; padding: 0.4rem 0; cursor: pointer;
     }
     .diag {
       font: 0.85rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
       color: var(--mute); white-space: pre-wrap; word-break: break-all;
-      padding: 0.8rem; border: 1px solid var(--line); border-radius: 0.6rem;
+      padding: 0.8rem; border: 1px solid var(--line); border-radius: 16px;
     }
 
     /* Landscape (the car's screen): two columns so nothing needs scrolling. */
     @media (orientation: landscape) and (min-width: 720px) {
-      .now { display: grid; grid-template-columns: 1.15fr 1fr; column-gap: 6vw; align-items: center; }
+      /* Both columns hang from one top line; the pair is centred as a block. */
+      .now { display: grid; grid-template-columns: 1.15fr 1fr; column-gap: 6vw; align-items: start; align-content: center; }
       .col-a { padding-right: 0; }
-      .col-b { padding-right: 100px; }
-      .air { padding-top: 0; border-top: 0; }
+      .col-b { padding-right: 80px; padding-top: 0.2em; }
+      .air { padding-top: 0; }
     }
     @media (orientation: landscape) and (max-width: 719px) {
       .temp { font-size: clamp(3.5rem, 18vmin, 8rem); }
@@ -394,23 +431,29 @@ import Layout from '../../layouts/Layout.astro';
     .radar { margin: 0; }
     .radar-box {
       position: relative; width: 100%; aspect-ratio: 853 / 479;
-      border-radius: 1rem; overflow: hidden; background: #dfe6ea;
+      border-radius: 16px; overflow: hidden; background: #dfe6ea;
     }
     .radar-box img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-    .radar-rain { opacity: 0.7; }
-    .g6[data-theme='night'] .radar-base { filter: brightness(0.82); }
+    .radar-rain { opacity: 0.75; }
+    /* Night: invert NEA's pale base map into a dark one with light
+       coastlines. The rain layer sits above, untouched, so its colours stay
+       true. */
+    .g6[data-theme='night'] .radar-box { background: #1a1d24; }
+    .g6[data-theme='night'] .radar-base { filter: invert(1) hue-rotate(180deg) brightness(0.72) contrast(0.9); }
     /* "You are here": monochrome — the page's navy ink with a white ring and
        navy radiating rings, so the only colour on the map is the rain
        (Mick, 1 Nov: keep to XPeng's sleek, minimalist language). No label;
        the rings say it. Sized against the map so it stays visible on the
        car's big screen. */
     .radar-you {
-      --pin: #0a0e17;
+      --pin: #0a0e17; --pin-ring: #fff;
       position: absolute; width: 2.2%; aspect-ratio: 1; min-width: 14px;
       transform: translate(-50%, -50%); border-radius: 50%;
-      background: var(--pin); border: 2.5px solid #fff;
+      background: var(--pin); border: 2.5px solid var(--pin-ring);
       box-shadow: 0 0 0 1px rgba(10, 14, 23, 0.6), 0 2px 8px rgba(0, 0, 0, 0.35);
     }
+    /* On the inverted night map the dot flips: white with a dark ring. */
+    .g6[data-theme='night'] .radar-you { --pin: #eef1f6; --pin-ring: #0d0f14; box-shadow: 0 0 0 1px rgba(238, 241, 246, 0.5), 0 2px 8px rgba(0, 0, 0, 0.5); }
     .radar-you::before, .radar-you::after {
       content: ''; position: absolute; inset: -2px; border-radius: 50%;
       border: 2.5px solid var(--pin); opacity: 0;
@@ -430,7 +473,7 @@ import Layout from '../../layouts/Layout.astro';
     /* Headline: glyph · forecast · temperature range — same grammar as the
        main page (picture, then number, then word). */
     .fc-head { display: flex; align-items: center; gap: 0.3em 0.6em; flex-wrap: wrap; }
-    .fc-glyph { font-size: clamp(2.2rem, 7vmin, 4.6rem); line-height: 1; color: var(--mute); }
+    .fc-glyph { font-size: clamp(2.2rem, 7vmin, 4.6rem); line-height: 1; color: var(--mute); display: block; }
     .fc-big { flex: 1 1 auto; font-size: clamp(1.8rem, 6vmin, 4rem); font-weight: 300; letter-spacing: -0.02em; line-height: 1.1; }
     .fc-range { font-size: clamp(1.8rem, 6vmin, 4rem); font-weight: 300; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
     /* Three period tiles (night / morning / afternoon), the current one lit. */
@@ -439,14 +482,15 @@ import Layout from '../../layouts/Layout.astro';
       display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.8rem;
     }
     :global(.fc-tiles li) {
-      border: 1px solid var(--line); border-radius: 1rem; padding: 1.2vh 0.5em;
+      border-radius: 16px; padding: 1.2vh 0.5em;
       text-align: center; color: var(--mute); font-weight: 300;
       font-size: clamp(1rem, 2.8vmin, 1.7rem); min-width: 0;
     }
-    :global(.fc-tiles li.on) { color: var(--ink); border-color: var(--ink); background: rgba(127, 127, 127, 0.07); }
+    /* The current period is a soft filled surface, not an outline. */
+    :global(.fc-tiles li.on) { color: var(--ink); background: var(--surf2); }
     :global(.fc-tiles .t-name) { display: block; font-weight: 500; font-size: 0.85em; }
     :global(.fc-tiles .t-when) { display: block; font-size: 0.72em; opacity: 0.75; margin-top: 0.1em; }
-    :global(.fc-tiles .t-g) { display: block; font-size: 2.2em; line-height: 1.15; margin: 0.1em 0; }
+    :global(.fc-tiles .t-g) { display: block; font-size: 2.2em; line-height: 1; margin: 0.25em 0; }
     :global(.fc-tiles .t-text) { display: block; line-height: 1.2; }
     /* Small facts as label-over-number chips, like the PM2.5 line. */
     .fc-chips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.8rem; margin-top: 1.5vh; }
@@ -459,7 +503,7 @@ import Layout from '../../layouts/Layout.astro';
       font-size: clamp(1.1rem, 3.2vmin, 2rem); font-weight: 300;
     }
     :global(.fc-days .d-day) { color: var(--mute); font-size: 0.85em; }
-    :global(.fc-days .d-g) { font-size: 1.4em; line-height: 1; color: var(--mute); text-align: center; }
+    :global(.fc-days .d-g) { font-size: 1.4em; line-height: 1; color: var(--mute); }
     :global(.fc-days .d-text) { color: var(--ink); }
     :global(.fc-days .d-t) { color: var(--mute); font-variant-numeric: tabular-nums; }
     @media (orientation: landscape) and (min-width: 900px) {
@@ -483,7 +527,7 @@ import Layout from '../../layouts/Layout.astro';
     :global(.cam) { display: block; }
     :global(.cam img) {
       display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover;
-      border-radius: 1rem; background: var(--line);
+      border-radius: 16px; background: var(--line);
     }
     :global(.cam figcaption) { margin-top: 0.5rem; font-size: clamp(1rem, 3vmin, 1.8rem); font-weight: 300; color: var(--mute); }
     :global(.cam figcaption b) { color: var(--ink); font-weight: 400; }
@@ -519,21 +563,35 @@ import Layout from '../../layouts/Layout.astro';
       ['4712', 'Tuas Ave 1 / Tuas West Road — approach'],
     ];
 
-    // WMO weather codes → a glyph. Night variants for clear / partly cloudy.
+    // Eight drawn weather icons (24-unit grid, monoline). currentColor +
+    // stroke come from the .wx class, so they inherit size and colour from
+    // wherever they're dropped.
+    const PATHS: Record<string, string> = {
+      sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.5 1.5M17.2 17.2l1.5 1.5M5.3 18.7l1.5-1.5M17.2 6.8l1.5-1.5"/>',
+      moon: '<path d="M19.5 14.2A7.5 7.5 0 0 1 9.8 4.5a7.5 7.5 0 1 0 9.7 9.7z"/>',
+      cloud: '<path d="M7.5 18.5h9a4 4 0 0 0 .6-7.95A6 6 0 0 0 5.8 11.7a3.4 3.4 0 0 0 1.7 6.8z"/>',
+      'partly-day': '<path d="M8 4.5v1.3M3.3 9.2h1.3M4.7 5.9l.9.9M11.3 5.9l-.9.9"/><path d="M5.6 11.2a3 3 0 1 1 4.9-2.6"/><path d="M9.5 20h8a3.5 3.5 0 0 0 .5-6.96A5.2 5.2 0 0 0 8 14.3 2.9 2.9 0 0 0 9.5 20z"/>',
+      'partly-night': '<path d="M9.6 10.6A4 4 0 0 1 7.3 4a4 4 0 1 0 5.2 5.3"/><path d="M9.5 20h8a3.5 3.5 0 0 0 .5-6.96A5.2 5.2 0 0 0 8 14.3 2.9 2.9 0 0 0 9.5 20z"/>',
+      rain: '<path d="M7.5 15.5h9a4 4 0 0 0 .6-7.95A6 6 0 0 0 5.8 8.7a3.4 3.4 0 0 0 1.7 6.8z"/><path d="M8.5 18.5l-.8 2.5M12.2 18.5l-.8 2.5M15.9 18.5l-.8 2.5"/>',
+      storm: '<path d="M7.5 15h9a4 4 0 0 0 .6-7.95A6 6 0 0 0 5.8 8.2a3.4 3.4 0 0 0 1.7 6.8z"/><path d="M12.8 13.5l-2.3 3.8h3L11 22"/>',
+      haze: '<path d="M4 8.5h16M6.5 12.5h11M4 16.5h16"/>',
+    };
+    const wx = (name: string) => `<svg class="wx" viewBox="0 0 24 24" aria-hidden="true">${PATHS[name] || PATHS.cloud}</svg>`;
+
+    // WMO weather codes (Open-Meteo hourly) → icon name.
     const glyph = (code: number | null, day: boolean) => {
-      if (code === null) return '·';
-      // ︎ = text presentation, so the car doesn't swap in colour emoji.
-      if (code === 0) return day ? '☀︎' : '☾︎';
-      if (code <= 2) return day ? '⛅︎' : '☁︎';
-      if (code === 3) return '☁︎';
-      if (code === 45 || code === 48) return '≡';
-      if (code <= 57) return '☂︎';
-      if (code <= 67 || (code >= 80 && code <= 82)) return '☔︎';
-      if (code >= 95) return '⚡︎';
-      return '☂︎';
+      if (code === null) return wx('cloud');
+      if (code === 0) return wx(day ? 'sun' : 'moon');
+      if (code <= 2) return wx(day ? 'partly-day' : 'partly-night');
+      if (code === 3) return wx('cloud');
+      if (code === 45 || code === 48) return wx('haze');
+      if (code <= 57) return wx('rain');
+      if (code <= 67 || (code >= 80 && code <= 82)) return wx('rain');
+      if (code >= 95) return wx('storm');
+      return wx('rain');
     };
 
-    const NIGHT_BG = '#0a0e17';
+    const NIGHT_BG = '#0d0f14';
     const DAY_BG = '#f3f4f7';
 
     // NEA's 50 km rain radar: a 5-minute PNG drawn over a fixed base map.
@@ -750,14 +808,28 @@ import Layout from '../../layouts/Layout.astro';
       const neaGlyph = (code: string | null, text: string | null, night: boolean) => {
         const c = String(code || '').toUpperCase();
         const t = String(text || '').toLowerCase();
-        if (/^(TL|HT|HG)$/.test(c) || t.includes('thunder')) return '⚡︎';
-        if (/^(HR|HS|RA|SR|WR|SK)$/.test(c) || /heavy|moderate rain/.test(t)) return '☔︎';
-        if (/^(DR|LR|LS|PS|SH|WS)$/.test(c) || /shower|rain|drizzle/.test(t)) return '☂︎';
-        if (/^(BR|FG|HZ|SL|MI)$/.test(c) || /haz|mist|fog/.test(t)) return '≡';
-        if (/^(PC|PN)$/.test(c) || t.includes('partly')) return night ? '☁︎' : '⛅︎';
-        if (/^(CL|OC|WC|WD)$/.test(c) || /cloud|overcast|windy/.test(t)) return '☁︎';
-        if (/^(FA|FW|SU|WF|FN)$/.test(c) || /fair|sunny/.test(t)) return night || c === 'FN' || t.includes('night') ? '☾︎' : '☀︎';
-        return '·';
+        if (/^(TL|HT|HG)$/.test(c) || t.includes('thunder')) return wx('storm');
+        if (/^(HR|HS|RA|SR|WR|SK|DR|LR|LS|PS|SH|WS)$/.test(c) || /shower|rain|drizzle/.test(t)) return wx('rain');
+        if (/^(BR|FG|HZ|SL|MI)$/.test(c) || /haz|mist|fog/.test(t)) return wx('haze');
+        if (/^(PC|PN)$/.test(c) || t.includes('partly')) return wx(night || c === 'PN' || t.includes('night') ? 'partly-night' : 'partly-day');
+        if (/^(CL|OC|WC|WD)$/.test(c) || /cloud|overcast|windy/.test(t)) return wx('cloud');
+        if (/^(FA|FW|SU|WF|FN)$/.test(c) || /fair|sunny/.test(t)) return wx(night || c === 'FN' || t.includes('night') ? 'moon' : 'sun');
+        return wx('cloud');
+      };
+      // One line of live data for the forecast tile, from the 6-hour strip:
+      // when the rain starts, or when it clears.
+      const rainy = (h: any) => (typeof h.pop === 'number' && h.pop >= 40) || (typeof h.code === 'number' && h.code >= 51);
+      const hourLabel = (iso: string) => new Date(iso).toLocaleTimeString('en-SG', { hour: '2-digit', hour12: false }).replace(/^24/, '00') + ':00';
+      const forecastLine = (d: any) => {
+        const hs: any[] = Array.isArray(d.hours) ? d.hours : [];
+        if (!hs.length) return d.day24?.text ? tidy(d.day24.text) : '';
+        const wet = hs.findIndex(rainy);
+        if (wet === -1) return `dry for the next ${hs.length} hours`;
+        if (wet === 0) {
+          const dry = hs.findIndex((h, i) => i > 0 && !rainy(h));
+          return dry === -1 ? `rain through the next ${hs.length} hours` : `rain now · clearing by ${hourLabel(hs[dry].t)}`;
+        }
+        return `rain likely from ${hourLabel(hs[wet].t)}`;
       };
       // NEA's three periods always start at 06, 12 or 18 local.
       const periodName = (startIso: string | null) => {
@@ -775,7 +847,7 @@ import Layout from '../../layouts/Layout.astro';
         const g = d.day24;
         const now = Date.now();
         $('fc24Head').textContent = `next 24 hours${d.region ? ` · ${d.region}` : ''}`;
-        $('fc24Glyph').textContent = g ? neaGlyph(g.code, g.text, !d.isDay) : '';
+        $('fc24Glyph').innerHTML = g ? neaGlyph(g.code, g.text, !d.isDay) : '';
         $('fc24Text').textContent = g ? tidy(g.text) : 'not in yet — retries each minute';
         $('fc24Range').textContent = g ? range(g.tempLo, g.tempHi, '°') : '';
         $('fcPeriods').innerHTML = (g?.periods || []).map((p: any) => {
@@ -858,6 +930,9 @@ import Layout from '../../layouts/Layout.astro';
         $('psi').textContent = fmt(d.psi);
         $('psiband').textContent = d.psiBand || '';
         $('air').dataset.band = d.psiBand || '';
+        // Quiet until it matters: big + coloured only from 'unhealthy' up.
+        $('air').classList.toggle('quiet', !d.psiBand || d.psiBand === 'good' || d.psiBand === 'moderate');
+        $('fcSub').textContent = forecastLine(d);
         $('pm25').textContent = fmt(d.pm25);
         $('pm25band').textContent = d.pm25Band || '';
         $('region').textContent = d.region ? `${d.region} region` : '';
@@ -865,18 +940,20 @@ import Layout from '../../layouts/Layout.astro';
         $('hours').innerHTML = hours.map((h, i) => {
           const t = new Date(h.t);
           const hh = t.toLocaleTimeString('en-SG', { hour: '2-digit', hour12: false }).replace(/^24/, '00');
-          const wet = typeof h.pop === 'number' && h.pop >= 40;
+          // Rain chance only when it's worth a glance (≥20%), blue from 40%.
+          const pop = typeof h.pop === 'number' ? h.pop : null;
+          const wet = pop !== null && pop >= 40;
           return `<li${i === 0 ? ' class="now-ish"' : ''}>
             <span class="h-t">${hh}</span>
             <span class="h-g" aria-hidden="true">${glyph(h.code, !!h.day)}</span>
             <span class="h-c">${fmt(h.temp)}°</span>
-            <span class="h-p${wet ? ' wet' : ''}">${typeof h.pop === 'number' ? h.pop + '%' : ''}</span>
+            <span class="h-p${wet ? ' wet' : ''}">${pop !== null && pop >= 20 ? pop + '%' : ''}</span>
           </li>`;
         }).join('');
         setTheme(!!d.isDay);
-        const src = d.locSource === 'gps' ? 'car gps' : d.locSource === 'ip' ? 'rough fix (no gps)' : 'no location — showing central';
-        const flag = d.source === 'stub' ? ' · OFFLINE STUB' : d.stale ? ' · nea slow, showing last' : '';
-        $('status').textContent = `${src} · updated ${hhmm()}${flag}`;
+        const src = d.locSource === 'gps' ? 'gps' : d.locSource === 'ip' ? 'rough fix' : 'no gps · central';
+        const flag = d.source === 'stub' ? ' · OFFLINE STUB' : d.stale ? ' · nea slow' : '';
+        $('status').textContent = `${src} · ${hhmm()}${flag}`;
         if (!fsheet.hasAttribute('hidden')) { renderForecast(); placeYou(); }
       };
 
@@ -941,13 +1018,11 @@ import Layout from '../../layouts/Layout.astro';
         loadRadar();
         if (radarTick) clearInterval(radarTick);
         radarTick = window.setInterval(() => loadRadar(), 5 * 60_000);
-        $('closeForecast').focus();
       };
       const closeForecast = () => {
         fsheet.setAttribute('hidden', '');
         if (radarTick) clearInterval(radarTick);
         radarTick = undefined;
-        $('openForecast').focus();
       };
       $('openForecast').addEventListener('click', openForecast, { signal });
       $('closeForecast').addEventListener('click', closeForecast, { signal });
@@ -1020,15 +1095,37 @@ import Layout from '../../layouts/Layout.astro';
         sheet.scrollTop = 0;
         loadCams();
         startCamTick();
-        $('closeCauseway').focus();
       };
       const closeSheet = () => {
         sheet.setAttribute('hidden', '');
         if (camTick) clearInterval(camTick);
         camTick = undefined;
         cams.innerHTML = '';
-        $('openCauseway').focus();
       };
+      // The causeway tile's live line: how many of the six are up, and the
+      // newest frame time. Checked on load and every 5 minutes.
+      const camSummary = async () => {
+        try {
+          const res = await fetch('https://api.data.gov.sg/v1/transport/traffic-images', { signal, cache: 'no-store' });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const d = await res.json();
+          const list: any[] = d.items?.[0]?.cameras || [];
+          const ours = list.filter((c) => CAMS.some(([id]) => id === String(c.camera_id)));
+          const newest = ours.map((c) => new Date(c.timestamp).getTime()).reduce((a, b) => Math.max(a, b), 0);
+          const n = ours.length;
+          $('camSub').textContent = n === 0
+            ? 'cameras offline'
+            : `${n === CAMS.length ? `${n} cameras` : `${n} of ${CAMS.length} live`} · ${newest ? hhmm(new Date(newest)) : '--'}`;
+          for (const c of ours) if (c.image) lastSeen[String(c.camera_id)] = { image: c.image, ts: c.timestamp };
+          try { localStorage.setItem('g6:cams', JSON.stringify(lastSeen)); } catch {}
+        } catch (err) {
+          if ((err as Error).name === 'AbortError') return;
+          $('camSub').textContent = '';
+        }
+      };
+      camSummary();
+      const camSumTick = window.setInterval(camSummary, 5 * 60_000);
+      signal.addEventListener('abort', () => clearInterval(camSumTick), { once: true });
       $('openCauseway').addEventListener('click', openSheet, { signal });
       $('closeCauseway').addEventListener('click', closeSheet, { signal });
       refreshBtn.addEventListener('click', () => { loadCams(); startCamTick(); }, { signal });
