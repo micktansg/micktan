@@ -1,11 +1,13 @@
 ---
 // /g6 — private in-car page for Mick's XPeng G6 Pro. Not in the hall, not in
 // the circuit, noindex. One glanceable panel (temperature, feels-like,
-// humidity, 2-hour forecast, PSI + PM2.5 for where the car is) and one big
-// button that opens the LTA checkpoint cameras for border runs.
+// humidity, 2-hour forecast, next 6 hours, PSI + PM2.5 for where the car is,
+// one card — a joke / word / quote) and two big buttons: an in-page forecast
+// sheet (rain radar, 24 h, 4 days) and the LTA checkpoint cameras.
 //
-// Design rules: zero taps needed while moving, huge type, auto day/night,
-// refreshes itself every minute. Location comes from the car browser's GPS;
+// Design rules: zero taps needed while moving, big type that still fits one
+// screen without scrolling, auto day/night, refreshes itself every minute.
+// Location comes from the car browser's GPS (confirmed working 1 Nov 2026);
 // if that's refused, the API falls back to a coarse IP fix.
 //
 // Look: borrowed from XPeng's own screens (and xp.leung.xin) — Inter, deep
@@ -35,35 +37,51 @@ import Layout from '../../layouts/Layout.astro';
       <i class="blob b3"></i>
     </div>
 
+    {/* Top-right: re-fix GPS + refetch everything + deal a new card. */}
+    <button class="pill refresh-all" id="refreshAll" type="button" aria-label="refresh location and weather">
+      <span aria-hidden="true">↻</span>
+    </button>
+
     <section class="now" aria-live="polite" aria-atomic="true">
-      <p class="where"><span id="area">locating</span><span class="dot" id="locdot" aria-hidden="true"></span></p>
-      <p class="forecast" id="forecast">&nbsp;</p>
+      <div class="col col-a">
+        <p class="where"><span id="area">locating</span><span class="dot" id="locdot" aria-hidden="true"></span></p>
+        <p class="forecast" id="forecast">&nbsp;</p>
 
-      <p class="temp"><span id="temp">--</span><span class="unit">°</span></p>
-      <p class="feels">
-        <span>feels <strong id="feels">--</strong>°</span>
-        <span class="sep" aria-hidden="true">·</span>
-        <span>humidity <strong id="hum">--</strong>%</span>
-      </p>
+        <p class="temp"><span id="temp">--</span><span class="unit">°</span></p>
+        <p class="feels">
+          <span>feels <strong id="feels">--</strong>°</span>
+          <span class="sep" aria-hidden="true">·</span>
+          <span>humidity <strong id="hum">--</strong>%</span>
+        </p>
 
-      <ol class="hours" id="hours" aria-label="next 6 hours"></ol>
-      <p class="links">
-        <a href="https://www.weather.gov.sg/weather-rain-area-50km/" target="_blank" rel="noopener">rain map ↗</a>
-        <a href="https://www.weather.gov.sg/weather-forecast-24hrforecast/" target="_blank" rel="noopener">24h forecast ↗</a>
-        <a href="https://www.weather.gov.sg/weather-forecast-4dayoutlook/" target="_blank" rel="noopener">4 days ↗</a>
-      </p>
+        <ol class="hours" id="hours" aria-label="next 6 hours"></ol>
+      </div>
 
-      <div class="air" id="air" data-band="">
-        <p class="air-num"><strong id="psi">--</strong> <span class="air-lbl">PSI</span></p>
-        <p class="air-band" id="psiband">&nbsp;</p>
-        <p class="air-sub">PM2.5 <strong id="pm25">--</strong> µg/m³ · <span id="pm25band">&nbsp;</span> · <span id="region">&nbsp;</span></p>
+      <div class="col col-b">
+        <div class="air" id="air" data-band="">
+          <p class="air-num"><strong id="psi">--</strong> <span class="air-lbl">PSI</span></p>
+          <p class="air-band" id="psiband">&nbsp;</p>
+          <p class="air-sub">PM2.5 <strong id="pm25">--</strong> µg/m³ · <span id="pm25band">&nbsp;</span> · <span id="region">&nbsp;</span></p>
+        </div>
+
+        <div class="card" id="card" data-kind="">
+          <p class="card-kind" id="cardKind">&nbsp;</p>
+          <p class="card-body" id="cardBody">&nbsp;</p>
+          <p class="card-by" id="cardBy"></p>
+        </div>
       </div>
     </section>
 
-    <button class="causeway" id="openCauseway" type="button">
-      <span>causeway cam</span>
-      <span class="arrow" aria-hidden="true">→</span>
-    </button>
+    <div class="actions">
+      <button class="big" id="openForecast" type="button">
+        <span>forecast</span>
+        <span class="arrow" aria-hidden="true">→</span>
+      </button>
+      <button class="big" id="openCauseway" type="button">
+        <span>causeway cam</span>
+        <span class="arrow" aria-hidden="true">→</span>
+      </button>
+    </div>
 
     <footer class="foot">
       <button class="diag-toggle" id="diagToggle" type="button" aria-expanded="false" aria-controls="diag">
@@ -72,6 +90,50 @@ import Layout from '../../layouts/Layout.astro';
       <pre class="diag" id="diag" hidden></pre>
     </footer>
 
+    {/* ── forecast sheet: rain radar + 24 h + 4 days, all from the same feed ── */}
+    <div class="sheet" id="fsheet" hidden role="dialog" aria-modal="true" aria-label="Forecast">
+      <div class="sheet-bar">
+        <p class="sheet-title">forecast <span class="sheet-ts" id="fcTs"></span></p>
+        <div class="sheet-actions">
+          <button class="back refresh" id="refreshFc" type="button" aria-label="refresh forecast">
+            <span aria-hidden="true">↻</span>
+          </button>
+          <button class="back" id="closeForecast" type="button" aria-label="back">
+            <span aria-hidden="true">←</span>
+          </button>
+        </div>
+      </div>
+      <div class="fc">
+        <figure class="radar">
+          <div class="radar-box">
+            <img class="radar-base" src="https://www.weather.gov.sg/wp-content/themes/wiptheme/assets/img/base-853.png" alt="" width="853" height="479" decoding="async" />
+            <img class="radar-rain" id="radarImg" alt="rain radar overlay" width="853" height="479" decoding="async" />
+            <span class="radar-you" id="radarYou" hidden aria-hidden="true"></span>
+          </div>
+          <figcaption>rain radar <span id="radarTs">—</span> · 50 km · <span class="legend">light <i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i> heavy</span></figcaption>
+        </figure>
+        <div class="fc-text">
+          <section class="fc-24">
+            <h2>next 24 hours</h2>
+            <p class="fc-big" id="fc24Text">—</p>
+            <p class="fc-sub" id="fc24Sub">&nbsp;</p>
+            <ol class="fc-periods" id="fcPeriods"></ol>
+          </section>
+          <section class="fc-4">
+            <h2>next 4 days</h2>
+            <ol class="fc-days" id="fcDays"></ol>
+          </section>
+        </div>
+      </div>
+      <p class="sheet-more">
+        NEA / MSS data via data.gov.sg. Full maps:
+        <a href="https://www.weather.gov.sg/weather-rain-area-50km/" target="_blank" rel="noopener">rain areas</a> ·
+        <a href="https://www.weather.gov.sg/weather-forecast-24hrforecast/" target="_blank" rel="noopener">24 h</a> ·
+        <a href="https://www.weather.gov.sg/weather-forecast-4dayoutlook/" target="_blank" rel="noopener">4 days</a>
+      </p>
+    </div>
+
+    {/* ── checkpoint cams sheet ── */}
     <div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-label="Checkpoint cameras">
       <div class="sheet-bar">
         <p class="sheet-title">checkpoint cams <span class="sheet-ts" id="camTs"></span></p>
@@ -111,8 +173,8 @@ import Layout from '../../layouts/Layout.astro';
       min-height: 100dvh;
       display: grid;
       grid-template-rows: 1fr auto auto;
-      gap: 2.5vh;
-      padding: 4vh 6vw 2vh;
+      gap: 2vh;
+      padding: 3vh 5vw 1.5vh;
       background: var(--bg);
       color: var(--ink);
       font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -169,10 +231,26 @@ import Layout from '../../layouts/Layout.astro';
       50%      { opacity: 1; }
     }
 
-    .now { display: flex; flex-direction: column; justify-content: center; }
+    /* Round pill buttons (refresh / back) — 72px tall, car-finger sized. */
+    .pill, .back {
+      appearance: none; border: 1px solid var(--line); background: rgba(127, 127, 127, 0.06); color: var(--ink);
+      min-width: 88px; height: 72px; padding: 0 1.4rem; border-radius: 999px;
+      font: inherit; font-size: 2.2rem; font-weight: 300; line-height: 1; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
+      -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+    }
+    .pill:active, .back:active { background: var(--line); }
+    .refresh-all { position: absolute; top: 3vh; right: 5vw; z-index: 2; }
+    .refresh span, .refresh-all span { display: inline-block; }
+    .refresh.busy span, .refresh-all.busy span { animation: spin 900ms linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── the Now panel ───────────────────────────────────────────────── */
+    .now { display: flex; flex-direction: column; justify-content: center; gap: 3vh; }
+    .col-a { padding-right: 100px; } /* keep the location line clear of the ↻ */
     .where {
       display: flex; align-items: center; gap: 0.6rem;
-      font-size: clamp(1.4rem, 4.2vmin, 3rem);
+      font-size: clamp(1.2rem, 3.2vmin, 2.2rem);
       font-weight: 500; letter-spacing: -0.01em;
     }
     .dot {
@@ -182,18 +260,18 @@ import Layout from '../../layouts/Layout.astro';
     .dot[data-src='gps'] { background: var(--teal); opacity: 1; }
     .dot[data-src='ip'] { background: var(--amber); opacity: 1; }
     .forecast {
-      font-size: clamp(1.3rem, 4vmin, 2.8rem);
+      font-size: clamp(1.1rem, 3vmin, 2rem);
       font-weight: 300; color: var(--mute); margin-top: 0.2em;
     }
     .temp {
-      margin-top: 2vh;
-      font-size: clamp(7rem, 34vmin, 24rem);
-      line-height: 0.9; font-weight: 300; letter-spacing: -0.05em;
+      margin-top: 1vh;
+      font-size: clamp(4.5rem, 20vmin, 13rem);
+      line-height: 0.92; font-weight: 300; letter-spacing: -0.05em;
     }
     .unit { font-size: 0.42em; vertical-align: top; margin-left: 0.04em; opacity: 0.55; font-weight: 300; }
     .feels {
-      margin-top: 1.5vh;
-      font-size: clamp(1.4rem, 4.4vmin, 3.2rem);
+      margin-top: 1vh;
+      font-size: clamp(1.15rem, 3.3vmin, 2.2rem);
       font-weight: 300; color: var(--mute);
       display: flex; flex-wrap: wrap; gap: 0 0.6em;
     }
@@ -201,12 +279,12 @@ import Layout from '../../layouts/Layout.astro';
 
     /* 6-hour strip: one column per hour, glyph / temp / rain chance. */
     .hours {
-      list-style: none; margin-top: 3.5vh;
+      list-style: none; margin-top: 2.5vh;
       /* Columns size to their content and huddle left, instead of being
          spread across the full width. */
       display: grid; grid-template-columns: repeat(6, minmax(0, 4.2em)); gap: 0.35em;
       justify-content: start;
-      font-size: clamp(1rem, 3vmin, 2rem); font-weight: 300; color: var(--mute);
+      font-size: clamp(0.95rem, 2.6vmin, 1.6rem); font-weight: 300; color: var(--mute);
       text-align: center; font-variant-numeric: tabular-nums;
     }
     :global(.hours li) { display: grid; gap: 0.2em; min-width: 0; }
@@ -216,32 +294,19 @@ import Layout from '../../layouts/Layout.astro';
     :global(.hours .h-p) { font-size: 0.85em; opacity: 0.6; }
     :global(.hours .h-p.wet) { color: #6aa9ef; opacity: 1; }
     :global(.hours li.now-ish .h-t) { color: var(--ink); }
-    .links {
-      margin-top: 2vh; display: flex; flex-wrap: wrap; gap: 0.6rem;
-    }
-    .links a {
-      color: var(--ink); text-decoration: none; font-weight: 300;
-      font-size: clamp(0.95rem, 2.6vmin, 1.5rem);
-      border: 1px solid var(--line); border-radius: 999px;
-      padding: 0.5em 1.1em; min-height: 44px; display: inline-flex; align-items: center;
-    }
-    .links a:active { background: var(--line); }
 
-    .air {
-      margin-top: 4vh; padding-top: 3vh;
-      border-top: 1px solid var(--line);
-    }
+    .air { padding-top: 2.5vh; border-top: 1px solid var(--line); }
     .air-num {
-      font-size: clamp(3.5rem, 14vmin, 10rem);
+      font-size: clamp(2.6rem, 9vmin, 6rem);
       line-height: 1; font-weight: 300; letter-spacing: -0.04em;
     }
     .air-num strong { font-weight: 300; }
-    .air-lbl { font-size: 0.28em; letter-spacing: 0.14em; opacity: 0.55; font-weight: 400; }
+    .air-lbl { font-size: 0.3em; letter-spacing: 0.14em; opacity: 0.55; font-weight: 400; }
     .air-band {
-      font-size: clamp(1.6rem, 5.5vmin, 4rem);
+      font-size: clamp(1.25rem, 3.8vmin, 2.5rem);
       font-weight: 400; color: var(--band); margin-top: 0.15em; letter-spacing: -0.01em;
     }
-    .air-sub { margin-top: 0.7em; font-size: clamp(1.1rem, 3.2vmin, 2.2rem); font-weight: 300; color: var(--mute); }
+    .air-sub { margin-top: 0.5em; font-size: clamp(1rem, 2.7vmin, 1.6rem); font-weight: 300; color: var(--mute); }
     .air-sub strong { color: var(--ink); font-weight: 400; }
     /* NEA colour language, tuned to the palette. */
     .air[data-band='good'] { --band: var(--teal); }
@@ -250,22 +315,38 @@ import Layout from '../../layouts/Layout.astro';
     .air[data-band='very unhealthy'] { --band: #ef7a52; }
     .air[data-band='hazardous'] { --band: #e04a4a; }
 
-    .causeway {
+    /* The card: one joke / word / quote per load or manual refresh. */
+    .card {
+      margin-top: 3vh; padding-top: 2.5vh; border-top: 1px solid var(--line);
+      font-size: clamp(1.05rem, 3vmin, 1.9rem); font-weight: 300; line-height: 1.35;
+      max-width: 34em;
+    }
+    .card-kind { font-size: 0.7em; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mute); margin-bottom: 0.5em; }
+    .card-body { color: var(--ink); }
+    :global(.card-body .w) { font-weight: 500; }
+    :global(.card-body .pos) { color: var(--mute); font-style: italic; margin: 0 0.3em; }
+    :global(.card-body .punch) { display: block; color: var(--mute); margin-top: 0.3em; }
+    .card-by { color: var(--mute); margin-top: 0.45em; font-size: 0.82em; }
+    .card-by:empty { display: none; }
+
+    /* ── the two big buttons ─────────────────────────────────────────── */
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .big {
       appearance: none; border: 1px solid var(--line); background: rgba(127, 127, 127, 0.06);
       color: var(--ink); font: inherit; cursor: pointer;
-      min-height: 64px; padding: 2.2vh 5vw; border-radius: 1.4rem;
-      display: flex; justify-content: space-between; align-items: center;
-      font-size: clamp(1.6rem, 5vmin, 3.6rem); font-weight: 400; letter-spacing: -0.01em;
+      min-height: 64px; padding: 1.8vh 4vw; border-radius: 1.4rem;
+      display: flex; justify-content: space-between; align-items: center; gap: 0.5em;
+      font-size: clamp(1.25rem, 3.8vmin, 2.6rem); font-weight: 400; letter-spacing: -0.01em;
       -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
       transition: background 160ms ease;
     }
-    .causeway:active { background: var(--line); }
+    .big:active { background: var(--line); }
     .arrow { opacity: 0.55; font-weight: 300; }
 
     .foot { display: flex; flex-direction: column; gap: 0.6rem; }
     .diag-toggle {
       appearance: none; border: 0; background: transparent; color: var(--mute);
-      font: inherit; font-weight: 300; font-size: clamp(0.9rem, 2.4vmin, 1.4rem); text-align: left;
+      font: inherit; font-weight: 300; font-size: clamp(0.9rem, 2.2vmin, 1.3rem); text-align: left;
       min-height: 44px; padding: 0.4rem 0; cursor: pointer;
     }
     .diag {
@@ -274,6 +355,18 @@ import Layout from '../../layouts/Layout.astro';
       padding: 0.8rem; border: 1px solid var(--line); border-radius: 0.6rem;
     }
 
+    /* Landscape (the car's screen): two columns so nothing needs scrolling. */
+    @media (orientation: landscape) and (min-width: 720px) {
+      .now { display: grid; grid-template-columns: 1.15fr 1fr; column-gap: 6vw; align-items: center; }
+      .col-a { padding-right: 0; }
+      .col-b { padding-right: 100px; }
+      .air { padding-top: 0; border-top: 0; }
+    }
+    @media (orientation: landscape) and (max-width: 719px) {
+      .temp { font-size: clamp(3.5rem, 18vmin, 8rem); }
+    }
+
+    /* ── sheets ─────────────────────────────────────────────────────── */
     .sheet {
       position: fixed; inset: 0; z-index: 50;
       background: var(--bg); color: var(--ink);
@@ -284,17 +377,47 @@ import Layout from '../../layouts/Layout.astro';
     .sheet-bar { display: flex; align-items: center; justify-content: space-between; gap: 1.2rem; margin-bottom: 1.5vh; }
     .sheet-title { font-size: clamp(1.4rem, 4vmin, 2.6rem); font-weight: 400; letter-spacing: -0.01em; }
     .sheet-ts { font-size: 0.6em; color: var(--mute); margin-left: 0.6em; font-weight: 300; }
-    .back {
-      appearance: none; border: 1px solid var(--line); background: rgba(127, 127, 127, 0.06); color: var(--ink);
-      min-width: 88px; height: 72px; padding: 0 1.4rem; border-radius: 999px;
-      font: inherit; font-size: 2.2rem; font-weight: 300; line-height: 1; cursor: pointer;
-      display: inline-flex; align-items: center; justify-content: center;
-    }
-    .back:active { background: var(--line); }
     .sheet-actions { display: flex; gap: 0.8rem; flex-shrink: 0; }
-    .refresh span { display: inline-block; }
-    .refresh.busy span { animation: spin 900ms linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    .sheet-more { margin-top: 2vh; font-size: clamp(0.95rem, 2.6vmin, 1.5rem); font-weight: 300; color: var(--mute); }
+    .sheet-more a { color: var(--ink); }
+
+    /* forecast sheet */
+    .fc { display: grid; gap: 3vh; }
+    .radar { margin: 0; }
+    .radar-box {
+      position: relative; width: 100%; aspect-ratio: 853 / 479;
+      border-radius: 1rem; overflow: hidden; background: #dfe6ea;
+    }
+    .radar-box img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    .radar-rain { opacity: 0.7; }
+    .g6[data-theme='night'] .radar-base { filter: brightness(0.82); }
+    .radar-you {
+      position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%;
+      background: var(--teal); border: 2px solid #fff; box-shadow: 0 0 0 4px rgba(47, 211, 166, 0.35);
+    }
+    .radar figcaption { margin-top: 0.6rem; font-size: clamp(0.95rem, 2.6vmin, 1.5rem); font-weight: 300; color: var(--mute); }
+    .legend i { display: inline-block; width: 1em; height: 0.6em; margin: 0 1px; vertical-align: middle; border-radius: 2px; }
+    .legend .l1 { background: #5ac8fa; } .legend .l2 { background: #2fbf5a; } .legend .l3 { background: #f2d43b; } .legend .l4 { background: #e04a4a; }
+
+    .fc-text { display: grid; gap: 3vh; align-content: start; }
+    .fc h2 { font-size: clamp(0.95rem, 2.6vmin, 1.5rem); font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mute); margin-bottom: 0.6em; }
+    .fc-big { font-size: clamp(1.8rem, 6vmin, 4rem); font-weight: 300; letter-spacing: -0.02em; line-height: 1.1; }
+    .fc-sub { margin-top: 0.4em; font-size: clamp(1.1rem, 3.2vmin, 2rem); font-weight: 300; color: var(--mute); }
+    :global(.fc-sub b) { color: var(--ink); font-weight: 400; }
+    .fc-periods, .fc-days { list-style: none; margin-top: 1.2vh; }
+    :global(.fc-periods li), :global(.fc-days li) {
+      display: grid; grid-template-columns: 6.8em 1fr auto; gap: 1em; align-items: baseline;
+      padding: 0.55em 0; border-top: 1px solid var(--line);
+      font-size: clamp(1.1rem, 3.2vmin, 2rem); font-weight: 300;
+    }
+    :global(.fc-periods .p-when), :global(.fc-days .d-day) { color: var(--mute); font-size: 0.85em; }
+    :global(.fc-periods .p-text), :global(.fc-days .d-text) { color: var(--ink); }
+    :global(.fc-days .d-t) { color: var(--mute); font-variant-numeric: tabular-nums; }
+    @media (orientation: landscape) and (min-width: 900px) {
+      .fc { grid-template-columns: 1.1fr 1fr; column-gap: 4vw; }
+    }
+
+    /* cams sheet */
     .cams.busy { opacity: 0.45; transition: opacity 200ms ease; }
     .cams { transition: opacity 300ms ease; }
     .cams { display: grid; gap: 2vh; }
@@ -308,19 +431,22 @@ import Layout from '../../layouts/Layout.astro';
     :global(.cam figcaption b) { color: var(--ink); font-weight: 400; }
     :global(.cam-off img) { opacity: 0.55; filter: saturate(0.4); }
     :global(.cam-off figcaption) { color: var(--amber); }
-    .sheet-more { margin-top: 2vh; font-size: clamp(0.95rem, 2.6vmin, 1.5rem); font-weight: 300; color: var(--mute); }
-    .sheet-more a { color: var(--ink); }
+    @media (orientation: landscape) and (min-width: 900px) {
+      .cams { grid-template-columns: 1fr 1fr; column-gap: 3vw; }
+    }
 
     button:focus-visible, a:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; border-radius: 0.4rem; }
     @media (prefers-reduced-motion: reduce) {
-      .g6, .causeway, .sky { transition: none; }
+      .g6, .big, .sky { transition: none; }
       /* Slow, not still — the brief is a breathing background. */
       .blob { animation-duration: 60s, 20s; }
-      .refresh.busy span { animation: none; opacity: 0.5; }
+      .refresh.busy span, .refresh-all.busy span { animation: none; opacity: 0.5; }
     }
   </style>
 
   <script>
+    import { DECK } from '../../data/g6-deck';
+
     // LTA checkpoint cameras (camera_id → label), via the keyless
     // data.gov.sg v1 traffic-images feed. Order = what you'd want to see first
     // on a Woodlands run, then Tuas.
@@ -350,13 +476,23 @@ import Layout from '../../layouts/Layout.astro';
     const NIGHT_BG = '#0a0e17';
     const DAY_BG = '#f3f4f7';
 
+    // NEA's 50 km rain radar: a 5-minute PNG drawn over a fixed base map.
+    // Same recipe as weather.gov.sg's own page (base-853.png + overlay).
+    const RADAR = 'https://www.weather.gov.sg/files/rainarea/50km/v2/dpsri_70km_';
+    // Base map bounds, copied from NEA's own calculatePosition(): the 853×479
+    // image spans 1.4572°N → 1.1450°N, 103.565°E → 104.130°E. Used to drop a
+    // "you are here" dot on the radar.
+    const RADAR_BOUNDS = { top: 1.4572, bottom: 1.145, left: 103.565, right: 104.13 };
+
     let abort: AbortController | null = null;
     let tick: number | undefined;
     let camTick: number | undefined;
+    let radarTick: number | undefined;
 
     const $ = (id: string) => document.getElementById(id)!;
     const fmt = (v: number | null, d = 0) => (typeof v === 'number' ? v.toFixed(d) : '--');
     const hhmm = (d = new Date()) => d.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const esc = (s: unknown) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] || c);
 
     const init = () => {
       abort?.abort();
@@ -397,7 +533,8 @@ import Layout from '../../layouts/Layout.astro';
       let fix: { lat: number; lon: number } | null = null;
       try { fix = JSON.parse(localStorage.getItem('g6:fix') || 'null'); } catch {}
 
-      const locate = () => new Promise<void>((resolve) => {
+      // fresh=true (the ↻ button) refuses a cached fix and waits a bit longer.
+      const locate = (fresh = false) => new Promise<void>((resolve) => {
         if (!('geolocation' in navigator)) return resolve();
         navigator.geolocation.getCurrentPosition(
           (pos) => {
@@ -407,11 +544,92 @@ import Layout from '../../layouts/Layout.astro';
             resolve();
           },
           (err) => { diag.lastFix = `error ${err.code}: ${err.message} @${hhmm()}`; resolve(); },
-          { enableHighAccuracy: false, maximumAge: 60_000, timeout: 8000 }
+          { enableHighAccuracy: fresh, maximumAge: fresh ? 0 : 60_000, timeout: fresh ? 12_000 : 8000 }
         );
       });
 
+      // ── the card ──────────────────────────────────────────────────────
+      // Random, but never one of the last 40 shown (localStorage).
+      const deal = () => {
+        let seen: number[] = [];
+        try { seen = JSON.parse(localStorage.getItem('g6:seen') || '[]') || []; } catch {}
+        const pool = DECK.map((_, i) => i).filter((i) => !seen.includes(i));
+        const i = (pool.length ? pool : DECK.map((_, i) => i))[Math.floor(Math.random() * (pool.length || DECK.length))];
+        seen = [...seen.filter((x) => x !== i), i].slice(-40);
+        try { localStorage.setItem('g6:seen', JSON.stringify(seen)); } catch {}
+        const c = DECK[i];
+        const card = $('card');
+        card.dataset.kind = c.k;
+        if (c.k === 'joke') {
+          $('cardKind').textContent = 'joke';
+          $('cardBody').innerHTML = `${esc(c.a)}<span class="punch">${esc(c.b)}</span>`;
+          $('cardBy').textContent = '';
+        } else if (c.k === 'word') {
+          $('cardKind').textContent = 'word';
+          $('cardBody').innerHTML = `<span class="w">${esc(c.w)}</span><span class="pos">${esc(c.p)}</span> ${esc(c.d)}`;
+          $('cardBy').textContent = '';
+        } else {
+          $('cardKind').textContent = 'quote';
+          $('cardBody').textContent = `“${c.q}”`;
+          $('cardBy').textContent = `— ${c.by}`;
+        }
+      };
+
+      // ── forecast sheet rendering (from the same /api/g6 payload) ───────
+      let last: any = null;
+      const fsheet = $('fsheet');
+      const shortWhen = (s: string) =>
+        s.replace(/\s\d{1,2}\s[A-Za-z]{3}/g, '').replace(/\bMidday\b/g, 'midday').replace(/\s+to\s+/g, ' – ').trim();
+      const range = (lo: any, hi: any, unit = '') =>
+        typeof lo === 'number' && typeof hi === 'number' ? `${lo}–${hi}${unit}` : '--';
+      const renderForecast = () => {
+        const d = last;
+        if (!d) return;
+        const g = d.day24;
+        $('fc24Text').textContent = g?.text || 'not in yet — retries each minute';
+        $('fc24Sub').innerHTML = g
+          ? `<b>${range(g.tempLo, g.tempHi, '°')}</b> · humidity ${range(g.humLo, g.humHi, '%')} · wind ${esc(g.windDir || '')} ${range(g.windLo, g.windHi)} km/h<br>${esc(g.valid || '')}${d.region ? ` · periods below: ${esc(d.region)} region` : ''}`
+          : '&nbsp;';
+        $('fcPeriods').innerHTML = (g?.periods || []).map((p: any) =>
+          `<li><span class="p-when">${esc(shortWhen(p.when))}</span><span class="p-text">${esc(p.text || '—')}</span><span></span></li>`).join('');
+        $('fcDays').innerHTML = (d.days || []).map((x: any) =>
+          `<li><span class="d-day">${esc(String(x.day || '').slice(0, 3))}</span><span class="d-text">${esc(x.summary || x.text || '—')}</span><span class="d-t">${range(x.lo, x.hi, '°')}</span></li>`).join('');
+        $('fcTs').textContent = g?.updated ? `issued ${hhmm(new Date(g.updated))}` : '';
+      };
+
+      // Radar: newest 5-minute slot, published ~5 min behind the clock.
+      // Try now−5, then step back 5 min at a time if the file isn't there yet.
+      const radarImg = $('radarImg') as HTMLImageElement;
+      const slot = (minutesBack: number) => {
+        const ms = Date.now() + 8 * 3600e3 - minutesBack * 60e3; // SGT = UTC+8, no DST
+        const t = new Date(ms - (ms % 300e3));
+        const p = (n: number) => String(n).padStart(2, '0');
+        return {
+          stamp: `${t.getUTCFullYear()}${p(t.getUTCMonth() + 1)}${p(t.getUTCDate())}${p(t.getUTCHours())}${p(t.getUTCMinutes())}`,
+          label: `${p(t.getUTCHours())}:${p(t.getUTCMinutes())}`,
+        };
+      };
+      const loadRadar = (attempt = 0) => {
+        if (attempt > 5) { $('radarTs').textContent = 'unavailable'; return; }
+        const s = slot(5 + attempt * 5);
+        const probe = new Image();
+        probe.onload = () => { radarImg.src = probe.src; $('radarTs').textContent = s.label; };
+        probe.onerror = () => loadRadar(attempt + 1);
+        probe.src = `${RADAR}${s.stamp}0000dBR.dpsri.png`;
+      };
+      const placeYou = () => {
+        const you = $('radarYou');
+        if (!fix) { you.setAttribute('hidden', ''); return; }
+        const x = (fix.lon - RADAR_BOUNDS.left) / (RADAR_BOUNDS.right - RADAR_BOUNDS.left);
+        const y = (RADAR_BOUNDS.top - fix.lat) / (RADAR_BOUNDS.top - RADAR_BOUNDS.bottom);
+        if (x < 0 || x > 1 || y < 0 || y > 1) { you.setAttribute('hidden', ''); return; }
+        you.style.left = `${(x * 100).toFixed(2)}%`;
+        you.style.top = `${(y * 100).toFixed(2)}%`;
+        you.removeAttribute('hidden');
+      };
+
       const paint = (d: any) => {
+        last = d;
         $('area').textContent = d.area || 'Singapore';
         $('locdot').dataset.src = d.locSource;
         $('forecast').textContent = d.forecast || '';
@@ -440,10 +658,11 @@ import Layout from '../../layouts/Layout.astro';
         const src = d.locSource === 'gps' ? 'car gps' : d.locSource === 'ip' ? 'rough fix (no gps)' : 'no location — showing central';
         const flag = d.source === 'stub' ? ' · OFFLINE STUB' : d.stale ? ' · nea slow, showing last' : '';
         $('status').textContent = `${src} · updated ${hhmm()}${flag}`;
+        if (!fsheet.hasAttribute('hidden')) { renderForecast(); placeYou(); }
       };
 
-      const refresh = async () => {
-        await locate();
+      const refresh = async (fresh = false) => {
+        await locate(fresh);
         const q = fix ? `?lat=${fix.lat.toFixed(4)}&lon=${fix.lon.toFixed(4)}` : '';
         try {
           const res = await fetch(`/api/g6${q}`, { signal, cache: 'no-store' });
@@ -458,11 +677,28 @@ import Layout from '../../layouts/Layout.astro';
         }
         renderDiag();
       };
+      const startTick = () => {
+        if (tick) clearInterval(tick);
+        tick = window.setInterval(() => refresh(), 60_000);
+      };
 
       renderDiag();
+      deal();
       refresh();
-      tick = window.setInterval(refresh, 60_000);
+      startTick();
       document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); }, { signal });
+
+      // ↻ on the main page: new GPS fix, fresh data, new card.
+      const refreshAll = $('refreshAll');
+      refreshAll.addEventListener('click', async () => {
+        if (refreshAll.classList.contains('busy')) return;
+        refreshAll.classList.add('busy');
+        $('status').textContent = 'refreshing — getting a new gps fix…';
+        deal();
+        await refresh(true);
+        startTick();
+        window.setTimeout(() => refreshAll.classList.remove('busy'), 350);
+      }, { signal });
 
       $('diagToggle').addEventListener('click', () => {
         const el = $('diag');
@@ -471,7 +707,36 @@ import Layout from '../../layouts/Layout.astro';
         $('diagToggle').setAttribute('aria-expanded', String(open));
       }, { signal });
 
-      // Checkpoint cams sheet.
+      // ── forecast sheet open/close ────────────────────────────────────
+      const refreshFc = $('refreshFc');
+      const openForecast = () => {
+        fsheet.removeAttribute('hidden');
+        fsheet.scrollTop = 0;
+        renderForecast();
+        placeYou();
+        loadRadar();
+        if (radarTick) clearInterval(radarTick);
+        radarTick = window.setInterval(() => loadRadar(), 5 * 60_000);
+        $('closeForecast').focus();
+      };
+      const closeForecast = () => {
+        fsheet.setAttribute('hidden', '');
+        if (radarTick) clearInterval(radarTick);
+        radarTick = undefined;
+        $('openForecast').focus();
+      };
+      $('openForecast').addEventListener('click', openForecast, { signal });
+      $('closeForecast').addEventListener('click', closeForecast, { signal });
+      refreshFc.addEventListener('click', async () => {
+        if (refreshFc.classList.contains('busy')) return;
+        refreshFc.classList.add('busy');
+        loadRadar();
+        await refresh();
+        renderForecast();
+        window.setTimeout(() => refreshFc.classList.remove('busy'), 350);
+      }, { signal });
+
+      // ── checkpoint cams sheet ────────────────────────────────────────
       const sheet = $('sheet');
       const cams = $('cams');
       const refreshBtn = $('refreshCams');
@@ -543,15 +808,22 @@ import Layout from '../../layouts/Layout.astro';
       $('openCauseway').addEventListener('click', openSheet, { signal });
       $('closeCauseway').addEventListener('click', closeSheet, { signal });
       refreshBtn.addEventListener('click', () => { loadCams(); startCamTick(); }, { signal });
-      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !sheet.hasAttribute('hidden')) closeSheet(); }, { signal });
-      // bfcache can restore the page with the sheet open and timers dead.
-      window.addEventListener('pageshow', (e) => { if ((e as PageTransitionEvent).persisted) closeSheet(); }, { signal });
+      document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        if (!sheet.hasAttribute('hidden')) closeSheet();
+        if (!fsheet.hasAttribute('hidden')) closeForecast();
+      }, { signal });
+      // bfcache can restore the page with a sheet open and timers dead.
+      window.addEventListener('pageshow', (e) => {
+        if ((e as PageTransitionEvent).persisted) { closeSheet(); closeForecast(); startTick(); }
+      }, { signal });
     };
 
     const teardown = () => {
       if (tick) clearInterval(tick);
       if (camTick) clearInterval(camTick);
-      tick = camTick = undefined;
+      if (radarTick) clearInterval(radarTick);
+      tick = camTick = radarTick = undefined;
       abort?.abort();
     };
 

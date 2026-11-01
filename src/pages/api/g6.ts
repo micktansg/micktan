@@ -57,7 +57,13 @@ const remembered = async (cache: Map<string, Cached>, key: string, ttl: number, 
   const now = Date.now();
   if (hit && hit.value && now - hit.at < ttl) return hit;
   try {
-    const res = await fetchWithTimeout(url, { headers: { accept: 'application/json' } }, 6000);
+    let res = await fetchWithTimeout(url, { headers: { accept: 'application/json' } }, 6000);
+    if (res.status === 429) {
+      // Cold start fires eight NEA calls at once and the keyless tier
+      // sometimes bounces one. A short pause and one retry clears it.
+      await new Promise((r) => setTimeout(r, 1200));
+      res = await fetchWithTimeout(url, { headers: { accept: 'application/json' } }, 6000);
+    }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const value = await res.json();
     const entry = { at: now, value, stale: false };
@@ -98,7 +104,7 @@ const STUB = {
   area: 'Bishan', forecast: 'Partly Cloudy (Night)',
   tempC: 27.3, feelsC: 31.0, humidity: 86, station: 'Ang Mo Kio Avenue 5',
   psi: 62, psiBand: 'moderate', pm25: 29, pm25Band: 'normal', region: 'central',
-  isDay: false, stale: false, hours: [] as any[],
+  isDay: false, stale: false, hours: [] as any[], day24: null as any, days: [] as any[],
 };
 
 export const GET: APIRoute = async ({ request, clientAddress }) => {
@@ -122,13 +128,17 @@ export const GET: APIRoute = async ({ request, clientAddress }) => {
   const grid = `${at.lat.toFixed(2)},${at.lon.toFixed(2)}`;
   const meteoUrl = `${OPEN_METEO}?latitude=${at.lat.toFixed(3)}&longitude=${at.lon.toFixed(3)}&current=apparent_temperature,is_day&hourly=temperature_2m,precipitation_probability,weather_code,is_day&forecast_hours=7&timezone=Asia%2FSingapore`;
 
-  const [temp, hum, fc, psi, pm25, meteo] = await Promise.all([
+  const [temp, hum, fc, psi, pm25, meteo, d24, d4] = await Promise.all([
     remembered(neaCache, 'air-temperature', NEA_TTL, `${NEA}/air-temperature`),
     remembered(neaCache, 'relative-humidity', NEA_TTL, `${NEA}/relative-humidity`),
     remembered(neaCache, 'two-hr-forecast', SLOW_TTL, `${NEA}/two-hr-forecast`),
     remembered(neaCache, 'psi', SLOW_TTL, `${NEA}/psi`),
     remembered(neaCache, 'pm25', SLOW_TTL, `${NEA}/pm25`),
     remembered(meteoCache, grid, METEO_TTL, meteoUrl),
+    // 24-hour forecast + 4-day outlook feed the in-page forecast sheet
+    // (NEA's own pages are unreadable at arm's length in a car).
+    remembered(neaCache, 'twenty-four-hr-forecast', SLOW_TTL, `${NEA}/twenty-four-hr-forecast`),
+    remembered(neaCache, 'four-day-outlook', SLOW_TTL, `${NEA}/four-day-outlook`),
   ]);
 
   const nothing = [temp, hum, fc, psi, pm25].every((c) => !c.value);
@@ -166,6 +176,34 @@ export const GET: APIRoute = async ({ request, clientAddress }) => {
         day: hz.is_day?.[i + 1] === 1,
       }))
     : [];
+  // 24-hour forecast: island-wide general outlook plus three 6/12-hour
+  // periods, each with a forecast per NEA region — we keep the car's region.
+  const rec24 = d24.value?.data?.records?.[0];
+  const g = rec24?.general;
+  const day24 = g
+    ? {
+        text: g.forecast?.text ?? null,
+        tempLo: g.temperature?.low ?? null, tempHi: g.temperature?.high ?? null,
+        humLo: g.relativeHumidity?.low ?? null, humHi: g.relativeHumidity?.high ?? null,
+        windDir: g.wind?.direction ?? null, windLo: g.wind?.speed?.low ?? null, windHi: g.wind?.speed?.high ?? null,
+        valid: g.validPeriod?.text ?? null,
+        updated: rec24.updatedTimestamp ?? null,
+        periods: (rec24.periods || []).map((p: any) => ({
+          when: p.timePeriod?.text ?? '',
+          text: p.regions?.[region]?.text ?? p.regions?.central?.text ?? null,
+        })),
+      }
+    : null;
+  const rec4 = d4.value?.data?.records?.[0];
+  const days = (rec4?.forecasts || []).map((f: any) => ({
+    day: f.day ?? null,
+    date: f.timestamp ?? null,
+    text: f.forecast?.text ?? null,
+    summary: f.forecast?.summary ?? null,
+    lo: f.temperature?.low ?? null, hi: f.temperature?.high ?? null,
+    windDir: f.wind?.direction ?? null, windLo: f.wind?.speed?.low ?? null, windHi: f.wind?.speed?.high ?? null,
+  }));
+
   const hour = Number(new Date().toLocaleString('en-SG', { timeZone: 'Asia/Singapore', hour: 'numeric', hour12: false }));
   const isDay = typeof cur?.is_day === 'number' ? cur.is_day === 1 : hour >= 7 && hour < 19;
 
@@ -186,6 +224,8 @@ export const GET: APIRoute = async ({ request, clientAddress }) => {
     region,
     isDay,
     hours,
+    day24,
+    days,
     updated: t?.ts || new Date().toISOString(),
     stale: [temp, hum, fc, psi, pm25].some((c) => c.stale),
   };
